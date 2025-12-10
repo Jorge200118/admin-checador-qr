@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Administrativo - Checador QR</title>
+    <link rel="stylesheet" href="Admin.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="logo">
+            <i class="fas fa-qrcode"></i>
+            <h2>Checador QR</h2>
+        </div>
+        
+        <nav class="nav-menu">
+            <ul>
+                <li class="nav-item active">
+                    <a href="#dashboard" data-section="dashboard">
+                        <i class="fas fa-dashboard"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#empleados" data-section="empleados">
+                        <i class="fas fa-users"></i>
+                        <span>Empleados</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#horarios" data-section="horarios">
+                        <i class="fas fa-clock"></i>
+                        <span>Horarios</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#registros" data-section="registros">
+                        <i class="fas fa-list"></i>
+                        <span>Registros</span>
+                    </a>
+                </li>
+           <!-- <li class="nav-item">
+                    <a href="#reportes" data-section="reportes">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Reportes</span>
+                    </a>
+                </li> -->
+                <li class="nav-item">
+                    <a href="#configuracion" data-section="configuracion">
+                        <i class="fas fa-cog"></i>
+                        <span>Configuración</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <header class="header">
+            <h1 id="pageTitle">Dashboard</h1>
+            <div class="header-actions">
+                <div class="status-indicator">
+                    <span class="status-dot online"></span>
+                    <span>Sistema activo</span>
+                </div>
+                <button class="btn btn-logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Salir
+                </button>
+            </div>
+        </header>
+
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="content-section active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="empleadosPresentes">0</h3>
+                        <p>Empleados Presentes</p>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="registrosHoy">0</h3>
+                        <p>Registros Hoy</p>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="llegadasTarde">0</h3>
+                        <p>Llegadas Tarde</p>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-tablet-alt"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="tabletsActivas">2</h3>
+                        <p>Tablets Activas</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Empleados Presentes Hoy</h3>
+                        <button class="btn btn-sm btn-primary" onclick="refreshDashboard()">
+                            <i class="fas fa-refresh"></i> Actualizar
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table id="empleadosPresentesTable">
+                                <thead>
+                                    <tr>
+                                        <th>Empleado</th>
+                                        <th>Entrada</th>
+                                        <th>Salida Esperada</th>
+                                        <th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Data loaded by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Últimos Registros</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table id="ultimosRegistrosTable">
+                                <thead>
+                                    <tr>
+                                        <th>Hora</th>
+                                        <th>Empleado</th>
+                                        <th>Tipo</th>
+                                        <th>Tablet</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Data loaded by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Empleados Section -->
+        <section id="empleados" class="content-section">
+            <div class="section-header">
+                <h2>Gestión de Empleados</h2>
+                <button class="btn btn-primary" id="btnNuevoEmpleado">
+                    <i class="fas fa-plus"></i> Nuevo Empleado
+                </button>
+            </div>
+
+            <div class="filters">
+                <div class="filter-group">
+                    <input type="text" id="searchEmpleados" placeholder="Buscar empleados..." class="form-input">
+                    <select id="filterHorario" class="form-select">
+                        <option value="">Todos los horarios</option>
+                        <!-- Options loaded by JavaScript -->
+                    </select>
+                    <select id="filterEstado" class="form-select">
+                        <option value="">Todos los estados</option>
+                        <option value="1">Activos</option>
+                        <option value="0">Inactivos</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-container">
+                        <table id="empleadosTable">
+                            <thead>
+                                <tr>
+                                    <th>Foto</th>
+                                    <th>Código</th>
+                                    <th>Nombre</th>
+                                    <th>Sucursal</th>
+                                    <th>Puesto</th>
+                                    <th>Horario</th>
+                                    <th>Estado</th>
+                                    <th>Fecha Alta</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data loaded by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Horarios Section -->
+        <section id="horarios" class="content-section">
+            <div class="section-header">
+                <h2>Gestión de Horarios</h2>
+                <button class="btn btn-primary" id="btnNuevoHorario">
+                    <i class="fas fa-plus"></i> Nuevo Horario
+                </button>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-container">
+                        <table id="horariosTable">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Descripción</th>
+                                    <th>Bloques</th>
+                                    <th>Empleados</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data loaded by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Registros Section -->
+        <section id="registros" class="content-section">
+            <!-- Header con período y estadísticas -->
+            <div class="registros-header">
+                <div class="periodo-info">
+                    <h2>Registros de Asistencia</h2>
+                    <div class="periodo-actual">
+                        <span class="periodo-label">Período:</span>
+                        <span class="periodo-fechas" id="periodoActual">18/11/2025 - 18/11/2025</span>
+                    </div>
+                </div>
+                
+                <!-- Estadísticas rápidas -->
+                <div class="stats-quick">
+                    <div class="stat-item">
+                        <span class="stat-label">Registros sin check</span>
+                        <span class="stat-number" id="registrosSinCheck">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Hrs Extra</span>
+                        <span class="stat-number" id="hrsExtra">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Total Registros</span>
+                        <span class="stat-number" id="totalRegistros">132</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filtros mejorados -->
+            <div class="filters-advanced">
+                <div class="filters-row">
+                    <!-- Filtros de fecha -->
+                    <div class="filter-group dates">
+                        <label>Período:</label>
+                        <div class="date-inputs">
+                            <input type="date" id="fechaInicio" class="form-input" placeholder="Fecha inicio">
+                            <span class="date-separator">-</span>
+                            <input type="date" id="fechaFin" class="form-input" placeholder="Fecha fin">
+                        </div>
+                    </div>
+                    
+                    <!-- Filtro de empleado con autocompletar -->
+                    <div class="filter-group">
+                        <label>Empleado:</label>
+                        <div class="autocomplete-container">
+                            <input type="text" id="filterEmpleadoBusqueda" class="form-input" 
+                                placeholder="Buscar empleado..." autocomplete="off">
+                            <div id="empleadosSuggestions" class="autocomplete-suggestions"></div>
+                            <input type="hidden" id="filterEmpleado" value="">
+                        </div>
+                    </div>
+                    
+                    <!-- Filtro de tipo -->
+                    <div class="filter-group">
+                        <label>Tipo:</label>
+                        <select id="filterTipo" class="form-select">
+                            <option value="">TODOS LOS TIPOS</option>
+                            <option value="ENTRADA">Entradas</option>
+                            <option value="SALIDA">Salidas</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Filtro de sucursal -->
+                    <div class="filter-group">
+                        <label>Sucursal:</label>
+                        <select id="filterSucursal" class="form-select">
+                            <option value="">TODAS LAS SUCURSALES</option>
+                            <option value="MATRIZ">MATRIZ</option>
+                            <option value="TAMARAL">TAMARAL</option>
+                            <option value="CABOS">CABOS</option>
+                            <option value="LA PAZ">LA PAZ</option>
+                            <option value="SAN JOSE">SAN JOSE</option>
+                            <option value="CULIACAN">CULIACAN</option>
+                            <option value="JUAN JOSE RIOS">JUAN JOSE RIOS</option>
+                            <option value="EL FUERTE">EL FUERTE</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Filtro de puesto -->
+                    <div class="filter-group">
+                        <label>Puesto:</label>
+                        <select id="filterPuesto" class="form-select">
+                            <option value="">TODOS LOS PUESTOS</option>
+                            <option value="VENTAS">VENTAS</option>
+                            <option value="CHOFER">CHOFER</option>
+                            <option value="TRABAJADOR DE PATIO">TRABAJADOR DE PATIO</option>
+                            <option value="AUXILIAR CONTABLE">AUXILIAR CONTABLE</option>
+                            <option value="ENCARGADO DE SUCURSAL">ENCARGADO DE SUCURSAL</option>
+                            <option value="CAJERA">CAJERA</option>
+                            <option value="ALMACEN">ALMACEN</option>
+                            <!-- Más opciones cargadas dinámicamente -->
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Botones de acción -->
+                <div class="filter-actions">
+                    <button class="btn btn-primary filter-btn" onclick="filtrarRegistros()">
+                        <i class="fas fa-search"></i> Filtrar
+                    </button>
+                    <button class="btn btn-info" onclick="mostrarReporteEjecutivo()" title="Reporte ejecutivo de productividad">
+                        <i class="fas fa-chart-line"></i> Resumen empleado
+                    </button>
+                    <button class="btn btn-secondary" onclick="limpiarFiltros()">
+                        <i class="fas fa-times"></i> Limpiar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sección de descarga de faltas mejorada -->
+            <div class="faltas-download-section">
+                <div class="section-title">
+                    <i class="fas fa-download"></i>
+                    <strong>Descargar Faltas por Rango</strong>
+                </div>
+                
+                <div class="download-controls">
+                    <div class="date-range-group">
+                        <label>Desde:</label>
+                        <input type="date" id="fecha-inicio-faltas" class="form-input-small">
+                        
+                        <label>Hasta:</label>
+                        <input type="date" id="fecha-fin-faltas" class="form-input-small">
+                    </div>
+                    
+                    <button onclick="obtenerEmpleadosSinEntradaRango()" class="btn btn-success">
+                        <i class="fas fa-file-excel"></i> Descargar Rango
+                    </button>
+                </div>
+                
+                <div class="download-hint">
+                    💡 Descarga todas las faltas del período seleccionado en un solo Excel
+                </div>
+            </div>
+
+
+            <!-- Controles de tabla -->
+            <div class="table-controls">
+                
+                <div class="table-actions">
+                    <button class="btn-icon" title="Imprimir" onclick="imprimirRegistros()">
+                        <i class="fas fa-print"></i>
+                    </button>
+                    <button class="btn-icon" title="Exportar Excel" onclick="exportarRegistros('excel')">
+                        <i class="fas fa-file-excel"></i>
+                    </button>
+                    <button class="btn-icon" title="Exportar PDF" onclick="exportarRegistros('pdf')">
+                        <i class="fas fa-file-pdf"></i>
+                    </button>
+                    <button class="btn-icon" title="Actualizar" onclick="reloadRegistros()">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button class="btn-icon" title="Configurar columnas" onclick="configurarColumnas()">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tabla principal -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-container">
+                        <table id="registrosTable" class="registros-table-advanced">
+                            <!-- Modificar tu thead -->
+                            <thead>
+                                <tr>
+                                    <th>
+                                        <input type="checkbox" id="selectAllRegistros" onchange="toggleSelectAll()">
+                                    </th>
+                                    <th>Empleado</th>
+                                    <th>Fecha</th>
+                                    <th>Check In</th>
+                                    <th>Check Out</th>
+                                    <th>Hrs Trabajadas</th>
+                                    <th>Hrs Objetivo</th>
+                                    <th>Estatus</th>
+                                    <th>Tablet</th>
+                                    <th>Foto</th>
+                                    <th>Todas las fotos</th> <!-- NUEVA COLUMNA -->
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data loaded by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Paginación -->
+          <!--    <div class="pagination-container">
+                <div class="pagination-info">
+                    <span id="paginationInfo">Mostrando registros del 1 al 10 de un total de 132</span>
+                </div>
+                
+              <!--   <div class="pagination-controls">
+                    <button class="btn-pagination" id="btnAnterior" onclick="cambiarPagina(-1)">
+                        <i class="fas fa-chevron-left"></i> Anterior
+                    </button>
+                    
+                    <div class="pagination-numbers" id="paginationNumbers">
+                        <button class="btn-page active">1</button>
+                        <button class="btn-page">2</button>
+                        <button class="btn-page">3</button>
+                        <span class="pagination-dots">...</span>
+                        <button class="btn-page">14</button>
+                    </div>
+                    
+                    <button class="btn-pagination" id="btnSiguiente" onclick="cambiarPagina(1)">
+                        Siguiente <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>-->
+        </section>
+
+        <!-- Reportes Section 
+        <section id="reportes" class="content-section">
+            <div class="section-header">
+                <h2>Reportes y Estadísticas</h2>
+            </div>
+
+            <div class="reports-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Reporte de Asistencia</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label>Período:</label>
+                            <div class="date-range">
+                                <input type="date" id="reporteFechaInicio" class="form-input">
+                                <span>hasta</span>
+                                <input type="date" id="reporteFechaFin" class="form-input">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Empleado:</label>
+                            <select id="reporteEmpleado" class="form-select">
+                                <option value="">Todos</option>
+                                <!-- Options loaded by JavaScript 
+                            </select>
+                        </div>
+                        <button onclick="generarReporteAsistencia()" class="btn btn-primary">
+                            📄 Generar Reporte
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Estadísticas del Mes</h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="chartAsistencia" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section> -->
+
+        <!-- Configuración Section -->
+        <section id="configuracion" class="content-section">
+            <div class="section-header">
+                <h2>Configuración del Sistema</h2>
+            </div>
+
+            <div class="config-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Tablets Registradas</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table id="tabletsTable">
+                                <thead>
+                                    <tr>
+                                        <th>ID Tablet</th>
+                                        <th>Ubicación</th>
+                                        <th>Estado</th>
+                                        <th>Último Ping</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Data loaded by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Configuración General</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="config-form">
+                            <div class="form-group">
+                                <label>Tolerancia por defecto (minutos):</label>
+                                <input type="number" id="toleranciaDefecto" class="form-input" value="15">
+                            </div>
+                            <div class="form-group">
+                                <label>Tamaño máximo de foto (MB):</label>
+                                <input type="number" id="maxFotoSize" class="form-input" value="5">
+                            </div>
+                            <div class="form-group">
+                                <label>Auto-logout admin (minutos):</label>
+                                <input type="number" id="autoLogout" class="form-input" value="60">
+                            </div>
+                            <button class="btn btn-primary" onclick="guardarConfiguracion()">
+                                <i class="fas fa-save"></i> Guardar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modals -->
+    <div id="modalEmpleado" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalEmpleadoTitle">Nuevo Empleado</h3>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="formEmpleado" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label>Código de Empleado:</label>
+                        <input type="text" id="empCodigo" name="codigo" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre:</label>
+                        <input type="text" id="empNombre" name="nombre" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Apellido:</label>
+                        <input type="text" id="empApellido" name="apellido" class="form-input" required>
+                    </div>
+                    <!-- AGREGAR ESTOS DOS CAMPOS NUEVOS -->
+                    <div class="form-group">
+                        <label>Sucursal:</label>
+                        <select id="empSucursal" name="sucursal" class="form-select">
+                            <option value="">Seleccionar sucursal</option>
+                            <option value="MATRIZ">LA PAZ</option>
+                            <option value="TAMARAL">TAMARAL</option>
+                            <option value="CABOS">CABOS</option>
+                            <option value="MATRIZ">MATRIZ</option>
+                            <option value="TAMARAL">EL FUERTE</option>
+                            <option value="CABOS">JUAN JOSE RIOS</option>
+                            <option value="CABOS">CULIACAN</option>
+                            <option value="CABOS">SAN JOSE</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Puesto:</label>
+                        <input type="text" id="empPuesto" name="puesto" class="form-input" 
+                            placeholder="Ej: VENTAS, ALMACÉN, ENCARGADO DE PATIO">
+                    </div>
+                    <!-- FIN DE CAMPOS NUEVOS -->
+                    <div class="form-group">
+                        <label>Horario:</label>
+                        <select id="empHorario" name="horario_id" class="form-select" required>
+                            <!-- Options loaded by JavaScript -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Foto de Perfil:</label>
+                        <input type="file" id="empFoto" name="foto" class="form-input" accept="image/*">
+                        <div id="previewFoto" class="foto-preview"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="empTrabajaDomingo" name="trabaja_domingo">
+                            Trabaja domingos
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="cerrarModal('modalEmpleado')">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="guardarEmpleado()">Guardar</button>
+            </div>
+        </div>
+    </div>
+    <script>
+    // Configuración global para evitar errores
+    window.ADMIN_CONFIG = {
+        apiUrl: 'http://localhost:3000/api'
+    };
+    </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="admin.js"></script>
+<!-- MODAL PARA EDITAR HORARIOS - AGREGAR AL FINAL DE INDEX.HTML -->
+<div id="horarioModal" class="modal">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h2 id="modalHorarioTitle">Editar Horario</h2>
+            <span class="close" onclick="closeHorarioModal()">&times;</span>
+        </div>
+        
+        <div class="modal-body">
+            <form id="horarioForm" onsubmit="saveHorario(event)">
+                <input type="hidden" id="horarioId" name="horario_id">
+                
+                <!-- Información básica -->
+                <div class="form-section">
+                    <h3>Información General</h3>
+                    <div class="form-row">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="horarioNombre">Nombre del Horario *</label>
+                            <input type="text" id="horarioNombre" name="nombre" required 
+                                   placeholder="Ej: Horario Oficina">
+                        </div>
+                        <div class="form-group" style="flex: 2;">
+                            <label for="horarioDescripcion">Descripción</label>
+                            <input type="text" id="horarioDescripcion" name="descripcion" 
+                                   placeholder="Descripción del horario">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Bloques de horario -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <h3>Bloques de Horario</h3>
+                        <button type="button" class="btn btn-secondary" onclick="agregarBloqueHorario()">
+                            <i class="fas fa-plus"></i> Agregar Bloque
+                        </button>
+                    </div>
+                    <div id="bloquesContainer" class="bloques-container">
+                        <!-- Los bloques se agregan dinámicamente aquí -->
+                    </div>
+                </div>
+                
+                <!-- Botones de acción -->
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeHorarioModal()">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Guardar Horario
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+</body>
+
+</html>
