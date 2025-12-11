@@ -4078,7 +4078,13 @@ async function exportarRegistros(tipo) {
 
         registros.forEach(reg => {
             const fechaHora = new Date(reg.fecha_hora);
-            const fecha = fechaHora.toISOString().split('T')[0];
+
+            // Obtener fecha en hora LOCAL, no UTC
+            const year = fechaHora.getFullYear();
+            const month = String(fechaHora.getMonth() + 1).padStart(2, '0');
+            const day = String(fechaHora.getDate()).padStart(2, '0');
+            const fecha = `${year}-${month}-${day}`;
+
             const empleadoId = reg.empleado_id;
             const key = `${empleadoId}_${fecha}`;
 
@@ -4127,15 +4133,25 @@ async function exportarRegistros(tipo) {
                 ? grupo.salidas[grupo.salidas.length - 1].toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
                 : 'N/A';
 
-            // Calcular horas trabajadas
+            // Calcular horas trabajadas SOLO si hay entrada Y salida
             let horasTrabajadas = 'N/A';
             if (grupo.entradas.length > 0 && grupo.salidas.length > 0) {
                 const entrada = grupo.entradas[0];
                 const salida = grupo.salidas[grupo.salidas.length - 1];
-                const diffMs = salida - entrada;
-                const diffHoras = Math.floor(diffMs / (1000 * 60 * 60));
-                const diffMinutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-                horasTrabajadas = `${diffHoras}h ${diffMinutos}m`;
+
+                // Verificar que la salida sea posterior a la entrada
+                if (salida > entrada) {
+                    const diffMs = salida - entrada;
+                    const diffHoras = Math.floor(diffMs / (1000 * 60 * 60));
+                    const diffMinutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                    horasTrabajadas = `${diffHoras}h ${diffMinutos}m`;
+                } else {
+                    // Si la salida es antes de la entrada, hay un error en los datos
+                    horasTrabajadas = 'Error';
+                }
+            } else if (grupo.entradas.length > 0 && grupo.salidas.length === 0) {
+                // Si solo hay entrada sin salida
+                horasTrabajadas = 'En turno';
             }
 
             csvContent += `"${grupo.fecha}",`;
