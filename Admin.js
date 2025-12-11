@@ -4017,11 +4017,12 @@ window.guardarEmpleado = guardarEmpleado;
 window.editEmployee = editEmployee;
 window.viewEmployeeQR = viewEmployeeQR;
 window.mostrarQR = mostrarQR;
+window.descargarQR = descargarQR;
+window.imprimirQRs = imprimirQRs;
 window.toggleEmployeeStatus = toggleEmployeeStatus;
 window.deleteEmployee = deleteEmployee;
 window.editHorario = editHorario;
-window.printBothQR = printBothQR;
-window.toggleHorarioStatus = toggleHorarioStatus;   
+window.toggleHorarioStatus = toggleHorarioStatus;
 window.deleteHorario = deleteHorario;
 window.closeModal = closeModal;
 window.generarReporteAsistencia = generarReporteAsistencia;
@@ -4037,9 +4038,8 @@ window.configurarColumnas = configurarColumnas;
 window.cambiarPagina = cambiarPagina;
 window.toggleSelectAll = toggleSelectAll;
 
-// Funciones para exportación
 // Función para exportar registros a CSV/Excel
-window.exportarRegistros = async (tipo) => {
+async function exportarRegistros(tipo) {
     if (tipo !== 'excel') {
         showAlert('Info', 'Solo disponible exportación a Excel/CSV', 'info');
         return;
@@ -4169,7 +4169,11 @@ window.exportarRegistros = async (tipo) => {
     } finally {
         hideLoading();
     }
-};
+}
+
+// Exportar función a window
+window.exportarRegistros = exportarRegistros;
+
 window.agregarBloqueHorario = (bloqueExistente = null) => {
     try {
         const container = document.getElementById('bloquesContainer');
