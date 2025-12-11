@@ -332,9 +332,14 @@ async function loadEmployees() {
     try {
         // NUEVO: Usar Supabase API
         const data = await SupabaseAPI.getEmpleados();
-        
+
         if (data.success) {
-            adminState.employeesData = data.data || [];
+            // Transformar datos para incluir horario_nombre
+            adminState.employeesData = (data.data || []).map(emp => ({
+                ...emp,
+                horario_nombre: emp.horario?.nombre || null,
+                horario_id: emp.horario?.id || emp.horario_id
+            }));
             renderEmployeesTable();
         }
     } catch (error) {
@@ -1484,18 +1489,36 @@ function renderEmployeesTable() {
     }).join('');
 }
 
-// Función para formatear horas bonitas CON CORRECCIÓN DE ZONA HORARIA
-// PARA MOSTRAR HORAS BONITAS:
+// Función para formatear horas bonitas
 function formatearHoraBonita(horaString) {
     if (!horaString) return 'N/A';
-    
+
     try {
+        // Si ya es una hora en formato HH:MM:SS o HH:MM, extraerla directamente
+        if (typeof horaString === 'string' && horaString.includes(':')) {
+            const partes = horaString.split(':');
+            const hora = parseInt(partes[0]);
+            const minuto = partes[1];
+
+            // Convertir a formato 12 horas
+            const periodo = hora >= 12 ? 'PM' : 'AM';
+            const hora12 = hora === 0 ? 12 : (hora > 12 ? hora - 12 : hora);
+
+            return `${hora12}:${minuto} ${periodo}`;
+        }
+
+        // Si es un timestamp completo
         const fecha = new Date(horaString);
-        return fecha.toLocaleTimeString('en-US', { timeZone: 'America/Mazatlan',
-            hour: '2-digit',
-            minute: '2-digit',
-        });
+        if (!isNaN(fecha.getTime())) {
+            return fecha.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+            });
+        }
+
+        return 'N/A';
     } catch (error) {
+        console.error('Error formateando hora:', error);
         return 'N/A';
     }
 }
@@ -1657,39 +1680,39 @@ function openEmployeeModal(employeeId = null) {
 async function loadEmployeeData(employeeId) {
     try {
         showLoading('Cargando datos del empleado...');
-        
-        const response = await fetch(`${ADMIN_CONFIG.apiUrl}/empleados/${employeeId}`);
-        const data = await response.json();
-        
+
+        // Usar Supabase API
+        const data = await SupabaseAPI.getEmpleadoById(employeeId);
+
         if (data.success) {
-            const emp = data.data || data.empleado;
-            
+            const emp = data.data;
+
             const setFieldValue = (id, value) => {
                 const field = document.getElementById(id);
                 if (field) field.value = value || '';
             };
-            
+
             setFieldValue('empCodigo', emp.codigo_empleado);
             setFieldValue('empNombre', emp.nombre);
             setFieldValue('empApellido', emp.apellido);
             setFieldValue('empHorario', emp.horario_id);
-            setFieldValue('empSucursal', emp.sucursal);     // AGREGAR ESTA LÍNEA
-            setFieldValue('empPuesto', emp.puesto);         // AGREGAR ESTA LÍNEA
-            
+            setFieldValue('empSucursal', emp.sucursal);
+            setFieldValue('empPuesto', emp.puesto);
+
             const checkbox = document.getElementById('empTrabajaDomingo');
             if (checkbox) checkbox.checked = emp.trabaja_domingo || false;
-            
-            if (emp.foto_perfil || emp.foto_url) {
-                showPhotoPreview(emp.foto_perfil || emp.foto_url);
+
+            if (emp.foto_perfil) {
+                showPhotoPreview(getSupabaseFotoUrl(emp.foto_perfil));
             }
-            
+
             adminState.selectedEmployee = emp;
         } else {
             showAlert('Error', data.message || 'No se pudo cargar el empleado', 'error');
         }
     } catch (error) {
         console.error('Error loading employee:', error);
-        showAlert('Error', 'Error de conexión', 'error');
+        showAlert('Error', 'Error de conexión: ' + error.message, 'error');
     } finally {
         hideLoading();
     }
@@ -2068,81 +2091,89 @@ async function guardarEmpleado() {
             showAlert('Error', 'No se encontró el formulario', 'error');
             return;
         }
-        
+
         const getFieldValue = (id) => {
             const field = document.getElementById(id);
             return field ? field.value.trim() : '';
         };
-        
+
         const codigo = getFieldValue('empCodigo');
         const nombre = getFieldValue('empNombre');
         const apellido = getFieldValue('empApellido');
         const horario_id = getFieldValue('empHorario');
-        const sucursal = getFieldValue('empSucursal');  // AGREGAR ESTA LÍNEA
-        const puesto = getFieldValue('empPuesto');      // AGREGAR ESTA LÍNEA
-        
-        if (!codigo || !nombre || !apellido || !horario_id) {
-            showAlert('Error', 'Todos los campos son obligatorios', 'error');
+        const sucursal = getFieldValue('empSucursal');
+        const puesto = getFieldValue('empPuesto');
+
+        if (!codigo || !nombre || !apellido) {
+            showAlert('Error', 'Código, nombre y apellido son obligatorios', 'error');
             return;
         }
-        
+
         showLoading('Guardando empleado...');
-        
-        const formData = new FormData();
-        formData.append('codigo_empleado', codigo);
-        formData.append('nombre', nombre);
-        formData.append('apellido', apellido);
-        formData.append('horario_id', horario_id);
-        formData.append('sucursal', sucursal);          // AGREGAR ESTA LÍNEA
-        formData.append('puesto', puesto);              // AGREGAR ESTA LÍNEA
-        
+
         const trabajaDomingos = document.getElementById('empTrabajaDomingo')?.checked || false;
-        formData.append('trabaja_domingos', trabajaDomingos);
-        
+
+        // Procesar foto si hay
+        let fotoBase64 = null;
         const fotoInput = document.getElementById('empFoto');
         if (fotoInput && fotoInput.files[0]) {
-            formData.append('foto', fotoInput.files[0]);
+            fotoBase64 = await convertirImagenABase64(fotoInput.files[0]);
         }
-        
+
+        const empleadoData = {
+            codigo_empleado: codigo,
+            nombre: nombre,
+            apellido: apellido,
+            horario_id: horario_id || null,
+            sucursal: sucursal || null,
+            puesto: puesto || null,
+            trabaja_domingo: trabajaDomingos,
+            activo: true
+        };
+
         const empleadoId = adminState.selectedEmployee?.id;
         const isEditing = !!empleadoId;
-        
-        const url = isEditing 
-            ? `${ADMIN_CONFIG.apiUrl}/empleados/${empleadoId}`
-            : `${ADMIN_CONFIG.apiUrl}/empleados`;
-            
-        const method = isEditing ? 'PUT' : 'POST';
-        
-        const response = await fetch(url, {
-            method: method,
-            body: formData
-        });
-        
-        const result = await response.json();
-        
-        if (response.ok && result.success) {
-            showAlert('Éxito', 
-                isEditing ? 'Empleado actualizado correctamente' : 'Empleado creado correctamente', 
+
+        let result;
+        if (isEditing) {
+            result = await SupabaseAPI.updateEmpleado(empleadoId, empleadoData, fotoBase64);
+        } else {
+            result = await SupabaseAPI.createEmpleado(empleadoData, fotoBase64);
+        }
+
+        if (result.success) {
+            showAlert('Éxito',
+                isEditing ? 'Empleado actualizado correctamente' : 'Empleado creado correctamente',
                 'success'
             );
-            
+
             closeModal('modalEmpleado');
             await loadEmployees();
-            
+
             form.reset();
             clearPhotoPreview();
             adminState.selectedEmployee = null;
-            
+
         } else {
             showAlert('Error', result.message || 'Error al guardar empleado', 'error');
         }
-        
+
     } catch (error) {
         console.error('Error guardando empleado:', error);
-        showAlert('Error', 'Error de conexión al guardar empleado', 'error');
+        showAlert('Error', 'Error de conexión: ' + error.message, 'error');
     } finally {
         hideLoading();
     }
+}
+
+// Helper para convertir imagen a Base64
+function convertirImagenABase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
 }
 
 async function editEmployee(empleadoId) {
@@ -2169,111 +2200,151 @@ async function viewEmployeeQR(empleadoId) {
     }
 }
 
-function mostrarQR(empleadoId, tipo = 'entrada') {
+async function mostrarQR(empleadoId, tipo = 'entrada') {
     const empleado = adminState.employeesData.find(emp => emp.id === empleadoId);
     if (!empleado) {
         showAlert('Error', 'Empleado no encontrado', 'error');
         return;
     }
-    
-    const existingModal = document.getElementById('modalQR');
-    if (existingModal) {
-        existingModal.remove();
-    }
-    
-    const modalHTML = `
-        <div id="modalQR" class="modal active" style="display: flex;">
-            <div class="modal-content" style="max-width: 600px;">
-                <div class="modal-header">
-                    <h3>Códigos QR - ${empleado.nombre || ''} ${empleado.apellido || ''}</h3>
-                    <span class="close" onclick="closeModal('modalQR')">&times;</span>
-                </div>
-                <div class="modal-body" style="padding: 20px;">
-                    <div style="display: flex; gap: 20px; justify-content: center;">
-                        <div class="qr-container" style="text-align: center; padding: 15px; border: 2px solid #16a34a; border-radius: 8px;">
-                            <h4 style="color: #16a34a; margin: 0 0 10px 0;">🟢 ENTRADA</h4>
-                            <img src="${ADMIN_CONFIG.apiUrl}/qr/generate/${empleadoId}?tipo=entrada" 
-                                 alt="QR Entrada" 
-                                 style="max-width: 200px; border: 1px solid #ddd;"
-                                 onerror="this.alt='QR no disponible'">
-                            <div style="margin-top: 10px;">
-                                <a href="${ADMIN_CONFIG.apiUrl}/qr/generate/${empleadoId}?tipo=entrada" 
-                                   download="${empleado.codigo_empleado}_entrada.png" 
-                                   class="btn btn-sm btn-success">
-                                    📥 Descargar Entrada
-                                </a>
+
+    try {
+        // Obtener configuración QR del empleado
+        const qrConfig = await SupabaseAPI.getQRConfigByEmpleado(empleadoId);
+        if (!qrConfig.success) {
+            showAlert('Error', 'No se encontró configuración QR para este empleado', 'error');
+            return;
+        }
+
+        const existingModal = document.getElementById('modalQR');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        const modalHTML = `
+            <div id="modalQR" class="modal active" style="display: flex;">
+                <div class="modal-content" style="max-width: 600px;">
+                    <div class="modal-header">
+                        <h3>Códigos QR - ${empleado.nombre || ''} ${empleado.apellido || ''}</h3>
+                        <span class="close" onclick="closeModal('modalQR')">&times;</span>
+                    </div>
+                    <div class="modal-body" style="padding: 20px;">
+                        <div style="display: flex; gap: 20px; justify-content: center;">
+                            <div class="qr-container" style="text-align: center; padding: 15px; border: 2px solid #16a34a; border-radius: 8px;">
+                                <h4 style="color: #16a34a; margin: 0 0 10px 0;">🟢 ENTRADA</h4>
+                                <div id="qrEntrada" style="display: inline-block;"></div>
+                                <div style="margin-top: 10px;">
+                                    <button class="btn btn-sm btn-success" onclick="descargarQR('qrEntrada', '${empleado.codigo_empleado}_entrada')">
+                                        📥 Descargar
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="qr-container" style="text-align: center; padding: 15px; border: 2px solid #dc2626; border-radius: 8px;">
+                                <h4 style="color: #dc2626; margin: 0 0 10px 0;">🔴 SALIDA</h4>
+                                <div id="qrSalida" style="display: inline-block;"></div>
+                                <div style="margin-top: 10px;">
+                                    <button class="btn btn-sm btn-danger" onclick="descargarQR('qrSalida', '${empleado.codigo_empleado}_salida')">
+                                        📤 Descargar
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                        
-                        <div class="qr-container" style="text-align: center; padding: 15px; border: 2px solid #dc2626; border-radius: 8px;">
-                            <h4 style="color: #dc2626; margin: 0 0 10px 0;">🔴 SALIDA</h4>
-                            <img src="${ADMIN_CONFIG.apiUrl}/qr/generate/${empleadoId}?tipo=salida" 
-                                 alt="QR Salida" 
-                                 style="max-width: 200px; border: 1px solid #ddd;"
-                                 onerror="this.alt='QR no disponible'">
-                            <div style="margin-top: 10px;">
-                                <a href="${ADMIN_CONFIG.apiUrl}/qr/generate/${empleadoId}?tipo=salida" 
-                                   download="${empleado.codigo_empleado}_salida.png" 
-                                   class="btn btn-sm btn-danger">
-                                    📤 Descargar Salida
-                                </a>
-                            </div>
+
+                        <div style="margin-top: 20px; text-align: center; border-top: 1px solid #eee; padding-top: 15px;">
+                            <p><strong>Empleado:</strong> ${empleado.codigo_empleado || 'N/A'}</p>
+                            <p><strong>Nombre:</strong> ${empleado.nombre || ''} ${empleado.apellido || ''}</p>
                         </div>
                     </div>
-                    
-                    <div style="margin-top: 20px; text-align: center; border-top: 1px solid #eee; padding-top: 15px;">
-                        <p><strong>Empleado:</strong> ${empleado.codigo_empleado || 'N/A'}</p>
-                        <p><strong>Nombre:</strong> ${empleado.nombre || ''} ${empleado.apellido || ''}</p>
+                    <div class="modal-footer">
+                        <button class="btn btn-primary" onclick="imprimirQRs('${empleado.codigo_empleado}', '${empleado.nombre || ''} ${empleado.apellido || ''}')">
+                            🖨️ Imprimir Ambos
+                        </button>
+                        <button class="btn btn-secondary" onclick="closeModal('modalQR')">Cerrar</button>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-primary" onclick="printBothQR('${empleadoId}', '${empleado.nombre || 'Empleado'}')">
-                        🖨️ Imprimir Ambos
-                    </button>
-                    <button class="btn btn-secondary" onclick="closeModal('modalQR')">Cerrar</button>
                 </div>
             </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        // Generar códigos QR
+        new QRCode(document.getElementById('qrEntrada'), {
+            text: qrConfig.data.qr_entrada,
+            width: 200,
+            height: 200
+        });
+
+        new QRCode(document.getElementById('qrSalida'), {
+            text: qrConfig.data.qr_salida,
+            width: 200,
+            height: 200
+        });
+
+    } catch (error) {
+        console.error('Error mostrando QR:', error);
+        showAlert('Error', 'Error al generar códigos QR', 'error');
+    }
 }
 
-function printBothQR(empleadoId, empleadoNombre) {
+// Función para descargar un código QR
+function descargarQR(containerId, filename) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const canvas = container.querySelector('canvas');
+    if (!canvas) return;
+
+    const link = document.createElement('a');
+    link.download = `${filename}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+}
+
+// Función para imprimir ambos códigos QR
+function imprimirQRs(codigoEmpleado, nombreEmpleado) {
+    const qrEntradaCanvas = document.getElementById('qrEntrada')?.querySelector('canvas');
+    const qrSalidaCanvas = document.getElementById('qrSalida')?.querySelector('canvas');
+
+    if (!qrEntradaCanvas || !qrSalidaCanvas) {
+        showAlert('Error', 'No se encontraron los códigos QR', 'error');
+        return;
+    }
+
     const printWindow = window.open('', '_blank');
     if (printWindow) {
         printWindow.document.write(`
             <html>
                 <head>
-                    <title>Códigos QR - ${empleadoNombre}</title>
+                    <title>Códigos QR - ${nombreEmpleado}</title>
                     <style>
                         body { text-align: center; font-family: Arial, sans-serif; padding: 20px; }
-                        .qr-container { display: inline-block; margin: 20px; padding: 20px; border: 1px solid #ddd; }
+                        .qr-container { display: inline-block; margin: 20px; padding: 20px; border: 2px solid #ddd; border-radius: 8px; }
                         .qr-entrada { border-color: #16a34a; }
                         .qr-salida { border-color: #dc2626; }
                         img { max-width: 250px; }
                         h2 { margin: 0 0 10px 0; }
                         .entrada { color: #16a34a; }
                         .salida { color: #dc2626; }
-                        @media print { 
+                        @media print {
                             body { margin: 0; }
                             .no-print { display: none; }
                         }
                     </style>
                 </head>
                 <body>
-                    <h1>Códigos QR - ${empleadoNombre}</h1>
-                    
+                    <h1>Códigos QR - ${nombreEmpleado}</h1>
+                    <p><strong>Código:</strong> ${codigoEmpleado}</p>
+
                     <div class="qr-container qr-entrada">
                         <h2 class="entrada">🟢 ENTRADA</h2>
-                        <img src="${ADMIN_CONFIG.apiUrl}/qr/generate/${empleadoId}?tipo=entrada" alt="QR Entrada">
+                        <img src="${qrEntradaCanvas.toDataURL()}" alt="QR Entrada">
                     </div>
-                    
+
                     <div class="qr-container qr-salida">
                         <h2 class="salida">🔴 SALIDA</h2>
-                        <img src="${ADMIN_CONFIG.apiUrl}/qr/generate/${empleadoId}?tipo=salida" alt="QR Salida">
+                        <img src="${qrSalidaCanvas.toDataURL()}" alt="QR Salida">
                     </div>
-                    
+
                     <p class="no-print">
                         <button onclick="window.print()">🖨️ Imprimir</button>
                         <button onclick="window.close()">❌ Cerrar</button>
@@ -2299,24 +2370,16 @@ async function toggleEmployeeStatus(empleadoId) {
     
     try {
         showLoading(`${action.charAt(0).toUpperCase() + action.slice(1)}ando empleado...`);
-        
-        const response = await fetch(`${ADMIN_CONFIG.apiUrl}/empleados/${empleadoId}`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ activo: newStatus })
-        });
-        
-        const result = await response.json();
-        
-        if (response.ok && result.success) {
+
+        const result = await SupabaseAPI.toggleEmpleadoActivo(empleadoId, newStatus);
+
+        if (result.success) {
             showAlert('Éxito', `Empleado ${action}ado correctamente`, 'success');
             await loadEmployees();
         } else {
             showAlert('Error', result.message || `Error al ${action} empleado`, 'error');
         }
-        
+
     } catch (error) {
         console.error(`Error ${action}ando empleado:`, error);
         showAlert('Error', 'Error de conexión', 'error');
@@ -2327,23 +2390,19 @@ async function toggleEmployeeStatus(empleadoId) {
 
 async function deleteEmployee(empleadoId) {
     if (!confirm('¿Estás seguro de eliminar este empleado? Esta acción no se puede deshacer.')) return;
-    
+
     try {
         showLoading('Eliminando empleado...');
-        
-        const response = await fetch(`${ADMIN_CONFIG.apiUrl}/empleados/${empleadoId}`, {
-            method: 'DELETE'
-        });
-        
-        const result = await response.json();
-        
-        if (response.ok && result.success) {
+
+        const result = await SupabaseAPI.deleteEmpleado(empleadoId);
+
+        if (result.success) {
             showAlert('Éxito', 'Empleado eliminado correctamente', 'success');
             await loadEmployees();
         } else {
             showAlert('Error', result.message || 'Error eliminando empleado', 'error');
         }
-        
+
     } catch (error) {
         console.error('Error eliminando empleado:', error);
         showAlert('Error', 'Error de conexión', 'error');
