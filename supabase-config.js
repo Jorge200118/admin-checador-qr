@@ -258,19 +258,25 @@ const SupabaseAPI = {
         }
     },
 
-    async createEmpleado(empleadoData) {
+    async createEmpleado(empleadoData, fotoBase64 = null) {
         try {
+            // Subir foto si existe
+            let fotoUrl = null;
+            if (fotoBase64) {
+                fotoUrl = await this.uploadFotoEmpleado(empleadoData.codigo_empleado, fotoBase64);
+            }
+
             const { data, error } = await supabaseClient
                 .from('empleados')
                 .insert({
                     codigo_empleado: empleadoData.codigo_empleado,
                     nombre: empleadoData.nombre,
                     apellido: empleadoData.apellido,
-                    email: empleadoData.email || null,
-                    telefono: empleadoData.telefono || null,
                     horario_id: empleadoData.horario_id || null,
-                    foto_perfil: empleadoData.foto_perfil || null,
-                    activo: true,
+                    sucursal: empleadoData.sucursal || null,
+                    puesto: empleadoData.puesto || null,
+                    foto_perfil: fotoUrl,
+                    activo: empleadoData.activo !== undefined ? empleadoData.activo : true,
                     trabaja_domingo: empleadoData.trabaja_domingo || false
                 })
                 .select()
@@ -299,18 +305,24 @@ const SupabaseAPI = {
         }
     },
 
-    async updateEmpleado(empleadoId, empleadoData) {
+    async updateEmpleado(empleadoId, empleadoData, fotoBase64 = null) {
         try {
+            // Subir foto si existe
+            let fotoUrl = empleadoData.foto_perfil;
+            if (fotoBase64) {
+                fotoUrl = await this.uploadFotoEmpleado(empleadoData.codigo_empleado, fotoBase64);
+            }
+
             const { data, error } = await supabaseClient
                 .from('empleados')
                 .update({
                     codigo_empleado: empleadoData.codigo_empleado,
                     nombre: empleadoData.nombre,
                     apellido: empleadoData.apellido,
-                    email: empleadoData.email || null,
-                    telefono: empleadoData.telefono || null,
                     horario_id: empleadoData.horario_id || null,
-                    foto_perfil: empleadoData.foto_perfil || null,
+                    sucursal: empleadoData.sucursal || null,
+                    puesto: empleadoData.puesto || null,
+                    foto_perfil: fotoUrl,
                     activo: empleadoData.activo !== undefined ? empleadoData.activo : true,
                     trabaja_domingo: empleadoData.trabaja_domingo || false
                 })
@@ -327,7 +339,7 @@ const SupabaseAPI = {
 
         } catch (error) {
             console.error('Error actualizando empleado:', error);
-            return { success: false, message: 'Error al actualizar empleado' };
+            return { success: false, message: error.message || 'Error al actualizar empleado' };
         }
     },
 
@@ -370,6 +382,27 @@ const SupabaseAPI = {
         }
     },
 
+    async getQRConfigByEmpleado(empleadoId) {
+        try {
+            const { data, error } = await supabaseClient
+                .from('configuracion_qr')
+                .select('*')
+                .eq('empleado_id', empleadoId)
+                .single();
+
+            if (error) throw error;
+
+            return {
+                success: true,
+                data: data
+            };
+
+        } catch (error) {
+            console.error('Error obteniendo configuración QR:', error);
+            return { success: false, message: 'Error al obtener configuración QR' };
+        }
+    },
+
     // ==========================================
     // HORARIOS
     // ==========================================
@@ -382,6 +415,7 @@ const SupabaseAPI = {
                     bloques:bloques_horario(
                         id,
                         orden_bloque,
+                        descripcion,
                         hora_entrada,
                         hora_salida,
                         tolerancia_entrada_min,
@@ -392,9 +426,23 @@ const SupabaseAPI = {
 
             if (error) throw error;
 
+            // Obtener conteo de empleados por horario
+            const horariosConConteo = await Promise.all((data || []).map(async (horario) => {
+                const { count } = await supabaseClient
+                    .from('empleados')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('horario_id', horario.id)
+                    .eq('activo', true);
+
+                return {
+                    ...horario,
+                    empleados_count: count || 0
+                };
+            }));
+
             return {
                 success: true,
-                data: data || []
+                data: horariosConConteo
             };
 
         } catch (error) {
@@ -642,6 +690,40 @@ const SupabaseAPI = {
     // ==========================================
     // STORAGE - FOTOS
     // ==========================================
+    async uploadFotoEmpleado(codigoEmpleado, base64Data) {
+        try {
+            // Convertir base64 a blob
+            const base64 = base64Data.replace(/^data:image\/\w+;base64,/, '');
+            const byteCharacters = atob(base64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: 'image/jpeg' });
+
+            // Nombre del archivo usando código de empleado
+            const filename = `emp_${codigoEmpleado}_${Date.now()}.jpg`;
+
+            // Subir a Storage
+            const { data, error } = await supabaseClient.storage
+                .from('empleados-fotos')
+                .upload(filename, blob, {
+                    contentType: 'image/jpeg',
+                    upsert: true
+                });
+
+            if (error) throw error;
+
+            // Retornar solo el nombre del archivo (no la URL completa)
+            return filename;
+
+        } catch (error) {
+            console.error('Error subiendo foto:', error);
+            return null;
+        }
+    },
+
     async uploadFotoPerfil(empleadoId, base64Data) {
         try {
             // Convertir base64 a blob
