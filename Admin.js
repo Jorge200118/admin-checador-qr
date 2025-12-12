@@ -650,10 +650,9 @@ function agruparRegistrosPorEmpleadoYFecha(registros) {
             }
         }
 
-        // Convertir minutos totales a formato horas
-        const horas = Math.floor(totalMinutos / 60);
-        const minutos = totalMinutos % 60;
-        const horasFormato = `${horas}h ${minutos.toString().padStart(2, '0')}m`;
+        // Convertir minutos totales a formato decimal
+        const horasDecimal = (totalMinutos / 60).toFixed(1);
+        const horasFormato = horasDecimal;
 
         // Determinar estatus
         let estatus = 'SIN REGISTRO';
@@ -738,7 +737,7 @@ function renderHoraBadge(registro) {
 
 function calcularHorasTrabajadasGrupo(grupo) {
     // Usar el nuevo campo que calcula correctamente los pares entrada-salida
-    return grupo.horas_trabajadas || '0h 00m';
+    return grupo.horas_trabajadas || '0.0';
 }
 
 function getEstatusClassAdvanced(estatus) {
@@ -4142,9 +4141,9 @@ async function exportarRegistros(tipo) {
                 // Verificar que la salida sea posterior a la entrada
                 if (salida > entrada) {
                     const diffMs = salida - entrada;
-                    const diffHoras = Math.floor(diffMs / (1000 * 60 * 60));
-                    const diffMinutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-                    horasTrabajadas = `${diffHoras}h ${diffMinutos}m`;
+                    const diffMinutos = Math.floor(diffMs / (1000 * 60));
+                    const horasDecimal = (diffMinutos / 60).toFixed(1);
+                    horasTrabajadas = horasDecimal;
                 } else {
                     // Si la salida es antes de la entrada, hay un error en los datos
                     horasTrabajadas = 'Error';
