@@ -3407,97 +3407,52 @@ async function mostrarReporteEjecutivo() {
         
         console.log('📅 Fechas seleccionadas:', fechasSeleccionadas);
         console.log('👤 Empleados seleccionados:', empleadosFiltrados);
-        
-        // FILTRAR POR EMPLEADOS Y FECHAS ESPECÍFICAS
-        const registrosVisibles = adminState.registrosData || [];
-        
-        const registrosFiltrados = registrosVisibles.filter(registro => {
-            const esEmpleadoSeleccionado = empleadosFiltrados.includes(registro.empleado_id?.toString());
-            
-            // Si tenemos fechas seleccionadas, filtrar también por esas fechas
-            if (fechasSeleccionadas.length > 0 && esEmpleadoSeleccionado) {
-                const fechaRegistro = getMazatlanTime(registro.fecha_hora).toISOString().split('T')[0];
-                return fechasSeleccionadas.includes(fechaRegistro);
-            }
-            
-            return esEmpleadoSeleccionado;
-        });
-        
-        console.log('📊 Registros EXACTOS filtrados:', registrosFiltrados);
-        
-        // Calcular métricas de TODOS los días seleccionados
-        const checkIns = registrosFiltrados.filter(r => r.tipo_registro === 'ENTRADA').length;
-        const checkOuts = registrosFiltrados.filter(r => r.tipo_registro === 'SALIDA').length;
-        
-        // Calcular horas trabajadas de TODOS los días seleccionados
-        let totalMinutosTrabajados = 0;
-        const diasTrabajados = {};
 
-        // Ordenar registros cronológicamente antes de agrupar
-        const registrosOrdenados = registrosFiltrados.sort((a, b) => {
-            return new Date(a.fecha_hora) - new Date(b.fecha_hora);
-        });
+        // SUMAR DIRECTAMENTE DE LA COLUMNA "HRS TRABAJADAS" DE LAS FILAS SELECCIONADAS
+        let totalHorasTrabajadas = 0;
+        let checkIns = 0;
+        let checkOuts = 0;
 
-        // Agrupar TODOS los registros por día (no solo uno)
-        registrosOrdenados.forEach(registro => {
-            const fechaRegistro = getMazatlanTime(registro.fecha_hora).toISOString().split('T')[0];
+        checkboxesMarcados.forEach(checkbox => {
+            const fila = checkbox.closest('tr');
 
-            if (!diasTrabajados[fechaRegistro]) {
-                diasTrabajados[fechaRegistro] = [];
-            }
-
-            // Guardar TODOS los registros del día con su timestamp
-            diasTrabajados[fechaRegistro].push({
-                tipo: registro.tipo_registro,
-                fecha_hora: getMazatlanTime(registro.fecha_hora)
-            });
-        });
-
-        // Calcular horas por cada día emparejando entrada-salida consecutivos
-        Object.keys(diasTrabajados).forEach(fecha => {
-            const registrosDia = diasTrabajados[fecha].sort((a, b) => a.fecha_hora - b.fecha_hora);
-
-            console.log(`📅 Fecha ${fecha}:`, registrosDia.map(r => `${r.tipo} ${r.fecha_hora.toLocaleTimeString()}`).join(', '));
-
-            let entradaPendiente = null;
-
-            for (let i = 0; i < registrosDia.length; i++) {
-                const registro = registrosDia[i];
-
-                if (registro.tipo === 'ENTRADA') {
-                    entradaPendiente = registro.fecha_hora;
-                    console.log(`  ⏱️ ENTRADA guardada: ${entradaPendiente.toLocaleTimeString()}`);
-                } else if (registro.tipo === 'SALIDA' && entradaPendiente) {
-                    // Calcular minutos de esta pareja entrada-salida
-                    const diferencia = registro.fecha_hora - entradaPendiente;
-                    const minutos = Math.floor(diferencia / (1000 * 60));
-                    console.log(`  ✅ PAR: ${entradaPendiente.toLocaleTimeString()} → ${registro.fecha_hora.toLocaleTimeString()} = ${minutos} min (${(minutos/60).toFixed(2)} hrs)`);
-                    totalMinutosTrabajados += Math.max(0, minutos); // Evitar minutos negativos
-
-                    entradaPendiente = null; // Resetear para la siguiente pareja
-                } else if (registro.tipo === 'SALIDA' && !entradaPendiente) {
-                    console.log(`  ⚠️ SALIDA ignorada (sin entrada previa): ${registro.fecha_hora.toLocaleTimeString()}`);
+            // Obtener horas trabajadas de la columna (ya están calculadas)
+            const horasCell = fila.querySelector('.horas-trabajadas');
+            if (horasCell) {
+                const horas = parseFloat(horasCell.textContent.trim());
+                if (!isNaN(horas)) {
+                    totalHorasTrabajadas += horas;
+                    console.log(`✅ Fila: ${horas} horas`);
                 }
             }
 
-            if (entradaPendiente) {
-                console.log(`  ⚠️ ENTRADA sin SALIDA: ${entradaPendiente.toLocaleTimeString()}`);
+            // Contar check-ins y check-outs por fila
+            const checkInCell = fila.querySelector('.hora-badge:not(.sin-registro)');
+            const checkOutCell = fila.querySelectorAll('.hora-badge:not(.sin-registro)')[1];
+
+            if (checkInCell && !checkInCell.textContent.includes('--:--')) {
+                checkIns++;
+            }
+            if (checkOutCell && !checkOutCell.textContent.includes('--:--')) {
+                checkOuts++;
             }
         });
 
-        console.log(`🎯 TOTAL: ${totalMinutosTrabajados} minutos = ${(totalMinutosTrabajados/60).toFixed(2)} horas`);
-        
-        const horasLaboradas = Math.floor(totalMinutosTrabajados / 60);
-        const minutosLaboradas = totalMinutosTrabajados % 60;
-        const formatoLaborado = `${horasLaboradas}:${minutosLaboradas.toString().padStart(2, '0')}`;
-        
+        console.log(`🎯 TOTAL HORAS TRABAJADAS: ${totalHorasTrabajadas.toFixed(2)} horas`);
+
+        // Convertir horas decimales a formato HH:MM
+        const horasEnteras = Math.floor(totalHorasTrabajadas);
+        const minutosDecimales = (totalHorasTrabajadas - horasEnteras) * 60;
+        const minutos = Math.round(minutosDecimales);
+        const formatoLaborado = `${horasEnteras}:${minutos.toString().padStart(2, '0')}`;
+
         const data = {
             registros_check_in: checkIns,
             registros_check_out: checkOuts,
             retardos_tiempo_formato: "00:00",
             retardos_minutos_total: 0,
             total_laborado_formato: formatoLaborado,
-            total_laborado_horas: totalMinutosTrabajados / 60,
+            total_laborado_horas: totalHorasTrabajadas,
             fecha_generacion: new Date()
         };
         
