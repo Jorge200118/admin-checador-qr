@@ -3433,8 +3433,13 @@ async function mostrarReporteEjecutivo() {
         let totalMinutosTrabajados = 0;
         const diasTrabajados = {};
 
+        // Ordenar registros cronológicamente antes de agrupar
+        const registrosOrdenados = registrosFiltrados.sort((a, b) => {
+            return new Date(a.fecha_hora) - new Date(b.fecha_hora);
+        });
+
         // Agrupar TODOS los registros por día (no solo uno)
-        registrosFiltrados.forEach(registro => {
+        registrosOrdenados.forEach(registro => {
             const fechaRegistro = getMazatlanTime(registro.fecha_hora).toISOString().split('T')[0];
 
             if (!diasTrabajados[fechaRegistro]) {
