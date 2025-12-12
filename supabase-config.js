@@ -789,7 +789,7 @@ const SupabaseAPI = {
                 .gte('fecha_hora', inicioHoy.toISOString())
                 .lte('fecha_hora', finHoy.toISOString())
                 .not('foto_registro', 'is', null)
-                .order('fecha_hora', { ascending: false });
+                .order('fecha_hora', { ascending: true });
 
             if (error) throw error;
 
