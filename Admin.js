@@ -3452,6 +3452,8 @@ async function mostrarReporteEjecutivo() {
         Object.keys(diasTrabajados).forEach(fecha => {
             const registrosDia = diasTrabajados[fecha].sort((a, b) => a.fecha_hora - b.fecha_hora);
 
+            console.log(`📅 Fecha ${fecha}:`, registrosDia.map(r => `${r.tipo} ${r.fecha_hora.toLocaleTimeString()}`).join(', '));
+
             let entradaPendiente = null;
 
             for (let i = 0; i < registrosDia.length; i++) {
@@ -3459,16 +3461,26 @@ async function mostrarReporteEjecutivo() {
 
                 if (registro.tipo === 'ENTRADA') {
                     entradaPendiente = registro.fecha_hora;
+                    console.log(`  ⏱️ ENTRADA guardada: ${entradaPendiente.toLocaleTimeString()}`);
                 } else if (registro.tipo === 'SALIDA' && entradaPendiente) {
                     // Calcular minutos de esta pareja entrada-salida
                     const diferencia = registro.fecha_hora - entradaPendiente;
                     const minutos = Math.floor(diferencia / (1000 * 60));
+                    console.log(`  ✅ PAR: ${entradaPendiente.toLocaleTimeString()} → ${registro.fecha_hora.toLocaleTimeString()} = ${minutos} min (${(minutos/60).toFixed(2)} hrs)`);
                     totalMinutosTrabajados += Math.max(0, minutos); // Evitar minutos negativos
 
                     entradaPendiente = null; // Resetear para la siguiente pareja
+                } else if (registro.tipo === 'SALIDA' && !entradaPendiente) {
+                    console.log(`  ⚠️ SALIDA ignorada (sin entrada previa): ${registro.fecha_hora.toLocaleTimeString()}`);
                 }
             }
+
+            if (entradaPendiente) {
+                console.log(`  ⚠️ ENTRADA sin SALIDA: ${entradaPendiente.toLocaleTimeString()}`);
+            }
         });
+
+        console.log(`🎯 TOTAL: ${totalMinutosTrabajados} minutos = ${(totalMinutosTrabajados/60).toFixed(2)} horas`);
         
         const horasLaboradas = Math.floor(totalMinutosTrabajados / 60);
         const minutosLaboradas = totalMinutosTrabajados % 60;
