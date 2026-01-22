@@ -3466,8 +3466,12 @@ async function mostrarReporteEjecutivo() {
         });
 
         // Calcular horas por cada día emparejando entrada-salida consecutivos
+        console.log('🔍 Días trabajados agrupados:', diasTrabajados);
+
         Object.keys(diasTrabajados).forEach(fecha => {
             const registrosDia = diasTrabajados[fecha].sort((a, b) => a.fecha_hora - b.fecha_hora);
+
+            console.log(`📅 Procesando fecha ${fecha}:`, registrosDia);
 
             let entradaPendiente = null;
 
@@ -3476,16 +3480,31 @@ async function mostrarReporteEjecutivo() {
 
                 if (registro.tipo === 'ENTRADA') {
                     entradaPendiente = registro.fecha_hora;
+                    console.log(`  ✅ ENTRADA detectada: ${registro.fecha_hora.toLocaleTimeString('es-MX')}`);
                 } else if (registro.tipo === 'SALIDA' && entradaPendiente) {
                     // Calcular minutos de esta pareja entrada-salida
                     const diferencia = registro.fecha_hora - entradaPendiente;
                     const minutos = Math.floor(diferencia / (1000 * 60));
+                    const horas = Math.floor(minutos / 60);
+                    const mins = minutos % 60;
+
+                    console.log(`  ✅ SALIDA detectada: ${registro.fecha_hora.toLocaleTimeString('es-MX')}`);
+                    console.log(`  ⏱️ Tiempo trabajado: ${horas}h ${mins}min (${minutos} minutos totales)`);
+
                     totalMinutosTrabajados += Math.max(0, minutos); // Evitar minutos negativos
 
                     entradaPendiente = null; // Resetear para la siguiente pareja
+                } else if (registro.tipo === 'SALIDA' && !entradaPendiente) {
+                    console.log(`  ⚠️ SALIDA sin ENTRADA previa: ${registro.fecha_hora.toLocaleTimeString('es-MX')}`);
                 }
             }
+
+            if (entradaPendiente) {
+                console.log(`  ⚠️ ENTRADA sin SALIDA: ${entradaPendiente.toLocaleTimeString('es-MX')}`);
+            }
         });
+
+        console.log(`⏱️ TOTAL MINUTOS TRABAJADOS: ${totalMinutosTrabajados} minutos`);
         
         const horasLaboradas = Math.floor(totalMinutosTrabajados / 60);
         const minutosLaboradas = totalMinutosTrabajados % 60;
