@@ -3424,84 +3424,42 @@ async function mostrarReporteEjecutivo() {
         
         console.log('📅 Fechas seleccionadas:', fechasSeleccionadas);
         console.log('👤 Empleados seleccionados:', empleadosFiltrados);
-        
-        // FILTRAR POR EMPLEADOS Y FECHAS ESPECÍFICAS
-        const registrosVisibles = adminState.registrosData || [];
-        
-        const registrosFiltrados = registrosVisibles.filter(registro => {
-            const esEmpleadoSeleccionado = empleadosFiltrados.includes(registro.empleado_id?.toString());
-            
-            // Si tenemos fechas seleccionadas, filtrar también por esas fechas
-            if (fechasSeleccionadas.length > 0 && esEmpleadoSeleccionado) {
-                const fechaRegistro = getMazatlanTime(registro.fecha_hora).toISOString().split('T')[0];
-                return fechasSeleccionadas.includes(fechaRegistro);
+
+        // OBTENER LOS GRUPOS YA CALCULADOS DE LA TABLA
+        const gruposCalculados = agruparRegistrosPorEmpleadoYFecha(adminState.registrosData || []);
+
+        // FILTRAR SOLO LOS GRUPOS SELECCIONADOS
+        const gruposSeleccionados = gruposCalculados.filter(grupo => {
+            const empleadoSeleccionado = empleadosFiltrados.includes(grupo.empleado_id?.toString());
+
+            if (!empleadoSeleccionado) return false;
+
+            // Si hay fechas específicas seleccionadas, filtrar por ellas
+            if (fechasSeleccionadas.length > 0) {
+                const fechaGrupo = new Date(grupo.fecha).toISOString().split('T')[0];
+                return fechasSeleccionadas.includes(fechaGrupo);
             }
-            
-            return esEmpleadoSeleccionado;
+
+            return true;
         });
-        
-        console.log('📊 Registros EXACTOS filtrados:', registrosFiltrados);
-        
-        // Calcular métricas de TODOS los días seleccionados
-        const checkIns = registrosFiltrados.filter(r => r.tipo_registro === 'ENTRADA').length;
-        const checkOuts = registrosFiltrados.filter(r => r.tipo_registro === 'SALIDA').length;
-        
-        // Calcular horas trabajadas de TODOS los días seleccionados
+
+        console.log('📊 Grupos seleccionados para reporte:', gruposSeleccionados);
+
+        // SUMAR LAS HORAS YA CALCULADAS DE CADA GRUPO
         let totalMinutosTrabajados = 0;
-        const diasTrabajados = {};
+        let checkIns = 0;
+        let checkOuts = 0;
 
-        // Agrupar TODOS los registros por día (no solo uno)
-        registrosFiltrados.forEach(registro => {
-            const fechaRegistro = getMazatlanTime(registro.fecha_hora).toISOString().split('T')[0];
+        gruposSeleccionados.forEach(grupo => {
+            // Sumar los minutos totales ya calculados
+            const minutosGrupo = grupo.minutos_totales || 0;
+            totalMinutosTrabajados += minutosGrupo;
 
-            if (!diasTrabajados[fechaRegistro]) {
-                diasTrabajados[fechaRegistro] = [];
-            }
+            // Contar entradas y salidas
+            if (grupo.entrada) checkIns++;
+            if (grupo.salida) checkOuts++;
 
-            // Guardar TODOS los registros del día con su timestamp
-            diasTrabajados[fechaRegistro].push({
-                tipo: registro.tipo_registro,
-                fecha_hora: getMazatlanTime(registro.fecha_hora)
-            });
-        });
-
-        // Calcular horas por cada día emparejando entrada-salida consecutivos
-        console.log('🔍 Días trabajados agrupados:', diasTrabajados);
-
-        Object.keys(diasTrabajados).forEach(fecha => {
-            const registrosDia = diasTrabajados[fecha].sort((a, b) => a.fecha_hora - b.fecha_hora);
-
-            console.log(`📅 Procesando fecha ${fecha}:`, registrosDia);
-
-            let entradaPendiente = null;
-
-            for (let i = 0; i < registrosDia.length; i++) {
-                const registro = registrosDia[i];
-
-                if (registro.tipo === 'ENTRADA') {
-                    entradaPendiente = registro.fecha_hora;
-                    console.log(`  ✅ ENTRADA detectada: ${registro.fecha_hora.toLocaleTimeString('es-MX')}`);
-                } else if (registro.tipo === 'SALIDA' && entradaPendiente) {
-                    // Calcular minutos de esta pareja entrada-salida
-                    const diferencia = registro.fecha_hora - entradaPendiente;
-                    const minutos = Math.floor(diferencia / (1000 * 60));
-                    const horas = Math.floor(minutos / 60);
-                    const mins = minutos % 60;
-
-                    console.log(`  ✅ SALIDA detectada: ${registro.fecha_hora.toLocaleTimeString('es-MX')}`);
-                    console.log(`  ⏱️ Tiempo trabajado: ${horas}h ${mins}min (${minutos} minutos totales)`);
-
-                    totalMinutosTrabajados += Math.max(0, minutos); // Evitar minutos negativos
-
-                    entradaPendiente = null; // Resetear para la siguiente pareja
-                } else if (registro.tipo === 'SALIDA' && !entradaPendiente) {
-                    console.log(`  ⚠️ SALIDA sin ENTRADA previa: ${registro.fecha_hora.toLocaleTimeString('es-MX')}`);
-                }
-            }
-
-            if (entradaPendiente) {
-                console.log(`  ⚠️ ENTRADA sin SALIDA: ${entradaPendiente.toLocaleTimeString('es-MX')}`);
-            }
+            console.log(`  📅 ${new Date(grupo.fecha).toLocaleDateString('es-MX')}: ${grupo.horas_trabajadas} hrs (${minutosGrupo} min)`);
         });
 
         console.log(`⏱️ TOTAL MINUTOS TRABAJADOS: ${totalMinutosTrabajados} minutos`);
