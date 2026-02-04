@@ -116,6 +116,18 @@ async function initializeAdmin() {
     console.log('🚀 Inicializando panel administrativo...');
 
     try {
+        // Obtener sesión del usuario logueado
+        const session = JSON.parse(localStorage.getItem('session_sucursal') || sessionStorage.getItem('session_sucursal'));
+        if (!session || !session.sucursal) {
+            console.error('❌ Error: No hay sesión de usuario válida');
+            window.location.href = 'login-sucursal.html';
+            return;
+        }
+
+        // Guardar sucursal del usuario en variable global
+        window.currentUserSucursal = session.sucursal;
+        console.log(`👤 Usuario logueado en sucursal: ${window.currentUserSucursal}`);
+
         // Inicializar Supabase
         if (!initSupabase()) {
             console.error('❌ Error: No se pudo inicializar Supabase');
@@ -281,8 +293,8 @@ async function loadDashboardData() {
             if (el) el.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size: 14px;"></i>';
         });
 
-        // NUEVO: Usar Supabase API
-        const result = await SupabaseAPI.getDashboardEstadisticas();
+        // NUEVO: Usar Supabase API con filtro de sucursal
+        const result = await SupabaseAPI.getDashboardEstadisticas(window.currentUserSucursal);
         console.log('📊 Respuesta de Supabase:', result);
 
         if (result.success && result.data) {
@@ -290,7 +302,7 @@ async function loadDashboardData() {
 
             // Cargar tablas adicionales
             try {
-                const empleadosData = await SupabaseAPI.getEmpleadosPresentes();
+                const empleadosData = await SupabaseAPI.getEmpleadosPresentes(window.currentUserSucursal);
                 if (empleadosData.success) {
                     updateEmpleadosPresentesTable(empleadosData.data || []);
                 }
@@ -299,7 +311,7 @@ async function loadDashboardData() {
             }
 
             try {
-                const registrosData = await SupabaseAPI.getRegistrosRecientes();
+                const registrosData = await SupabaseAPI.getRegistrosRecientes(10, window.currentUserSucursal);
                 if (registrosData.success) {
                     updateUltimosRegistrosTable(registrosData.data || []);
                 }
@@ -330,8 +342,8 @@ async function loadDashboardData() {
 
 async function loadEmployees() {
     try {
-        // NUEVO: Usar Supabase API
-        const data = await SupabaseAPI.getEmpleados();
+        // NUEVO: Usar Supabase API con filtro de sucursal
+        const data = await SupabaseAPI.getEmpleados(window.currentUserSucursal);
 
         if (data.success) {
             // Transformar datos para incluir horario_nombre
@@ -365,8 +377,8 @@ async function loadHorarios() {
 
 async function loadRecentRegistros() {
     try {
-        // NUEVO: Usar Supabase API
-        const data = await SupabaseAPI.getRegistrosToday(50);
+        // NUEVO: Usar Supabase API con filtro de sucursal
+        const data = await SupabaseAPI.getRegistrosToday(50, window.currentUserSucursal);
 
         if (data.success) {
             adminState.registrosData = data.data || data.registros || [];
@@ -446,9 +458,9 @@ async function loadRegistrosData() {
 // Cargar empleados para el filtro
 async function loadEmpleadosForFilter() {
     try {
-        // NUEVO: Usar Supabase API
-        const data = await SupabaseAPI.getEmpleados();
-        
+        // NUEVO: Usar Supabase API con filtro de sucursal
+        const data = await SupabaseAPI.getEmpleados(window.currentUserSucursal);
+
         if (data.success && data.data) {
             const selectEmpleado = document.getElementById('filterEmpleado');
             if (selectEmpleado) {
@@ -1946,8 +1958,9 @@ async function filtrarRegistros() {
     try {
         showLoading('Filtrando registros...');
 
-        // NUEVO: Usar Supabase API
+        // NUEVO: Usar Supabase API con filtro de sucursal del usuario
         const filtros = {
+            sucursalUsuario: window.currentUserSucursal, // SIEMPRE filtrar por sucursal del usuario
             empleadoId: empleadoId || null,
             tipo: tipo || null,
             sucursal: sucursal || null,

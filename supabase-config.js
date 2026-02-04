@@ -37,33 +37,46 @@ const SupabaseAPI = {
     // ==========================================
     // DASHBOARD
     // ==========================================
-    async getDashboardEstadisticas() {
+    async getDashboardEstadisticas(sucursal = null) {
         try {
             const hoy = new Date();
             const inicioHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
             const finHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59);
 
             // Contar empleados presentes (con entrada hoy sin salida)
-            const { count: presentes } = await supabaseClient
+            let queryPresentes = supabaseClient
                 .from('registros')
-                .select('empleado_id', { count: 'exact', head: true })
+                .select('empleado_id, empleado:empleados!inner(sucursal)', { count: 'exact', head: true })
                 .eq('tipo_registro', 'ENTRADA')
                 .gte('fecha_hora', inicioHoy.toISOString())
                 .lte('fecha_hora', finHoy.toISOString());
 
+            if (sucursal) {
+                queryPresentes = queryPresentes.eq('empleado.sucursal', sucursal);
+            }
+
+            const { count: presentes } = await queryPresentes;
+
             // Contar total de registros hoy
-            const { count: registrosHoy } = await supabaseClient
+            let queryRegistros = supabaseClient
                 .from('registros')
-                .select('*', { count: 'exact', head: true })
+                .select('*, empleado:empleados!inner(sucursal)', { count: 'exact', head: true })
                 .gte('fecha_hora', inicioHoy.toISOString())
                 .lte('fecha_hora', finHoy.toISOString());
 
+            if (sucursal) {
+                queryRegistros = queryRegistros.eq('empleado.sucursal', sucursal);
+            }
+
+            const { count: registrosHoy } = await queryRegistros;
+
             // Contar llegadas tarde (usando bloques de horario)
-            const { data: registrosConBloque } = await supabaseClient
+            let queryTarde = supabaseClient
                 .from('registros')
                 .select(`
                     id,
                     fecha_hora,
+                    empleado:empleados!inner(sucursal),
                     bloque_horario:bloques_horario(
                         hora_entrada,
                         tolerancia_entrada_min
@@ -73,6 +86,12 @@ const SupabaseAPI = {
                 .gte('fecha_hora', inicioHoy.toISOString())
                 .lte('fecha_hora', finHoy.toISOString())
                 .not('bloque_horario_id', 'is', null);
+
+            if (sucursal) {
+                queryTarde = queryTarde.eq('empleado.sucursal', sucursal);
+            }
+
+            const { data: registrosConBloque } = await queryTarde;
 
             let llegadasTarde = 0;
             if (registrosConBloque) {
@@ -87,11 +106,17 @@ const SupabaseAPI = {
             }
 
             // Tablets activas (contar tablets únicas en registros de hoy)
-            const { data: tablets } = await supabaseClient
+            let queryTablets = supabaseClient
                 .from('registros')
-                .select('tablet_id')
+                .select('tablet_id, empleado:empleados!inner(sucursal)')
                 .gte('fecha_hora', inicioHoy.toISOString())
                 .lte('fecha_hora', finHoy.toISOString());
+
+            if (sucursal) {
+                queryTablets = queryTablets.eq('empleado.sucursal', sucursal);
+            }
+
+            const { data: tablets } = await queryTablets;
 
             const tabletsActivas = tablets ? new Set(tablets.map(t => t.tablet_id)).size : 0;
 
@@ -111,26 +136,34 @@ const SupabaseAPI = {
         }
     },
 
-    async getEmpleadosPresentes() {
+    async getEmpleadosPresentes(sucursal = null) {
         try {
             const hoy = new Date();
             const inicioHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
 
-            const { data, error } = await supabaseClient
+            let query = supabaseClient
                 .from('registros')
                 .select(`
                     id,
                     fecha_hora,
-                    empleado:empleados(
+                    empleado:empleados!inner(
                         id,
                         codigo_empleado,
                         nombre,
-                        apellido
+                        apellido,
+                        sucursal
                     )
                 `)
                 .eq('tipo_registro', 'ENTRADA')
-                .gte('fecha_hora', inicioHoy.toISOString())
-                .order('fecha_hora', { ascending: false });
+                .gte('fecha_hora', inicioHoy.toISOString());
+
+            if (sucursal) {
+                query = query.eq('empleado.sucursal', sucursal);
+            }
+
+            query = query.order('fecha_hora', { ascending: false });
+
+            const { data, error } = await query;
 
             if (error) throw error;
 
@@ -155,23 +188,30 @@ const SupabaseAPI = {
         }
     },
 
-    async getRegistrosRecientes(limit = 10) {
+    async getRegistrosRecientes(limit = 10, sucursal = null) {
         try {
-            const { data, error } = await supabaseClient
+            let query = supabaseClient
                 .from('registros')
                 .select(`
                     id,
                     fecha_hora,
                     tipo_registro,
                     tablet_id,
-                    empleado:empleados(
+                    empleado:empleados!inner(
                         codigo_empleado,
                         nombre,
-                        apellido
+                        apellido,
+                        sucursal
                     )
-                `)
-                .order('fecha_hora', { ascending: false })
-                .limit(limit);
+                `);
+
+            if (sucursal) {
+                query = query.eq('empleado.sucursal', sucursal);
+            }
+
+            query = query.order('fecha_hora', { ascending: false }).limit(limit);
+
+            const { data, error } = await query;
 
             if (error) throw error;
 
@@ -200,9 +240,9 @@ const SupabaseAPI = {
     // ==========================================
     // EMPLEADOS
     // ==========================================
-    async getEmpleados() {
+    async getEmpleados(sucursal = null) {
         try {
-            const { data, error } = await supabaseClient
+            let query = supabaseClient
                 .from('empleados')
                 .select(`
                     *,
@@ -210,8 +250,16 @@ const SupabaseAPI = {
                         id,
                         nombre
                     )
-                `)
-                .order('codigo_empleado');
+                `);
+
+            // Filtrar por sucursal si se proporciona
+            if (sucursal) {
+                query = query.eq('sucursal', sucursal);
+            }
+
+            query = query.order('codigo_empleado');
+
+            const { data, error } = await query;
 
             if (error) throw error;
 
@@ -562,20 +610,21 @@ const SupabaseAPI = {
     // ==========================================
     // REGISTROS
     // ==========================================
-    async getRegistrosToday(limit = 50) {
+    async getRegistrosToday(limit = 50, sucursal = null) {
         try {
             const hoy = new Date();
             const inicioHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
             const finHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59);
 
-            const { data, error } = await supabaseClient
+            let query = supabaseClient
                 .from('registros')
                 .select(`
                     *,
-                    empleado:empleados(
+                    empleado:empleados!inner(
                         codigo_empleado,
                         nombre,
-                        apellido
+                        apellido,
+                        sucursal
                     ),
                     bloque_horario:bloques_horario(
                         hora_entrada,
@@ -583,9 +632,15 @@ const SupabaseAPI = {
                     )
                 `)
                 .gte('fecha_hora', inicioHoy.toISOString())
-                .lte('fecha_hora', finHoy.toISOString())
-                .order('fecha_hora', { ascending: false })
-                .limit(limit);
+                .lte('fecha_hora', finHoy.toISOString());
+
+            if (sucursal) {
+                query = query.eq('empleado.sucursal', sucursal);
+            }
+
+            query = query.order('fecha_hora', { ascending: false }).limit(limit);
+
+            const { data, error } = await query;
 
             if (error) throw error;
 
@@ -611,11 +666,14 @@ const SupabaseAPI = {
 
     async getRegistrosByFecha(fechaInicio, fechaFin, filtros = {}) {
         try {
+            // Determinar si necesitamos usar !inner basado en si hay filtros de empleado/sucursal
+            const needsInner = filtros.sucursalUsuario || filtros.empleadoId;
+
             let query = supabaseClient
                 .from('registros')
                 .select(`
                     *,
-                    empleado:empleados(
+                    empleado:empleados${needsInner ? '!inner' : ''}(
                         codigo_empleado,
                         nombre,
                         apellido,
@@ -637,6 +695,11 @@ const SupabaseAPI = {
             if (fechaFin) {
                 const finStr = `${fechaFin} 23:59:59`;
                 query = query.lte('fecha_hora', finStr);
+            }
+
+            // Aplicar filtro de sucursal del usuario (si viene en filtros)
+            if (filtros.sucursalUsuario) {
+                query = query.eq('empleado.sucursal', filtros.sucursalUsuario);
             }
 
             // Aplicar filtro de empleado
