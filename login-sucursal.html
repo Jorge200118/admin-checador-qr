@@ -469,7 +469,7 @@
 
                     // Redirect to admin panel with chat
                     setTimeout(() => {
-                        window.location.href = 'admin-panel/Index.html?chat=true';
+                        window.location.href = 'Index.html?chat=true';
                     }, 1000);
                 } else {
                     showAlert(result.message || 'Usuario o contraseña incorrectos', 'error');
@@ -490,7 +490,7 @@
         }
 
         function goToAdminPanel() {
-            window.location.href = 'admin-panel/Index.html';
+            window.location.href = 'Index.html';
         }
 
         // Check if already logged in
@@ -506,7 +506,7 @@
                 const hoursSinceLogin = (now - loginTime) / (1000 * 60 * 60);
 
                 if (hoursSinceLogin < 24) {
-                    window.location.href = 'admin-panel/Index.html?chat=true';
+                    window.location.href = 'Index.html?chat=true';
                 } else {
                     // Clear expired session
                     localStorage.removeItem('session_sucursal');
