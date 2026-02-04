@@ -125,8 +125,16 @@ async function initializeAdmin() {
         }
 
         // Guardar sucursal del usuario en variable global
-        window.currentUserSucursal = session.sucursal;
-        console.log(`👤 Usuario logueado en sucursal: ${window.currentUserSucursal}`);
+        // Si es superadmin (username = superadmin), puede ver todas las sucursales
+        if (session.username === 'superadmin') {
+            window.currentUserSucursal = null; // null = ver todas las sucursales
+            window.isSuperAdmin = true;
+            console.log(`👤 SUPERADMIN logueado - Acceso a todas las sucursales`);
+        } else {
+            window.currentUserSucursal = session.sucursal;
+            window.isSuperAdmin = false;
+            console.log(`👤 Usuario logueado en sucursal: ${window.currentUserSucursal}`);
+        }
 
         // Inicializar Supabase
         if (!initSupabase()) {
