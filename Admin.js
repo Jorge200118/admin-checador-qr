@@ -887,16 +887,19 @@ async function obtenerEmpleadosSinEntradaRango() {
         button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
 
 
-        // Obtener todos los empleados activos
-        const empleadosResult = await SupabaseAPI.getEmpleados();
+        // Obtener empleados activos filtrados por sucursal del usuario
+        const empleadosResult = await SupabaseAPI.getEmpleados(window.currentUserSucursal);
         if (!empleadosResult.success) {
             throw new Error('Error obteniendo empleados');
         }
 
         const empleadosActivos = empleadosResult.data.filter(emp => emp.activo);
 
-        // Obtener todos los registros del rango
-        const registrosResult = await SupabaseAPI.getRegistrosByFecha(fechaInicio, fechaFin);
+        // Obtener registros del rango filtrados por sucursal del usuario
+        const filtros = {
+            sucursalUsuario: window.currentUserSucursal
+        };
+        const registrosResult = await SupabaseAPI.getRegistrosByFecha(fechaInicio, fechaFin, filtros);
         if (!registrosResult.success) {
             throw new Error('Error obteniendo registros');
         }
