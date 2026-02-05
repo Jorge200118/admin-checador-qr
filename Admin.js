@@ -1697,10 +1697,12 @@ function renderRegistrosTable() {
 // ================================
 function openEmployeeModal(employeeId = null) {
     adminState.selectedEmployee = employeeId;
-    
+
     const modal = elements.modalEmpleado;
     const title = document.getElementById('modalEmpleadoTitle');
-    
+    const sucursalField = document.getElementById('empSucursal');
+    const sucursalGroup = sucursalField?.closest('.form-group');
+
     if (employeeId) {
         if (title) title.textContent = 'Editar Empleado';
         loadEmployeeData(employeeId);
@@ -1708,8 +1710,23 @@ function openEmployeeModal(employeeId = null) {
         if (title) title.textContent = 'Nuevo Empleado';
         if (elements.formEmpleado) elements.formEmpleado.reset();
         clearPhotoPreview();
+
+        // Si NO es superadmin, ocultar el select de sucursal y pre-llenarlo
+        if (!window.isSuperAdmin && window.currentUserSucursal) {
+            if (sucursalField) {
+                sucursalField.value = window.currentUserSucursal;
+            }
+            if (sucursalGroup) {
+                sucursalGroup.style.display = 'none';
+            }
+        } else {
+            // Si es superadmin, mostrar el select
+            if (sucursalGroup) {
+                sucursalGroup.style.display = 'block';
+            }
+        }
     }
-    
+
     openModal('modalEmpleado');
 }
 
@@ -1740,6 +1757,22 @@ async function loadEmployeeData(employeeId) {
 
             if (emp.foto_perfil) {
                 showPhotoPreview(getSupabaseFotoUrl(emp.foto_perfil));
+            }
+
+            // Controlar visibilidad del campo sucursal al editar
+            const sucursalField = document.getElementById('empSucursal');
+            const sucursalGroup = sucursalField?.closest('.form-group');
+
+            if (!window.isSuperAdmin) {
+                // Usuarios normales no pueden cambiar la sucursal al editar
+                if (sucursalGroup) {
+                    sucursalGroup.style.display = 'none';
+                }
+            } else {
+                // Superadmin puede editar la sucursal
+                if (sucursalGroup) {
+                    sucursalGroup.style.display = 'block';
+                }
             }
 
             adminState.selectedEmployee = emp;
