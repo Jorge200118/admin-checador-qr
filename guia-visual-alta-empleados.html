@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guía Visual - Alta de Empleados</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .intro {
+            background: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .intro h2 {
+            color: #1e40af;
+            margin-bottom: 10px;
+        }
+
+        .step {
+            margin-bottom: 40px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .step:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+
+        .step-header {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .step-number {
+            width: 50px;
+            height: 50px;
+            background: white;
+            color: #3b82f6;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .step-title {
+            flex: 1;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .step-body {
+            padding: 25px;
+        }
+
+        .field-group {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .field-group:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .field-label {
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .badge-required {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        .badge-optional {
+            background: #f0fdf4;
+            color: #16a34a;
+        }
+
+        .field-description {
+            color: #475569;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .tips {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+
+        .tips-title {
+            color: #0f172a;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .tips ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .tips li {
+            padding: 4px 0;
+            color: #475569;
+            position: relative;
+            padding-left: 20px;
+        }
+
+        .tips li::before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #3b82f6;
+            font-weight: bold;
+        }
+
+        .warning-box {
+            background: #fff7ed;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+
+        .warning-box strong {
+            color: #92400e;
+        }
+
+        .success-box {
+            background: #f0fdf4;
+            border-left: 4px solid #10b981;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+        }
+
+        .success-box h3 {
+            color: #065f46;
+            margin-bottom: 15px;
+        }
+
+        .success-box ol {
+            color: #065f46;
+            padding-left: 20px;
+        }
+
+        .success-box li {
+            padding: 5px 0;
+            line-height: 1.6;
+        }
+
+        .footer {
+            background: #f8fafc;
+            padding: 30px;
+            text-align: center;
+            color: #64748b;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .container {
+                box-shadow: none;
+            }
+
+            .step {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 Guía Rápida</h1>
+            <p>Cómo dar de alta un nuevo empleado</p>
+        </div>
+
+        <div class="content">
+            <div class="intro">
+                <h2>🎯 Bienvenido</h2>
+                <p>Esta guía te mostrará paso a paso cómo registrar un nuevo empleado en el sistema de checador QR. El proceso es simple y solo toma 2-3 minutos.</p>
+            </div>
+
+            <!-- Paso 1 -->
+            <div class="step">
+                <div class="step-header">
+                    <div class="step-number">1</div>
+                    <div class="step-title">Acceder al formulario</div>
+                </div>
+                <div class="step-body">
+                    <div class="field-group">
+                        <div class="field-description">
+                            En el panel administrativo, ve a la sección <strong>"Empleados"</strong> y haz clic en el botón azul <strong>"Nuevo Empleado"</strong>.
+                        </div>
+                        <div class="tips">
+                            <div class="tips-title">💡 Consejo:</div>
+                            <ul>
+                                <li>Si es tu primera vez, haz clic en el botón "Tutorial" para una guía interactiva</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Paso 2 -->
+            <div class="step">
+                <div class="step-header">
+                    <div class="step-number">2</div>
+                    <div class="step-title">Datos básicos del empleado</div>
+                </div>
+                <div class="step-body">
+                    <div class="field-group">
+                        <div class="field-label">
+                            Código de Empleado
+                            <span class="badge badge-required">Obligatorio</span>
+                        </div>
+                        <div class="field-description">
+                            Identificador único del empleado (ejemplo: EMP001, EMP002, etc.)
+                        </div>
+                        <div class="tips">
+                            <div class="tips-title">💡 Consejos:</div>
+                            <ul>
+                                <li>Usa un formato consistente</li>
+                                <li>No puede repetirse con otro empleado</li>
+                                <li>Asegúrate de que sea fácil de recordar</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <div class="field-label">
+                            Nombre
+                            <span class="badge badge-required">Obligatorio</span>
+                        </div>
+                        <div class="field-description">
+                            Nombre(s) del empleado
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <div class="field-label">
+                            Apellido
+                            <span class="badge badge-required">Obligatorio</span>
+                        </div>
+                        <div class="field-description">
+                            Apellido(s) del empleado
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Paso 3 -->
+            <div class="step">
+                <div class="step-header">
+                    <div class="step-number">3</div>
+                    <div class="step-title">Sucursal y puesto de trabajo</div>
+                </div>
+                <div class="step-body">
+                    <div class="field-group">
+                        <div class="field-label">
+                            Sucursal
+                            <span class="badge badge-required">Obligatorio</span>
+                        </div>
+                        <div class="field-description">
+                            Selecciona la sucursal donde el empleado estará asignado
+                        </div>
+                        <div class="tips">
+                            <div class="tips-title">💡 Importante:</div>
+                            <ul>
+                                <li>Esta información se usará para filtrar reportes</li>
+                                <li>El empleado solo aparecerá en las tablets de su sucursal</li>
+                                <li>Puedes cambiar la sucursal después editando el empleado</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <div class="field-label">
+                            Puesto
+                        </div>
+                        <div class="field-description">
+                            Especifica el cargo o puesto del empleado (ejemplos: VENTAS, CHOFER, ALMACÉN, CAJERA, etc.)
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Paso 4 -->
+            <div class="step">
+                <div class="step-header">
+                    <div class="step-number">4</div>
+                    <div class="step-title">Asignar horario de trabajo</div>
+                </div>
+                <div class="step-body">
+                    <div class="field-group">
+                        <div class="field-label">
+                            Horario
+                            <span class="badge badge-required">Obligatorio</span>
+                        </div>
+                        <div class="field-description">
+                            Selecciona el horario que seguirá el empleado. Este horario determina las horas de entrada y salida esperadas.
+                        </div>
+                        <div class="warning-box">
+                            <strong>⚠️ Importante:</strong> El horario debe existir previamente. Si no encuentras el horario adecuado, créalo primero en la sección "Horarios".
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Paso 5 -->
+            <div class="step">
+                <div class="step-header">
+                    <div class="step-number">5</div>
+                    <div class="step-title">Foto y configuración adicional</div>
+                </div>
+                <div class="step-body">
+                    <div class="field-group">
+                        <div class="field-label">
+                            Foto de Perfil
+                            <span class="badge badge-optional">Opcional</span>
+                        </div>
+                        <div class="field-description">
+                            Sube una foto del empleado para facilitar su identificación
+                        </div>
+                        <div class="tips">
+                            <div class="tips-title">💡 Recomendaciones:</div>
+                            <ul>
+                                <li>Usa una foto reciente y clara</li>
+                                <li>Formato recomendado: JPG o PNG</li>
+                                <li>Tamaño máximo: 5 MB</li>
+                                <li>La foto aparecerá en la tablet al hacer check-in</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <div class="field-label">
+                            Trabaja domingos
+                        </div>
+                        <div class="field-description">
+                            Marca esta casilla si el empleado trabaja los domingos. Esto afecta cómo se calculan las asistencias y reportes semanales.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Paso 6 -->
+            <div class="step">
+                <div class="step-header">
+                    <div class="step-number">6</div>
+                    <div class="step-title">Guardar y finalizar</div>
+                </div>
+                <div class="step-body">
+                    <div class="field-description">
+                        Una vez completados todos los campos obligatorios, haz clic en el botón <strong>"Guardar"</strong> en la parte inferior del formulario.
+                    </div>
+
+                    <div class="success-box">
+                        <h3>✅ ¿Qué sigue después?</h3>
+                        <ol>
+                            <li>El empleado aparecerá en la lista de empleados</li>
+                            <li>Podrás imprimir su código QR para que lo use en las tablets</li>
+                            <li>Empezará a registrar asistencias según su horario</li>
+                            <li>Podrás ver sus registros en la sección "Registros"</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>Sistema Checador QR V2</strong></p>
+            <p>Para más ayuda, usa el Tutorial interactivo en el portal administrativo</p>
+        </div>
+    </div>
+</body>
+</html>

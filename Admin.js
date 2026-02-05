@@ -4237,3 +4237,167 @@ window.agregarBloqueHorario = (bloqueExistente = null) => {
 window.guardarConfiguracion = () => showAlert('Info', 'Función de configuración en desarrollo', 'info');
 window.viewPhoto = (url) => window.open(url, '_blank');
 
+
+// ============================================
+// TUTORIAL INTERACTIVO DE NUEVO EMPLEADO
+// ============================================
+
+let tutorialCurrentStep = 1;
+const tutorialTotalSteps = 5;
+
+/**
+ * Inicia el tutorial de alta de empleados
+ */
+window.iniciarTutorialEmpleado = function() {
+    tutorialCurrentStep = 1;
+    const modal = document.getElementById('modalTutorialEmpleado');
+    if (modal) {
+        modal.style.display = 'block';
+        actualizarPasoTutorial();
+    }
+};
+
+/**
+ * Cierra el tutorial
+ */
+window.cerrarTutorialEmpleado = function() {
+    const modal = document.getElementById('modalTutorialEmpleado');
+    if (modal) {
+        modal.style.display = 'none';
+        tutorialCurrentStep = 1;
+    }
+};
+
+/**
+ * Avanza al siguiente paso del tutorial
+ */
+window.siguientePasoTutorial = function() {
+    if (tutorialCurrentStep < tutorialTotalSteps) {
+        tutorialCurrentStep++;
+        actualizarPasoTutorial();
+    }
+};
+
+/**
+ * Retrocede al paso anterior del tutorial
+ */
+window.anteriorPasoTutorial = function() {
+    if (tutorialCurrentStep > 1) {
+        tutorialCurrentStep--;
+        actualizarPasoTutorial();
+    }
+};
+
+/**
+ * Finaliza el tutorial y abre el modal de nuevo empleado
+ */
+window.finalizarTutorial = function() {
+    cerrarTutorialEmpleado();
+
+    // Abrir el modal de nuevo empleado después de cerrar el tutorial
+    setTimeout(() => {
+        const btnNuevoEmpleado = document.getElementById('btnNuevoEmpleado');
+        if (btnNuevoEmpleado) {
+            btnNuevoEmpleado.click();
+        }
+    }, 300);
+};
+
+/**
+ * Actualiza la visualización del tutorial según el paso actual
+ */
+function actualizarPasoTutorial() {
+    // Actualizar indicadores de paso
+    document.querySelectorAll('.step-indicator').forEach((indicator, index) => {
+        const stepNumber = index + 1;
+        indicator.classList.remove('active', 'completed');
+
+        if (stepNumber === tutorialCurrentStep) {
+            indicator.classList.add('active');
+        } else if (stepNumber < tutorialCurrentStep) {
+            indicator.classList.add('completed');
+        }
+    });
+
+    // Actualizar contenido de pasos
+    document.querySelectorAll('.tutorial-step').forEach(step => {
+        step.classList.remove('active');
+    });
+
+    const currentStepElement = document.querySelector(`.tutorial-step[data-step="${tutorialCurrentStep}"]`);
+    if (currentStepElement) {
+        currentStepElement.classList.add('active');
+    }
+
+    // Actualizar contador de pasos
+    const stepCounter = document.getElementById('tutorialCurrentStep');
+    if (stepCounter) {
+        stepCounter.textContent = tutorialCurrentStep;
+    }
+
+    // Actualizar botones
+    const btnPrev = document.getElementById('btnTutorialPrev');
+    const btnNext = document.getElementById('btnTutorialNext');
+    const btnFinish = document.getElementById('btnTutorialFinish');
+
+    if (btnPrev) {
+        btnPrev.style.display = tutorialCurrentStep === 1 ? 'none' : 'inline-flex';
+    }
+
+    if (btnNext && btnFinish) {
+        if (tutorialCurrentStep === tutorialTotalSteps) {
+            btnNext.style.display = 'none';
+            btnFinish.style.display = 'inline-flex';
+        } else {
+            btnNext.style.display = 'inline-flex';
+            btnFinish.style.display = 'none';
+        }
+    }
+
+    // Scroll al inicio del contenido
+    const modalBody = document.querySelector('#modalTutorialEmpleado .modal-body');
+    if (modalBody) {
+        modalBody.scrollTop = 0;
+    }
+}
+
+/**
+ * Cierra el tutorial al hacer clic fuera del modal
+ */
+window.addEventListener('click', function(event) {
+    const modal = document.getElementById('modalTutorialEmpleado');
+    if (event.target === modal) {
+        cerrarTutorialEmpleado();
+    }
+});
+
+/**
+ * Manejo de teclas para navegación del tutorial
+ */
+document.addEventListener('keydown', function(event) {
+    const modal = document.getElementById('modalTutorialEmpleado');
+    if (modal && modal.style.display === 'block') {
+        // Flecha derecha o Enter: siguiente paso
+        if (event.key === 'ArrowRight' || event.key === 'Enter') {
+            if (tutorialCurrentStep < tutorialTotalSteps) {
+                siguientePasoTutorial();
+            } else {
+                finalizarTutorial();
+            }
+            event.preventDefault();
+        }
+        // Flecha izquierda: paso anterior
+        else if (event.key === 'ArrowLeft') {
+            anteriorPasoTutorial();
+            event.preventDefault();
+        }
+        // Escape: cerrar tutorial
+        else if (event.key === 'Escape') {
+            cerrarTutorialEmpleado();
+            event.preventDefault();
+        }
+    }
+});
+
+console.log('✅ Tutorial de empleados inicializado');
+

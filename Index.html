@@ -179,9 +179,14 @@
         <section id="empleados" class="content-section">
             <div class="section-header">
                 <h2>Gestión de Empleados</h2>
-                <button class="btn btn-primary" id="btnNuevoEmpleado">
-                    <i class="fas fa-plus"></i> Nuevo Empleado
-                </button>
+                <div class="header-actions-group">
+                    <button class="btn btn-info" id="btnTutorialEmpleado" onclick="iniciarTutorialEmpleado()">
+                        <i class="fas fa-question-circle"></i> Tutorial
+                    </button>
+                    <button class="btn btn-primary" id="btnNuevoEmpleado">
+                        <i class="fas fa-plus"></i> Nuevo Empleado
+                    </button>
+                </div>
             </div>
 
             <div class="filters">
@@ -723,6 +728,286 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
     <script src="Admin.js"></script>
+<!-- MODAL DE TUTORIAL PARA NUEVO EMPLEADO -->
+<div id="modalTutorialEmpleado" class="modal">
+    <div class="modal-content modal-tutorial">
+        <div class="modal-header">
+            <h3><i class="fas fa-graduation-cap"></i> Tutorial: Cómo dar de alta un nuevo empleado</h3>
+            <span class="close" onclick="cerrarTutorialEmpleado()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <!-- Navegación de pasos -->
+            <div class="tutorial-progress">
+                <div class="step-indicator active" data-step="1">
+                    <div class="step-number">1</div>
+                    <div class="step-label">Introducción</div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step-indicator" data-step="2">
+                    <div class="step-number">2</div>
+                    <div class="step-label">Datos básicos</div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step-indicator" data-step="3">
+                    <div class="step-number">3</div>
+                    <div class="step-label">Ubicación</div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step-indicator" data-step="4">
+                    <div class="step-number">4</div>
+                    <div class="step-label">Horario</div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step-indicator" data-step="5">
+                    <div class="step-number">5</div>
+                    <div class="step-label">Foto y extras</div>
+                </div>
+            </div>
+
+            <!-- Contenido de pasos -->
+            <div class="tutorial-content">
+                <!-- Paso 1: Introducción -->
+                <div class="tutorial-step active" data-step="1">
+                    <div class="step-icon">
+                        <i class="fas fa-user-plus fa-3x"></i>
+                    </div>
+                    <h3>Bienvenido al asistente de alta de empleados</h3>
+                    <p>Este tutorial te guiará paso a paso para registrar un nuevo empleado en el sistema de checador QR.</p>
+
+                    <div class="info-box">
+                        <h4><i class="fas fa-info-circle"></i> ¿Qué necesitas tener listo?</h4>
+                        <ul>
+                            <li><i class="fas fa-check"></i> Código único del empleado</li>
+                            <li><i class="fas fa-check"></i> Nombre completo</li>
+                            <li><i class="fas fa-check"></i> Sucursal donde trabajará</li>
+                            <li><i class="fas fa-check"></i> Puesto o cargo</li>
+                            <li><i class="fas fa-check"></i> Horario asignado</li>
+                            <li><i class="fas fa-check"></i> Foto de perfil (opcional)</li>
+                        </ul>
+                    </div>
+
+                    <div class="time-estimate">
+                        <i class="fas fa-clock"></i> Tiempo estimado: <strong>2-3 minutos</strong>
+                    </div>
+                </div>
+
+                <!-- Paso 2: Datos básicos -->
+                <div class="tutorial-step" data-step="2">
+                    <h3><i class="fas fa-id-card"></i> Paso 1: Datos básicos del empleado</h3>
+
+                    <div class="tutorial-field">
+                        <div class="field-demo">
+                            <label>Código de Empleado:</label>
+                            <input type="text" class="form-input demo-input" placeholder="Ej: EMP001" readonly>
+                            <span class="required-badge">Obligatorio</span>
+                        </div>
+                        <div class="field-explanation">
+                            <h4>Código de Empleado</h4>
+                            <p>Es el identificador único del empleado. Puede ser un número de nómina, un código alfanumérico, etc.</p>
+                            <div class="tips">
+                                <strong>💡 Consejos:</strong>
+                                <ul>
+                                    <li>Usa un formato consistente (Ej: EMP001, EMP002)</li>
+                                    <li>No puede repetirse con otro empleado</li>
+                                    <li>Asegúrate de que sea fácil de recordar</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tutorial-field">
+                        <div class="field-demo">
+                            <label>Nombre:</label>
+                            <input type="text" class="form-input demo-input" placeholder="Ej: Juan" readonly>
+                            <span class="required-badge">Obligatorio</span>
+                        </div>
+                        <div class="field-explanation">
+                            <h4>Nombre</h4>
+                            <p>Nombre(s) del empleado.</p>
+                        </div>
+                    </div>
+
+                    <div class="tutorial-field">
+                        <div class="field-demo">
+                            <label>Apellido:</label>
+                            <input type="text" class="form-input demo-input" placeholder="Ej: Pérez García" readonly>
+                            <span class="required-badge">Obligatorio</span>
+                        </div>
+                        <div class="field-explanation">
+                            <h4>Apellido</h4>
+                            <p>Apellido(s) del empleado.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Paso 3: Ubicación y puesto -->
+                <div class="tutorial-step" data-step="3">
+                    <h3><i class="fas fa-building"></i> Paso 2: Sucursal y puesto de trabajo</h3>
+
+                    <div class="tutorial-field">
+                        <div class="field-demo">
+                            <label>Sucursal:</label>
+                            <select class="form-select demo-input" disabled>
+                                <option>Seleccionar sucursal</option>
+                                <option>MATRIZ</option>
+                                <option>LA PAZ</option>
+                                <option>TAMARAL</option>
+                                <option>CABOS</option>
+                            </select>
+                            <span class="required-badge">Obligatorio</span>
+                        </div>
+                        <div class="field-explanation">
+                            <h4>Sucursal</h4>
+                            <p>Selecciona la sucursal donde el empleado estará asignado.</p>
+                            <div class="tips">
+                                <strong>💡 Importante:</strong>
+                                <ul>
+                                    <li>Esta información se usará para filtrar reportes</li>
+                                    <li>El empleado solo aparecerá en las tablets de su sucursal</li>
+                                    <li>Puedes cambiar la sucursal después editando el empleado</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tutorial-field">
+                        <div class="field-demo">
+                            <label>Puesto:</label>
+                            <input type="text" class="form-input demo-input" placeholder="Ej: VENTAS, ALMACÉN, ENCARGADO" readonly>
+                        </div>
+                        <div class="field-explanation">
+                            <h4>Puesto</h4>
+                            <p>Especifica el cargo o puesto del empleado.</p>
+                            <div class="tips">
+                                <strong>💡 Ejemplos comunes:</strong>
+                                <ul>
+                                    <li>VENTAS</li>
+                                    <li>CHOFER</li>
+                                    <li>TRABAJADOR DE PATIO</li>
+                                    <li>AUXILIAR CONTABLE</li>
+                                    <li>ENCARGADO DE SUCURSAL</li>
+                                    <li>CAJERA</li>
+                                    <li>ALMACEN</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Paso 4: Horario -->
+                <div class="tutorial-step" data-step="4">
+                    <h3><i class="fas fa-clock"></i> Paso 3: Asignar horario de trabajo</h3>
+
+                    <div class="tutorial-field">
+                        <div class="field-demo">
+                            <label>Horario:</label>
+                            <select class="form-select demo-input" disabled>
+                                <option>Seleccionar horario...</option>
+                                <option>Horario Oficina (8:00-17:00)</option>
+                                <option>Turno Matutino (6:00-14:00)</option>
+                                <option>Turno Vespertino (14:00-22:00)</option>
+                            </select>
+                            <span class="required-badge">Obligatorio</span>
+                        </div>
+                        <div class="field-explanation">
+                            <h4>Horario de trabajo</h4>
+                            <p>Selecciona el horario que seguirá el empleado. Este horario determina las horas de entrada y salida esperadas.</p>
+                            <div class="warning-box">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <strong>Importante:</strong> El horario debe existir previamente. Si no encuentras el horario adecuado, créalo primero en la sección "Horarios".
+                            </div>
+                            <div class="tips">
+                                <strong>💡 ¿Qué incluye un horario?</strong>
+                                <ul>
+                                    <li>Hora de entrada y salida</li>
+                                    <li>Bloques de trabajo (si hay turnos partidos)</li>
+                                    <li>Tolerancia de retardo</li>
+                                    <li>Horas objetivo diarias</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Paso 5: Foto y extras -->
+                <div class="tutorial-step" data-step="5">
+                    <h3><i class="fas fa-camera"></i> Paso 4: Foto y configuración adicional</h3>
+
+                    <div class="tutorial-field">
+                        <div class="field-demo">
+                            <label>Foto de Perfil:</label>
+                            <div class="file-upload-demo">
+                                <i class="fas fa-image fa-2x"></i>
+                                <p>Haz clic para seleccionar una foto</p>
+                            </div>
+                            <span class="optional-badge">Opcional</span>
+                        </div>
+                        <div class="field-explanation">
+                            <h4>Foto de perfil</h4>
+                            <p>Sube una foto del empleado para facilitar su identificación.</p>
+                            <div class="tips">
+                                <strong>💡 Recomendaciones:</strong>
+                                <ul>
+                                    <li>Usa una foto reciente y clara</li>
+                                    <li>Formato recomendado: JPG o PNG</li>
+                                    <li>Tamaño máximo: 5 MB</li>
+                                    <li>La foto aparecerá en la tablet al hacer check-in</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tutorial-field">
+                        <div class="field-demo">
+                            <label>
+                                <input type="checkbox" class="demo-checkbox" disabled>
+                                Trabaja domingos
+                            </label>
+                        </div>
+                        <div class="field-explanation">
+                            <h4>Trabaja domingos</h4>
+                            <p>Marca esta casilla si el empleado trabaja los domingos.</p>
+                            <div class="tips">
+                                <strong>💡 Nota:</strong> Esto afecta cómo se calculan las asistencias y reportes semanales.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="success-box">
+                        <i class="fas fa-check-circle"></i>
+                        <h4>¡Listo para guardar!</h4>
+                        <p>Una vez que hayas llenado todos los campos obligatorios, presiona el botón "Guardar" y el empleado será dado de alta en el sistema.</p>
+                    </div>
+
+                    <div class="next-steps">
+                        <h4><i class="fas fa-forward"></i> ¿Qué sigue después?</h4>
+                        <ol>
+                            <li>El empleado aparecerá en la lista de empleados</li>
+                            <li>Podrás imprimir su código QR para que lo use en las tablets</li>
+                            <li>Empezará a registrar asistencias según su horario</li>
+                            <li>Podrás ver sus registros en la sección "Registros"</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer tutorial-footer">
+            <button class="btn btn-secondary" id="btnTutorialPrev" onclick="anteriorPasoTutorial()">
+                <i class="fas fa-arrow-left"></i> Anterior
+            </button>
+            <div class="tutorial-step-counter">
+                <span id="tutorialCurrentStep">1</span> / 5
+            </div>
+            <button class="btn btn-primary" id="btnTutorialNext" onclick="siguientePasoTutorial()">
+                Siguiente <i class="fas fa-arrow-right"></i>
+            </button>
+            <button class="btn btn-success" id="btnTutorialFinish" onclick="finalizarTutorial()" style="display: none;">
+                <i class="fas fa-check"></i> ¡Entendido! Crear empleado
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL PARA EDITAR HORARIOS - AGREGAR AL FINAL DE INDEX.HTML -->
 <div id="horarioModal" class="modal">
     <div class="modal-content modal-large">
