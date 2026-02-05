@@ -421,20 +421,43 @@ async function loadSectionData(section) {
 // Cargar datos específicos para registros
 async function loadRegistrosData() {
     try {
-        
+
         // Cargar registros
         await loadRecentRegistros();
-        
+
         // Cargar empleados para el filtro
         await loadEmpleadosForFilter();
-        
+
+        // Configurar filtro de sucursal según rol del usuario
+        configurarFiltroSucursal();
+
         // Establecer fechas por defecto
         setDefaultDates();
-        
+
         // Actualizar estadísticas
         updateRegistrosStats();
-        
+
     } catch (error) {
+    }
+}
+
+// Configurar el filtro de sucursal según el rol del usuario
+function configurarFiltroSucursal() {
+    const filterSucursal = document.getElementById('filterSucursal');
+    if (!filterSucursal) return;
+
+    if (!window.isSuperAdmin && window.currentUserSucursal) {
+        // Usuario normal: ocultar el filtro completamente
+        const filterGroup = filterSucursal.closest('.filter-group');
+        if (filterGroup) {
+            filterGroup.style.display = 'none';
+        }
+    } else {
+        // Superadmin: mostrar el filtro con todas las opciones
+        const filterGroup = filterSucursal.closest('.filter-group');
+        if (filterGroup) {
+            filterGroup.style.display = 'block';
+        }
     }
 }
 
@@ -1933,18 +1956,19 @@ async function filtrarRegistros() {
     
     const empleadoId = document.getElementById('filterEmpleado').value;
     const tipo = document.getElementById('filterTipo').value;
-    const sucursal = document.getElementById('filterSucursal').value;
+    const sucursal = document.getElementById('filterSucursal')?.value;
     const puesto = document.getElementById('filterPuesto').value;
-    
+
     try {
         showLoading('Filtrando registros...');
 
         // NUEVO: Usar Supabase API con filtro de sucursal del usuario
         const filtros = {
-            sucursalUsuario: window.currentUserSucursal, // SIEMPRE filtrar por sucursal del usuario
+            sucursalUsuario: window.currentUserSucursal, // SIEMPRE filtrar por sucursal del usuario (null si es superadmin)
             empleadoId: empleadoId || null,
             tipo: tipo || null,
-            sucursal: sucursal || null,
+            // Solo aplicar filtro de sucursal adicional si es superadmin
+            sucursal: (window.isSuperAdmin && sucursal) ? sucursal : null,
             puesto: puesto || null
         };
 
