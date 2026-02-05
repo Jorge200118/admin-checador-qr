@@ -2797,9 +2797,6 @@ async function renderEstadisticasConDatosReales() {
             empleados = await empleadosRes.value.json();
         }
         
-            registros: registros.data?.length || 0,
-            empleados: empleados.data?.length || 0
-        });
         
         const container = document.querySelector('#estadisticas-content') || 
                          crearContenedorEstadisticas();
