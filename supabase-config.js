@@ -14,7 +14,6 @@ let supabaseClient = null;
 // Inicializar cliente de Supabase
 function initSupabase() {
     if (typeof supabase === 'undefined') {
-        console.error('❌ Librería de Supabase no cargada');
         return false;
     }
 
@@ -23,7 +22,6 @@ function initSupabase() {
         SUPABASE_CONFIG.anonKey
     );
 
-    console.log('✅ Cliente de Supabase inicializado');
     return true;
 }
 
@@ -131,7 +129,6 @@ const SupabaseAPI = {
             };
 
         } catch (error) {
-            console.error('Error obteniendo estadísticas:', error);
             return { success: false, message: 'Error al obtener estadísticas' };
         }
     },
@@ -183,7 +180,6 @@ const SupabaseAPI = {
             };
 
         } catch (error) {
-            console.error('Error obteniendo empleados presentes:', error);
             return { success: false, message: 'Error al obtener empleados presentes' };
         }
     },
@@ -232,7 +228,6 @@ const SupabaseAPI = {
             };
 
         } catch (error) {
-            console.error('Error obteniendo registros recientes:', error);
             return { success: false, message: 'Error al obtener registros recientes' };
         }
     },
@@ -269,7 +264,6 @@ const SupabaseAPI = {
             };
 
         } catch (error) {
-            console.error('Error obteniendo empleados:', error);
             return { success: false, message: 'Error al obtener empleados' };
         }
     },
@@ -301,7 +295,6 @@ const SupabaseAPI = {
             };
 
         } catch (error) {
-            console.error('Error obteniendo empleado:', error);
             return { success: false, message: 'Error al obtener empleado' };
         }
     },
@@ -348,7 +341,6 @@ const SupabaseAPI = {
             };
 
         } catch (error) {
-            console.error('Error creando empleado:', error);
             return { success: false, message: error.message || 'Error al crear empleado' };
         }
     },
@@ -386,7 +378,6 @@ const SupabaseAPI = {
             };
 
         } catch (error) {
-            console.error('Error actualizando empleado:', error);
             return { success: false, message: error.message || 'Error al actualizar empleado' };
         }
     },
@@ -403,7 +394,6 @@ const SupabaseAPI = {
             return { success: true };
 
         } catch (error) {
-            console.error('Error eliminando empleado:', error);
             return { success: false, message: 'Error al eliminar empleado' };
         }
     },
@@ -425,7 +415,6 @@ const SupabaseAPI = {
             };
 
         } catch (error) {
-            console.error('Error cambiando estado de empleado:', error);
             return { success: false, message: 'Error al cambiar estado' };
         }
     },
@@ -446,7 +435,6 @@ const SupabaseAPI = {
             };
 
         } catch (error) {
-            console.error('Error obteniendo configuración QR:', error);
             return { success: false, message: 'Error al obtener configuración QR' };
         }
     },
@@ -494,7 +482,6 @@ const SupabaseAPI = {
             };
 
         } catch (error) {
-            console.error('Error obteniendo horarios:', error);
             return { success: false, message: 'Error al obtener horarios' };
         }
     },
@@ -535,7 +522,6 @@ const SupabaseAPI = {
             };
 
         } catch (error) {
-            console.error('Error creando horario:', error);
             return { success: false, message: 'Error al crear horario' };
         }
     },
@@ -557,7 +543,6 @@ const SupabaseAPI = {
             };
 
         } catch (error) {
-            console.error('Error cambiando estado de horario:', error);
             return { success: false, message: 'Error al cambiar estado' };
         }
     },
@@ -581,7 +566,6 @@ const SupabaseAPI = {
             return { success: true };
 
         } catch (error) {
-            console.error('Error eliminando horario:', error);
             return { success: false, message: 'Error al eliminar horario' };
         }
     },
@@ -602,7 +586,6 @@ const SupabaseAPI = {
             };
 
         } catch (error) {
-            console.error('Error obteniendo empleados del horario:', error);
             return { success: false, message: 'Error al obtener empleados' };
         }
     },
@@ -659,7 +642,6 @@ const SupabaseAPI = {
             };
 
         } catch (error) {
-            console.error('Error obteniendo registros de hoy:', error);
             return { success: false, message: 'Error al obtener registros' };
         }
     },
@@ -745,7 +727,6 @@ const SupabaseAPI = {
             };
 
         } catch (error) {
-            console.error('Error obteniendo registros por fecha:', error);
             return { success: false, message: 'Error al obtener registros' };
         }
     },
@@ -782,7 +763,6 @@ const SupabaseAPI = {
             return filename;
 
         } catch (error) {
-            console.error('Error subiendo foto:', error);
             return null;
         }
     },
@@ -823,7 +803,6 @@ const SupabaseAPI = {
             };
 
         } catch (error) {
-            console.error('Error subiendo foto de perfil:', error);
             return { success: false, message: 'Error al subir foto' };
         }
     },
@@ -875,7 +854,6 @@ const SupabaseAPI = {
             };
 
         } catch (error) {
-            console.error('Error obteniendo fotos de registro:', error);
             return { success: false, message: 'Error al obtener fotos', data: [] };
         }
     },
@@ -938,7 +916,6 @@ const SupabaseAPI = {
             };
 
         } catch (error) {
-            console.error('Error en login:', error);
             return {
                 success: false,
                 message: 'Error al procesar el login'
@@ -961,7 +938,6 @@ const SupabaseAPI = {
             return { success: true };
 
         } catch (error) {
-            console.error('Error actualizando último acceso:', error);
             return { success: false };
         }
     },
@@ -997,7 +973,6 @@ const SupabaseAPI = {
             return { success: true, data: data || [] };
 
         } catch (error) {
-            console.error('Error obteniendo usuarios:', error);
             return { success: false, data: [] };
         }
     },
@@ -1029,7 +1004,6 @@ const SupabaseAPI = {
             return { success: true, data };
 
         } catch (error) {
-            console.error('Error creando usuario:', error);
             return {
                 success: false,
                 message: error.message || 'Error al crear usuario'
@@ -1069,7 +1043,6 @@ const SupabaseAPI = {
             return { success: true, data };
 
         } catch (error) {
-            console.error('Error actualizando usuario:', error);
             return { success: false, message: 'Error al actualizar usuario' };
         }
     },
@@ -1090,7 +1063,6 @@ const SupabaseAPI = {
             return { success: true };
 
         } catch (error) {
-            console.error('Error eliminando usuario:', error);
             return { success: false, message: 'Error al eliminar usuario' };
         }
     },
@@ -1112,7 +1084,6 @@ const SupabaseAPI = {
             return { success: true };
 
         } catch (error) {
-            console.error('Error cambiando estado de usuario:', error);
             return { success: false };
         }
     },
@@ -1140,7 +1111,6 @@ const SupabaseAPI = {
             return count > 0;
 
         } catch (error) {
-            console.error('Error verificando username:', error);
             return false;
         }
     }

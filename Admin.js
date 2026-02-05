@@ -113,13 +113,11 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 async function initializeAdmin() {
-    console.log('🚀 Inicializando panel administrativo...');
 
     try {
         // Obtener sesión del usuario logueado
         const session = JSON.parse(localStorage.getItem('session_sucursal') || sessionStorage.getItem('session_sucursal'));
         if (!session || !session.sucursal) {
-            console.error('❌ Error: No hay sesión de usuario válida');
             window.location.href = 'login-sucursal.html';
             return;
         }
@@ -129,16 +127,13 @@ async function initializeAdmin() {
         if (session.username === 'superadmin') {
             window.currentUserSucursal = null; // null = ver todas las sucursales
             window.isSuperAdmin = true;
-            console.log(`👤 SUPERADMIN logueado - Acceso a todas las sucursales`);
         } else {
             window.currentUserSucursal = session.sucursal;
             window.isSuperAdmin = false;
-            console.log(`👤 Usuario logueado en sucursal: ${window.currentUserSucursal}`);
         }
 
         // Inicializar Supabase
         if (!initSupabase()) {
-            console.error('❌ Error: No se pudo inicializar Supabase');
             showAlert('Error de configuración', 'No se pudo conectar con la base de datos', 'error');
             return;
         }
@@ -157,10 +152,8 @@ async function initializeAdmin() {
         addRequiredStyles();
         setupReportesSection();
         
-        console.log('✅ Panel administrativo inicializado');
         
     } catch (error) {
-        console.error('❌ Error inicializando admin:', error);
         showAlert('Error', 'No se pudo inicializar el panel administrativo', 'error');
     } finally {
         setTimeout(killAllSpinners, 500);
@@ -275,9 +268,7 @@ async function loadInitialData() {
         results.forEach((result, index) => {
             const names = ['Dashboard', 'Empleados', 'Horarios', 'Registros'];
             if (result.status === 'rejected') {
-                console.warn(`⚠️ Error cargando ${names[index]}:`, result.reason);
             } else {
-                console.log(`✅ ${names[index]} cargado correctamente`);
             }
         });
         
@@ -285,7 +276,6 @@ async function loadInitialData() {
         if (adminState.employeesData.length > 0) populateEmployeeSelects();
         
     } catch (error) {
-        console.error('❌ Error cargando datos:', error);
         showAlert('Error', 'No se pudieron cargar algunos datos', 'warning');
     } finally {
         hideLoading();
@@ -295,7 +285,6 @@ async function loadInitialData() {
 
 async function loadDashboardData() {
     try {
-        console.log('📊 Iniciando carga del dashboard...');
 
         document.querySelectorAll('.stat-number').forEach(el => {
             if (el) el.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size: 14px;"></i>';
@@ -303,7 +292,6 @@ async function loadDashboardData() {
 
         // NUEVO: Usar Supabase API con filtro de sucursal
         const result = await SupabaseAPI.getDashboardEstadisticas(window.currentUserSucursal);
-        console.log('📊 Respuesta de Supabase:', result);
 
         if (result.success && result.data) {
             updateDashboardStats(result.data);
@@ -315,7 +303,6 @@ async function loadDashboardData() {
                     updateEmpleadosPresentesTable(empleadosData.data || []);
                 }
             } catch (e) {
-                console.warn('⚠️ No se pudieron cargar empleados presentes');
             }
 
             try {
@@ -324,17 +311,14 @@ async function loadDashboardData() {
                     updateUltimosRegistrosTable(registrosData.data || []);
                 }
             } catch (e) {
-                console.warn('⚠️ No se pudieron cargar registros recientes');
             }
 
         } else {
             throw new Error(result.message || 'No se recibieron datos válidos');
         }
 
-        console.log('✅ Dashboard cargado correctamente');
 
     } catch (error) {
-        console.error('❌ Error cargando dashboard:', error);
 
         updateDashboardStats({
             empleados_presentes: 0,
@@ -363,7 +347,6 @@ async function loadEmployees() {
             renderEmployeesTable();
         }
     } catch (error) {
-        console.error('Error loading employees:', error);
         adminState.employeesData = [];
     }
 }
@@ -378,7 +361,6 @@ async function loadHorarios() {
             renderHorariosTable();
         }
     } catch (error) {
-        console.error('Error loading horarios:', error);
         adminState.horariosData = [];
     }
 }
@@ -399,7 +381,6 @@ async function loadRecentRegistros() {
             }
         }
     } catch (error) {
-        console.error('Error loading registros:', error);
         adminState.registrosData = [];
     }
 }
@@ -408,7 +389,6 @@ async function loadRecentRegistros() {
 // FUNCIONES DE SECCIONES
 // ================================
 async function loadSectionData(section) {
-    console.log(`Cargando datos para sección: ${section}`);
     
     switch(section) {
         case 'dashboard':
@@ -426,14 +406,11 @@ async function loadSectionData(section) {
             setupRegistrosPagination();
             break;
         case 'reportes':
-            console.log('Cargando sección de reportes...');
             setTimeout(renderEstadisticasConDatosReales, 500);
             break;
         case 'configuracion':
-            console.log('Sección de configuración (en desarrollo)');
             break;
         default:
-            console.log(`Sección no reconocida: ${section}`);
     }
 }
 
@@ -444,7 +421,6 @@ async function loadSectionData(section) {
 // Cargar datos específicos para registros
 async function loadRegistrosData() {
     try {
-        console.log('📊 Cargando datos de registros...');
         
         // Cargar registros
         await loadRecentRegistros();
@@ -459,7 +435,6 @@ async function loadRegistrosData() {
         updateRegistrosStats();
         
     } catch (error) {
-        console.error('❌ Error cargando datos de registros:', error);
     }
 }
 
@@ -485,11 +460,9 @@ async function loadEmpleadosForFilter() {
                         selectEmpleado.appendChild(option);
                     });
                 
-                console.log('✅ Empleados cargados en filtro:', data.data.length);
             }
         }
     } catch (error) {
-        console.error('❌ Error cargando empleados para filtro:', error);
     }
 }
 
@@ -516,7 +489,6 @@ function setDefaultDates() {
 function renderRegistrosTableAdvanced() {
     const tbody = document.querySelector('#registrosTable tbody');
     if (!tbody) {
-        console.warn('⚠️ No se encontró tbody de registros');
         return;
     }
     
@@ -687,7 +659,6 @@ function agruparRegistrosPorEmpleadoYFecha(registros) {
 
         // DEBUG
         if (grupo.empleado_nombre && (entradaRegistro || salidaRegistro)) {
-            console.log(`[${grupo.empleado_nombre}] ENTRADA:`, entradaRegistro?.fecha_hora, 'SALIDA:', salidaRegistro?.fecha_hora);
         }
 
         return {
@@ -819,13 +790,11 @@ async function filtrarRegistros() {
             // Usar tu función existente para renderizar
            renderRegistrosTableAdvanced();
             
-            console.log(`Filtros aplicados: ${data.registros.length} registros encontrados`);
         } else {
             showError('Error al filtrar registros: ' + data.message);
         }
         
     } catch (error) {
-        console.error('Error al filtrar registros:', error);
         showError('Error al filtrar registros');
     } finally {
         hideLoading();
@@ -894,7 +863,6 @@ async function obtenerEmpleadosSinEntradaRango() {
         button.disabled = true;
         button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
 
-        console.log(`📅 Consultando faltas desde ${fechaInicio} hasta ${fechaFin}`);
 
         // Obtener todos los empleados activos
         const empleadosResult = await SupabaseAPI.getEmpleados();
@@ -903,7 +871,6 @@ async function obtenerEmpleadosSinEntradaRango() {
         }
 
         const empleadosActivos = empleadosResult.data.filter(emp => emp.activo);
-        console.log(`👥 Empleados activos: ${empleadosActivos.length}`);
 
         // Obtener todos los registros del rango
         const registrosResult = await SupabaseAPI.getRegistrosByFecha(fechaInicio, fechaFin);
@@ -912,7 +879,6 @@ async function obtenerEmpleadosSinEntradaRango() {
         }
 
         const registros = registrosResult.data;
-        console.log(`📊 Registros obtenidos: ${registros.length}`);
 
         // Generar todas las fechas del rango
         const fechas = generarRangoFechas(fechaInicio, fechaFin);
@@ -960,7 +926,6 @@ async function obtenerEmpleadosSinEntradaRango() {
             });
         }
 
-        console.log(`📊 Total faltas encontradas: ${todasLasFaltas.length}`);
 
         if (todasLasFaltas.length === 0) {
             alert('✅ No se encontraron faltas en el rango de fechas seleccionado');
@@ -972,7 +937,6 @@ async function obtenerEmpleadosSinEntradaRango() {
         button.innerHTML = originalText;
 
     } catch (error) {
-        console.error('Error:', error);
         alert('❌ Error al consultar faltas: ' + error.message);
 
         const button = event.target;
@@ -1002,7 +966,6 @@ function generarRangoFechas(fechaInicio, fechaFin) {
 }
 
 function descargarExcelFaltasRango(empleados, fechaInicio, fechaFin) {
-    console.log('📥 Generando Excel de faltas por rango...');
     
     // Crear contenido CSV
     let csvContent = '\ufeff'; // BOM para UTF-8
@@ -1064,12 +1027,10 @@ function descargarExcelFaltasRango(empleados, fechaInicio, fechaFin) {
     link.click();
     document.body.removeChild(link);
     
-    console.log('✅ Excel de rango descargado');
     alert(`📥 Excel descargado: ${empleados.length} faltas en ${totalDias} días`);
 }
 async function verTodasFotos(empleadoId, fecha, nombre) {
     try {
-        console.log(`📸 Consultando fotos: empleado ${empleadoId}, fecha ${fecha}`);
 
         // NUEVO: Usar Supabase API
         const result = await SupabaseAPI.getFotosRegistro(empleadoId, fecha);
@@ -1080,7 +1041,6 @@ async function verTodasFotos(empleadoId, fecha, nombre) {
             alert(`📸 No hay fotos para ${nombre} el ${fecha}`);
         }
     } catch (error) {
-        console.error('Error:', error);
         alert('❌ Error al consultar fotos');
     }
 }
@@ -1241,7 +1201,6 @@ function descargarFotoIndividual(rutaFoto, nombreArchivo) {
 // Configurar paginación
 function setupRegistrosPagination() {
     // Por implementar paginación completa
-    console.log('Configurando paginación de registros...');
 }
 
 // Funciones adicionales para registros
@@ -1258,34 +1217,28 @@ function reloadRegistros() {
 
 function verFotoCompleta(url) {
     // Implementar modal para ver foto completa
-    console.log('Ver foto:', url);
     window.open(url, '_blank', 'width=600,height=600');
 }
 
 function editarRegistro(id) {
-    console.log('Editar registro:', id);
     showAlert('Info', 'Función de edición en desarrollo', 'info');
 }
 
 function eliminarRegistro(id) {
     if (confirm('¿Estás seguro de eliminar este registro?')) {
-        console.log('Eliminar registro:', id);
         showAlert('Info', 'Función de eliminación en desarrollo', 'info');
     }
 }
 
 function imprimirRegistros() {
-    console.log('Imprimiendo registros...');
     window.print();
 }
 
 function configurarColumnas() {
-    console.log('Configurar columnas...');
     showAlert('Info', 'Función de configuración de columnas en desarrollo', 'info');
 }
 
 function cambiarPagina(direccion) {
-    console.log('Cambiar página:', direccion);
     showAlert('Info', 'Paginación en desarrollo', 'info');
 }
 
@@ -1302,10 +1255,8 @@ function toggleSelectAll() {
 // ACTUALIZACIÓN DE ESTADÍSTICAS
 // ================================
 function updateDashboardStats(stats) {
-    console.log('📊 Actualizando stats dashboard:', stats);
     
     if (!stats || typeof stats !== 'object') {
-        console.warn('⚠️ Stats inválidos, usando valores por defecto');
         stats = {};
     }
     
@@ -1327,7 +1278,6 @@ function updateDashboardStats(stats) {
         const elemento = elementos[key];
         if (elemento) {
             elemento.textContent = valores[key];
-            console.log(`📈 ${key}: ${valores[key] || 0}`);
         }
     });
     
@@ -1361,7 +1311,6 @@ function updateDashboardStats(stats) {
 function updateEmpleadosPresentesTable(empleados) {
     const tbody = elements.empleadosPresentesTable?.querySelector('tbody');
     if (!tbody) {
-        console.warn('⚠️ No se encontró tabla de empleados presentes');
         return;
     }
     
@@ -1418,7 +1367,6 @@ function updateEmpleadosPresentesTable(empleados) {
 function updateUltimosRegistrosTable(registros) {
     const tbody = elements.ultimosRegistrosTable?.querySelector('tbody');
     if (!tbody) {
-        console.warn('⚠️ No se encontró tabla de últimos registros');
         return;
     }
     
@@ -1554,7 +1502,6 @@ function formatearHoraBonita(horaString) {
 
         return 'N/A';
     } catch (error) {
-        console.error('Error formateando hora:', error);
         return 'N/A';
     }
 }
@@ -1780,7 +1727,6 @@ async function loadEmployeeData(employeeId) {
             showAlert('Error', data.message || 'No se pudo cargar el empleado', 'error');
         }
     } catch (error) {
-        console.error('Error loading employee:', error);
         showAlert('Error', 'Error de conexión: ' + error.message, 'error');
     } finally {
         hideLoading();
@@ -1802,7 +1748,6 @@ async function cargarEmpleadosAutocompletar() {
         // NUEVO: Usar Supabase API
         const result = await SupabaseAPI.getEmpleados();
         
-        console.log('👥 Empleados result:', result);
         
         // USAR LA ESTRUCTURA CORRECTA
         const empleados = result.data || result || [];
@@ -1815,9 +1760,7 @@ async function cargarEmpleadosAutocompletar() {
             puesto: emp.puesto || 'Sin asignar'
         }));
         
-        console.log('✅ EmpleadosData preparada:', empleadosData.length);
     } catch (error) {
-        console.error('Error cargando empleados:', error);
     }
 }
 // Función para inicializar el autocompletar
@@ -1827,7 +1770,6 @@ function inicializarAutocompletarEmpleados() {
     const hiddenInput = document.getElementById('filterEmpleado');
     
     if (!input || !suggestions || !hiddenInput) {
-        console.error('Elementos de autocompletar no encontrados');
         return;
     }
 
@@ -1975,7 +1917,6 @@ async function filtrarRegistros() {
     const fechaFin = document.getElementById('fechaFin').value;
     
     // VALIDAR FECHAS
-    console.log('📅 Fechas originales:', { fechaInicio, fechaFin });
     
     // Si las fechas están mal, usar valores por defecto
     let fechaInicioValid = fechaInicio;
@@ -1989,7 +1930,6 @@ async function filtrarRegistros() {
         fechaFinValid = new Date().toISOString().split('T')[0];
     }
     
-    console.log('📅 Fechas validadas:', { fechaInicioValid, fechaFinValid });
     
     const empleadoId = document.getElementById('filterEmpleado').value;
     const tipo = document.getElementById('filterTipo').value;
@@ -2008,10 +1948,8 @@ async function filtrarRegistros() {
             puesto: puesto || null
         };
 
-        console.log('🔍 Aplicando filtros:', { fechaInicioValid, fechaFinValid, filtros });
 
         const data = await SupabaseAPI.getRegistrosByFecha(fechaInicioValid, fechaFinValid, filtros);
-        console.log('📊 Respuesta de Supabase:', data);
 
         if (data.success) {
             // Actualizar estado global - VERIFICAR LA ESTRUCTURA
@@ -2036,13 +1974,11 @@ async function filtrarRegistros() {
             // Renderizar tabla
             renderRegistrosTableAdvanced();
             
-            console.log(`Filtros aplicados: ${data.registros.length} registros encontrados`);
             } else {
                 showAlert('Error', 'Error al filtrar registros: ' + data.message, 'error'); // ✅ EXISTE
             }
         
     } catch (error) {
-        console.error('Error al filtrar registros:', error);
         showAlert('Error', 'Error al filtrar registros', 'error'); // ✅ EXISTE
     } finally {
         hideLoading();
@@ -2101,7 +2037,6 @@ async function cargarPuestosFiltro() {
         // NUEVO: Usar Supabase API
         const result = await SupabaseAPI.getEmpleados();
         
-        console.log('📊 Resultado puestos:', result); // Para debug
         
         // USAR LA ESTRUCTURA CORRECTA
         const empleados = result.data || result || [];
@@ -2130,10 +2065,8 @@ async function cargarPuestosFiltro() {
                 select.value = currentValue;
             }
             
-            console.log('✅ Puestos cargados:', puestos.length);
         }
     } catch (error) {
-        console.error('Error cargando puestos:', error);
     }
 }
 // Inicializar cuando se carga la página
@@ -2229,7 +2162,6 @@ async function guardarEmpleado() {
         }
 
     } catch (error) {
-        console.error('Error guardando empleado:', error);
         showAlert('Error', 'Error de conexión: ' + error.message, 'error');
     } finally {
         hideLoading();
@@ -2263,7 +2195,6 @@ async function viewEmployeeQR(empleadoId) {
         mostrarQR(empleadoId, 'entrada');
         
     } catch (error) {
-        console.error('Error obteniendo QR:', error);
         showAlert('Error', 'Error obteniendo código QR', 'error');
     } finally {
         hideLoading();
@@ -2351,7 +2282,6 @@ async function mostrarQR(empleadoId, tipo = 'entrada') {
         });
 
     } catch (error) {
-        console.error('Error mostrando QR:', error);
         showAlert('Error', 'Error al generar códigos QR', 'error');
     }
 }
@@ -2451,7 +2381,6 @@ async function toggleEmployeeStatus(empleadoId) {
         }
 
     } catch (error) {
-        console.error(`Error ${action}ando empleado:`, error);
         showAlert('Error', 'Error de conexión', 'error');
     } finally {
         hideLoading();
@@ -2474,7 +2403,6 @@ async function deleteEmployee(empleadoId) {
         }
 
     } catch (error) {
-        console.error('Error eliminando empleado:', error);
         showAlert('Error', 'Error de conexión', 'error');
     } finally {
         hideLoading();
@@ -2517,7 +2445,6 @@ function filterEmployees() {
 // GESTIÓN DE HORARIOS
 // ================================
 function openHorarioModal(horarioId = null) {
-    console.log('🕒 Abriendo modal para crear horario nuevo');
     
     const modal = document.getElementById('horarioModal');
     const modalTitle = document.getElementById('modalHorarioTitle');
@@ -2543,13 +2470,11 @@ function openHorarioModal(horarioId = null) {
     modal.style.display = 'block';
     document.body.classList.add('modal-open');
     
-    console.log('✅ Modal de crear horario abierto');
 }
 // Crear modal dinámicamente si no existe
 function createHorarioModalIfNeeded() {
     if (document.getElementById('horarioModal')) return true;
     
-    console.log('📝 Creando modal de horario dinámicamente...');
     
     const modalHTML = `
         <div id="horarioModal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
@@ -2611,7 +2536,6 @@ function createHorarioModalIfNeeded() {
     `;
     
     document.body.insertAdjacentHTML('beforeend', modalHTML);
-    console.log('✅ Modal creado dinámicamente');
     return true;
 }
 async function editHorario(horarioId) {
@@ -2624,13 +2548,11 @@ function closeHorarioModal() {
         modal.style.display = 'none';
         document.body.classList.remove('modal-open');
     }
-    console.log('✅ Modal cerrado');
 }
 async function saveHorario(event) {
     event.preventDefault();
     
     try {
-        console.log('💾 Guardando horario...');
         
         const formData = new FormData(event.target);
         const horarioId = formData.get('horario_id');
@@ -2676,7 +2598,6 @@ async function saveHorario(event) {
         
         horarioData.bloques = bloques;
         
-        console.log('📤 Datos a enviar:', horarioData);
         
         showLoading('Creando nuevo horario...');
         
@@ -2702,7 +2623,6 @@ async function saveHorario(event) {
         }
         
     } catch (error) {
-        console.error('❌ Error guardando horario:', error);
         showAlert('Error', 'Error de conexión', 'error');
     } finally {
         hideLoading();
@@ -2738,7 +2658,6 @@ function eliminarBloqueHorario(button) {
 
 async function toggleHorarioStatus(horarioId) {
     try {
-        console.log('🔄 Cambiando estado horario:', horarioId);
         
         const horario = adminState.horariosData.find(h => h.id === horarioId);
         if (!horario) {
@@ -2778,7 +2697,6 @@ async function toggleHorarioStatus(horarioId) {
         }
         
     } catch (error) {
-        console.error('❌ Error cambiando estado:', error);
         showAlert('Error', 'Error de conexión', 'error');
     } finally {
         hideLoading();
@@ -2786,7 +2704,6 @@ async function toggleHorarioStatus(horarioId) {
 }
 async function deleteHorario(horarioId) {
     try {
-        console.log('🗑️ Eliminando horario:', horarioId);
         
         const horario = adminState.horariosData.find(h => h.id === horarioId);
         if (!horario) {
@@ -2843,7 +2760,6 @@ async function deleteHorario(horarioId) {
         }
         
     } catch (error) {
-        console.error('❌ Error eliminando horario:', error);
         showAlert('Error', 'Error de conexión', 'error');
     } finally {
         hideLoading();
@@ -2853,7 +2769,6 @@ async function deleteHorario(horarioId) {
 // REPORTES Y ESTADÍSTICAS
 // ================================
 function setupReportesSection() {
-    console.log('⚡ Configurando sección de reportes...');
     
     // Configurar función de reportes cuando se entre a la sección
     setTimeout(() => {
@@ -2865,7 +2780,6 @@ function setupReportesSection() {
 
 async function renderEstadisticasConDatosReales() {
     try {
-        console.log('📊 Obteniendo estadísticas reales...');
         
         const [registrosRes, empleadosRes] = await Promise.allSettled([
             fetch(`${ADMIN_CONFIG.apiUrl}/registros?limit=100`),
@@ -2883,7 +2797,6 @@ async function renderEstadisticasConDatosReales() {
             empleados = await empleadosRes.value.json();
         }
         
-        console.log('📊 Datos obtenidos:', {
             registros: registros.data?.length || 0,
             empleados: empleados.data?.length || 0
         });
@@ -2892,7 +2805,6 @@ async function renderEstadisticasConDatosReales() {
                          crearContenedorEstadisticas();
         
         if (!container) {
-            console.warn('⚠️ No se pudo crear contenedor de estadísticas');
             return;
         }
         
@@ -2996,10 +2908,8 @@ async function renderEstadisticasConDatosReales() {
             ` : ''}
         `;
         
-        console.log('✅ Estadísticas reales renderizadas');
         
     } catch (error) {
-        console.error('❌ Error renderizando estadísticas:', error);
     }
 }
 
@@ -3023,7 +2933,6 @@ function crearContenedorEstadisticas() {
 
 async function generarReporteAsistencia() {
     try {
-        console.log('🔍 Iniciando generación de reporte...');
         
         const fechaInicioInput = document.querySelector('input[type="date"]:first-of-type');
         const fechaFinInput = document.querySelector('input[type="date"]:last-of-type');
@@ -3040,7 +2949,6 @@ async function generarReporteAsistencia() {
         const fechaInicioFinal = fechaInicio || fechaHaceUnaSemana;
         const fechaFinFinal = fechaFin || hoy;
         
-        console.log('📊 Generando reporte:', {
             fechaInicioFinal,
             fechaFinFinal,
             empleadoId
@@ -3055,23 +2963,18 @@ async function generarReporteAsistencia() {
         }
         
         const url = `${ADMIN_CONFIG.apiUrl}/reportes/asistencia?${params}`;
-        console.log('🔗 URL del reporte:', url);
         
         const response = await fetch(url);
         const data = await response.json();
         
-        console.log('📋 Respuesta del servidor:', data);
         
         if (data.success && data.data && data.data.length > 0) {
             mostrarReporteEnTabla(data.data);
-            console.log('✅ Reporte generado con', data.data.length, 'registros');
         } else {
             alert(`No se encontraron registros para el período ${fechaInicioFinal} - ${fechaFinFinal}`);
-            console.log('⚠️ Sin registros encontrados');
         }
         
     } catch (error) {
-        console.error('❌ Error generando reporte:', error);
         alert('Error generando reporte: ' + error.message);
     }
 }
@@ -3132,7 +3035,6 @@ function updateDateFilters() {
     const fechaInicio = elements.fechaInicio?.value;
     const fechaFin = elements.fechaFin?.value;
     
-    console.log('Filtros de fecha actualizados:', { fechaInicio, fechaFin });
     
     adminState.filters.fechaInicio = fechaInicio;
     adminState.filters.fechaFin = fechaFin;
@@ -3476,8 +3378,6 @@ async function mostrarReporteEjecutivo() {
             return;
         }
         
-        console.log('📅 Fechas seleccionadas:', fechasSeleccionadas);
-        console.log('👤 Empleados seleccionados:', empleadosFiltrados);
 
         // OBTENER LOS GRUPOS YA CALCULADOS DE LA TABLA
         const gruposCalculados = agruparRegistrosPorEmpleadoYFecha(adminState.registrosData || []);
@@ -3497,7 +3397,6 @@ async function mostrarReporteEjecutivo() {
             return true;
         });
 
-        console.log('📊 Grupos seleccionados para reporte:', gruposSeleccionados);
 
         // SUMAR LAS HORAS YA CALCULADAS DE CADA GRUPO
         let totalMinutosTrabajados = 0;
@@ -3513,10 +3412,8 @@ async function mostrarReporteEjecutivo() {
             if (grupo.entrada) checkIns++;
             if (grupo.salida) checkOuts++;
 
-            console.log(`  📅 ${new Date(grupo.fecha).toLocaleDateString('es-MX')}: ${grupo.horas_trabajadas} hrs (${minutosGrupo} min)`);
         });
 
-        console.log(`⏱️ TOTAL MINUTOS TRABAJADOS: ${totalMinutosTrabajados} minutos`);
         
         const horasLaboradas = Math.floor(totalMinutosTrabajados / 60);
         const minutosLaboradas = totalMinutosTrabajados % 60;
@@ -3532,12 +3429,10 @@ async function mostrarReporteEjecutivo() {
             fecha_generacion: new Date()
         };
         
-        console.log('📊 Datos finales del reporte:', data);
         
         mostrarModalReporteEjecutivo(data);
         
     } catch (error) {
-        console.error('Error:', error);
         showAlert('Error', 'Error generando reporte', 'error');
     }
 }
@@ -3691,7 +3586,6 @@ function formatearFecha(fechaStr) {
             day: 'numeric'
         });
     } catch (error) {
-        console.log('Error formateando fecha:', fechaStr);
         return fechaStr; // Devolver la fecha original si hay error
     }
 }
@@ -3736,7 +3630,6 @@ window.mostrarReporteEjecutivo = mostrarReporteEjecutivo;
 // MANEJO DE ERRORES E IMÁGENES
 // ================================
 function handleGlobalError(event) {
-    console.error('Error global capturado:', event.error);
     killAllSpinners();
 }
 
@@ -4092,7 +3985,6 @@ async function exportarRegistros(tipo) {
         return;
     }
 
-    console.log('📊 Exportando registros a CSV/Excel...');
 
     try {
         showLoading('Generando archivo Excel...');
@@ -4103,7 +3995,6 @@ async function exportarRegistros(tipo) {
         const fechaFin = document.getElementById('fechaFin')?.value ||
                          new Date().toISOString().split('T')[0];
 
-        console.log(`📅 Obteniendo registros desde Supabase: ${fechaInicio} a ${fechaFin}`);
 
         // Obtener registros desde Supabase
         const result = await SupabaseAPI.getRegistrosByFecha(fechaInicio, fechaFin);
@@ -4113,7 +4004,6 @@ async function exportarRegistros(tipo) {
         }
 
         const registros = result.data;
-        console.log(`✅ ${registros.length} registros obtenidos`);
 
         if (registros.length === 0) {
             showAlert('Info', 'No hay registros en el período seleccionado', 'info');
@@ -4227,7 +4117,6 @@ async function exportarRegistros(tipo) {
         showAlert('Éxito', `Excel descargado: ${registros.length} registros`, 'success');
 
     } catch (error) {
-        console.error('❌ Error exportando registros:', error);
         showAlert('Error', 'Error generando archivo Excel: ' + error.message, 'error');
     } finally {
         hideLoading();
@@ -4326,7 +4215,6 @@ window.agregarBloqueHorario = (bloqueExistente = null) => {
         actualizarNumerosBloques();
         
     } catch (error) {
-        console.error('Error agregando bloque:', error);
         showAlert('Error', 'Error agregando bloque de horario', 'error');
     }
 };
@@ -4335,4 +4223,3 @@ window.agregarBloqueHorario = (bloqueExistente = null) => {
 window.guardarConfiguracion = () => showAlert('Info', 'Función de configuración en desarrollo', 'info');
 window.viewPhoto = (url) => window.open(url, '_blank');
 
-console.log('🖥️ Admin.js v3.0 cargado completamente - Panel Administrativo con Registros Avanzados');
