@@ -2780,21 +2780,21 @@ function setupReportesSection() {
 
 async function renderEstadisticasConDatosReales() {
     try {
-        
+        // Usar SupabaseAPI con filtro de sucursal
         const [registrosRes, empleadosRes] = await Promise.allSettled([
-            fetch(`${ADMIN_CONFIG.apiUrl}/registros?limit=100`),
-            fetch(`${ADMIN_CONFIG.apiUrl}/empleados`)
+            SupabaseAPI.getRegistrosToday(100, window.currentUserSucursal),
+            SupabaseAPI.getEmpleados(window.currentUserSucursal)
         ]);
-        
+
         let registros = { data: [] };
         let empleados = { data: [] };
-        
-        if (registrosRes.status === 'fulfilled' && registrosRes.value.ok) {
-            registros = await registrosRes.value.json();
+
+        if (registrosRes.status === 'fulfilled' && registrosRes.value.success) {
+            registros = { data: registrosRes.value.data || [] };
         }
-        
-        if (empleadosRes.status === 'fulfilled' && empleadosRes.value.ok) {
-            empleados = await empleadosRes.value.json();
+
+        if (empleadosRes.status === 'fulfilled' && empleadosRes.value.success) {
+            empleados = { data: empleadosRes.value.data || [] };
         }
         
         
@@ -2930,43 +2930,35 @@ function crearContenedorEstadisticas() {
 
 async function generarReporteAsistencia() {
     try {
-        
         const fechaInicioInput = document.querySelector('input[type="date"]:first-of-type');
         const fechaFinInput = document.querySelector('input[type="date"]:last-of-type');
         const empleadoSelect = document.querySelector('select');
-        
+
         const fechaInicio = fechaInicioInput?.value;
         const fechaFin = fechaFinInput?.value;
         const empleadoId = empleadoSelect?.value;
-        
+
         const hoy = new Date().toISOString().split('T')[0];
         const haceUnaSemana = new Date();
         haceUnaSemana.setDate(haceUnaSemana.getDate() - 7);
         const fechaHaceUnaSemana = haceUnaSemana.toISOString().split('T')[0];
         const fechaInicioFinal = fechaInicio || fechaHaceUnaSemana;
         const fechaFinFinal = fechaFin || hoy;
-        
-        
-        const params = new URLSearchParams();
-        params.append('fecha_inicio', fechaInicioFinal);
-        params.append('fecha_fin', fechaFinFinal);
-        
-        if (empleadoId && empleadoId !== 'todos' && empleadoId !== 'Todos') {
-            params.append('empleado_id', empleadoId);
-        }
-        
-        const url = `${ADMIN_CONFIG.apiUrl}/reportes/asistencia?${params}`;
-        
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        
+
+        // Usar SupabaseAPI con filtro de sucursal
+        const filtros = {
+            sucursalUsuario: window.currentUserSucursal, // Filtrar por sucursal del usuario
+            empleadoId: (empleadoId && empleadoId !== 'todos' && empleadoId !== 'Todos') ? empleadoId : null
+        };
+
+        const data = await SupabaseAPI.getRegistrosByFecha(fechaInicioFinal, fechaFinFinal, filtros);
+
         if (data.success && data.data && data.data.length > 0) {
             mostrarReporteEnTabla(data.data);
         } else {
             alert(`No se encontraron registros para el período ${fechaInicioFinal} - ${fechaFinFinal}`);
         }
-        
+
     } catch (error) {
         alert('Error generando reporte: ' + error.message);
     }
