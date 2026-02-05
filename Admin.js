@@ -2946,10 +2946,6 @@ async function generarReporteAsistencia() {
         const fechaInicioFinal = fechaInicio || fechaHaceUnaSemana;
         const fechaFinFinal = fechaFin || hoy;
         
-            fechaInicioFinal,
-            fechaFinFinal,
-            empleadoId
-        });
         
         const params = new URLSearchParams();
         params.append('fecha_inicio', fechaInicioFinal);
