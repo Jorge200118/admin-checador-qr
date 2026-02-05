@@ -4007,9 +4007,11 @@ async function exportarRegistros(tipo) {
         const fechaFin = document.getElementById('fechaFin')?.value ||
                          new Date().toISOString().split('T')[0];
 
-
-        // Obtener registros desde Supabase
-        const result = await SupabaseAPI.getRegistrosByFecha(fechaInicio, fechaFin);
+        // Obtener registros desde Supabase con filtro de sucursal
+        const filtros = {
+            sucursalUsuario: window.currentUserSucursal
+        };
+        const result = await SupabaseAPI.getRegistrosByFecha(fechaInicio, fechaFin, filtros);
 
         if (!result.success) {
             throw new Error(result.message || 'Error obteniendo registros');
