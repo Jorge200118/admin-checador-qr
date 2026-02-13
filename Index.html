@@ -281,10 +281,6 @@
                         <span class="stat-number" id="registrosSinCheck">0</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">Hrs Extra</span>
-                        <span class="stat-number" id="hrsExtra">0</span>
-                    </div>
-                    <div class="stat-item">
                         <span class="stat-label">Total Registros</span>
                         <span class="stat-number" id="totalRegistros">132</span>
                     </div>
@@ -388,7 +384,7 @@
                         <input type="date" id="fecha-fin-faltas" class="form-input-small">
                     </div>
                     
-                    <button onclick="obtenerEmpleadosSinEntradaRango()" class="btn btn-success">
+                    <button id="btn-descargar-faltas" onclick="obtenerEmpleadosSinEntradaRango(event)" class="btn btn-success">
                         <i class="fas fa-file-excel"></i> Descargar Rango
                     </button>
                 </div>
