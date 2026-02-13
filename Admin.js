@@ -373,12 +373,7 @@ async function loadRecentRegistros() {
         if (data.success) {
             adminState.registrosData = data.data || data.registros || [];
 
-            // Si estamos en la sección de registros, usar la función avanzada
-            if (adminState.currentSection === 'registros') {
-                renderRegistrosTableAdvanced();
-            } else {
-                renderRegistrosTableAdvanced();
-            }
+            renderRegistrosTableAdvanced();
         }
     } catch (error) {
         adminState.registrosData = [];
@@ -496,11 +491,17 @@ function setDefaultDates() {
     const fechaFin = document.getElementById('fechaFin');
     const periodoActual = document.getElementById('periodoActual');
     
+    // Usar fecha local para evitar que UTC muestre el día siguiente en horario nocturno
+    const year = hoy.getFullYear();
+    const month = String(hoy.getMonth() + 1).padStart(2, '0');
+    const day = String(hoy.getDate()).padStart(2, '0');
+    const fechaLocal = `${year}-${month}-${day}`;
+
     if (fechaInicio) {
-        fechaInicio.value = hoy.toISOString().split('T')[0];
+        fechaInicio.value = fechaLocal;
     }
     if (fechaFin) {
-        fechaFin.value = hoy.toISOString().split('T')[0];
+        fechaFin.value = fechaLocal;
     }
     if (periodoActual) {
         const fechaFormateada = hoy.toLocaleDateString('es-MX');
@@ -612,7 +613,10 @@ function agruparRegistrosPorEmpleadoYFecha(registros) {
     // Agrupar registros por empleado y fecha
     registros.forEach(registro => {
         const fechaMazatlan = getMazatlanTime(registro.fecha_hora);
-        const fecha = fechaMazatlan.toDateString();
+        const year = fechaMazatlan.getFullYear();
+        const month = String(fechaMazatlan.getMonth() + 1).padStart(2, '0');
+        const day = String(fechaMazatlan.getDate()).padStart(2, '0');
+        const fecha = `${year}-${month}-${day}`;
         const key = `${registro.empleado_id}-${fecha}`;
 
         if (!grupos.has(key)) {
@@ -680,10 +684,6 @@ function agruparRegistrosPorEmpleadoYFecha(registros) {
         const entradaRegistro = registrosOrdenados.find(r => r.tipo_registro === 'ENTRADA');
         const salidaRegistro = [...registrosOrdenados].reverse().find(r => r.tipo_registro === 'SALIDA');
 
-        // DEBUG
-        if (grupo.empleado_nombre && (entradaRegistro || salidaRegistro)) {
-        }
-
         return {
             ...grupo,
             entrada: entradaRegistro,
@@ -703,7 +703,7 @@ function getInitials(nombre) {
 }
 
 function formatDateBadge(fecha) {
-    const date = new Date(fecha);
+    const date = new Date(fecha + 'T00:00:00');
     return date.toLocaleDateString('es-MX', {
         day: '2-digit',
         month: '2-digit',
@@ -711,7 +711,7 @@ function formatDateBadge(fecha) {
     });
 }
 
-function renderHoraBadgeAdvanced(registro, tipoColumna) {
+function renderHoraBadgeAdvanced(registro) {
     if (!registro) {
         return '<span class="hora-badge sin-registro">--:--</span>';
     }
@@ -722,10 +722,7 @@ function renderHoraBadgeAdvanced(registro, tipoColumna) {
         minute: '2-digit'
     });
 
-    // Usar el tipo de columna para determinar si es tardanza
-    const esTardanza = tipoColumna === 'ENTRADA' &&
-                      horaMazatlan.getHours() > 8;
-
+    const esTardanza = esTardanzaRegistro(registro, horaMazatlan);
     const claseExtra = esTardanza ? ' tardanza' : '';
     return `<span class="hora-badge${claseExtra}">${hora}</span>`;
 }
@@ -741,12 +738,26 @@ function renderHoraBadge(registro) {
         minute: '2-digit'
     });
 
-    // Determinar si es tardanza solo si es ENTRADA y después de las 8 AM
-    const esTardanza = registro.tipo_registro === 'ENTRADA' &&
-                      horaMazatlan.getHours() > 8;
-
+    const esTardanza = esTardanzaRegistro(registro, horaMazatlan);
     const claseExtra = esTardanza ? ' tardanza' : '';
     return `<span class="hora-badge${claseExtra}">${hora}</span>`;
+}
+
+function esTardanzaRegistro(registro, horaMazatlan) {
+    if (registro.tipo_registro !== 'ENTRADA') return false;
+
+    // Usar hora del bloque horario asignado si existe
+    if (registro.bloque_horario && registro.bloque_horario.hora_entrada) {
+        const partes = registro.bloque_horario.hora_entrada.split(':');
+        const horaLimite = parseInt(partes[0]);
+        const minLimite = parseInt(partes[1] || 0);
+        const horaRegistro = horaMazatlan.getHours();
+        const minRegistro = horaMazatlan.getMinutes();
+        return (horaRegistro > horaLimite) || (horaRegistro === horaLimite && minRegistro > minLimite);
+    }
+
+    // Fallback: si no hay horario asignado, considerar tardanza después de 8:00
+    return horaMazatlan.getHours() > 8 || (horaMazatlan.getHours() === 8 && horaMazatlan.getMinutes() > 0);
 }
 
 function calcularHorasTrabajadasGrupo(grupo) {
@@ -763,86 +774,20 @@ function getEstatusClassAdvanced(estatus) {
     return clases[estatus] || 'sin-registro';
 }
 
-// Función actualizada para filtrar registros (CORREGIDA PARA TU SISTEMA)
-async function filtrarRegistros() {
-    const fechaInicio = document.getElementById('fechaInicio').value;
-    const fechaFin = document.getElementById('fechaFin').value;
-    const empleadoId = document.getElementById('filterEmpleado').value;
-    const tipo = document.getElementById('filterTipo').value;
-    const sucursal = document.getElementById('filterSucursal').value;
-    const puesto = document.getElementById('filterPuesto').value;
-    
-    try {
-        showLoading('Filtrando registros...');
-        
-        // Construir URL con parámetros
-        const params = new URLSearchParams();
-        if (fechaInicio) params.append('fechaInicio', fechaInicio);
-        if (fechaFin) params.append('fechaFin', fechaFin);
-        if (empleadoId) params.append('empleadoId', empleadoId);
-        if (tipo) params.append('tipo', tipo);
-        if (sucursal) params.append('sucursal', sucursal);
-        if (puesto) params.append('puesto', puesto);
-        
-        // Usar tu endpoint actual de registros
-        const url = `/api/registros${params.toString() ? '?' + params.toString() : ''}`;
-        
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        if (data.success) {
-            // Actualizar estado global (usar tu variable global existente)
-            adminState.registrosData = data.registros;
-            adminState.currentPage = 1;
-            
-            // Actualizar período mostrado
-            const periodoElement = document.getElementById('periodoActual');
-            if (periodoElement) {
-                if (fechaInicio && fechaFin) {
-                    const fechaInicioFormatted = formatearFechaCorta(fechaInicio);
-                    const fechaFinFormatted = formatearFechaCorta(fechaFin);
-                    periodoElement.textContent = `${fechaInicioFormatted} - ${fechaFinFormatted}`;
-                } else {
-                    periodoElement.textContent = 'Todos los registros';
-                }
-            }
-            
-            // Actualizar estadísticas
-            actualizarEstadisticasRegistros(data.registros);
-            
-            // Usar tu función existente para renderizar
-           renderRegistrosTableAdvanced();
-            
-        } else {
-            showError('Error al filtrar registros: ' + data.message);
-        }
-        
-    } catch (error) {
-        showError('Error al filtrar registros');
-    } finally {
-        hideLoading();
-    }
-}
-
 // Actualizar estadísticas de registros
 function updateRegistrosStats() {
     const registros = adminState.registrosData || [];
     
     // Calcular estadísticas
     const registrosSinCheck = registros.filter(r => !r.tipo_registro || r.tipo_registro === '').length;
-    const hrsExtra = 0; // Por implementar
     const totalRegistros = registros.length;
-    
+
     // Actualizar elementos
-    const elements = {
-        registrosSinCheck: document.getElementById('registrosSinCheck'),
-        hrsExtra: document.getElementById('hrsExtra'),
-        totalRegistros: document.getElementById('totalRegistros')
-    };
-    
-    if (elements.registrosSinCheck) elements.registrosSinCheck.textContent = registrosSinCheck;
-    if (elements.hrsExtra) elements.hrsExtra.textContent = hrsExtra;
-    if (elements.totalRegistros) elements.totalRegistros.textContent = totalRegistros;
+    const elSinCheck = document.getElementById('registrosSinCheck');
+    const elTotal = document.getElementById('totalRegistros');
+
+    if (elSinCheck) elSinCheck.textContent = registrosSinCheck;
+    if (elTotal) elTotal.textContent = totalRegistros;
 }
 
 // Configurar filtros de registros
@@ -866,7 +811,7 @@ function setupRegistrosFilters() {
     }
 }
 // Función para descargar faltas por RANGO de fechas
-async function obtenerEmpleadosSinEntradaRango() {
+async function obtenerEmpleadosSinEntradaRango(event) {
     const fechaInicio = document.getElementById('fecha-inicio-faltas').value;
     const fechaFin = document.getElementById('fecha-fin-faltas').value;
 
@@ -881,7 +826,7 @@ async function obtenerEmpleadosSinEntradaRango() {
     }
 
     try {
-        const button = event.target;
+        const button = event?.target || document.querySelector('#btn-descargar-faltas');
         const originalText = button.innerHTML;
         button.disabled = true;
         button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
@@ -965,10 +910,10 @@ async function obtenerEmpleadosSinEntradaRango() {
     } catch (error) {
         alert('❌ Error al consultar faltas: ' + error.message);
 
-        const button = event.target;
-        if (button) {
-            button.disabled = false;
-            button.innerHTML = '📥 Descargar Rango';
+        const btnFallback = event?.target || document.querySelector('#btn-descargar-faltas');
+        if (btnFallback) {
+            btnFallback.disabled = false;
+            btnFallback.innerHTML = '📥 Descargar Rango';
         }
     }
 }
@@ -1949,11 +1894,13 @@ async function filtrarRegistros() {
     let fechaFinValid = fechaFin;
     
     if (!fechaInicio || fechaInicio.length < 10 || fechaInicio.startsWith('0002')) {
-        fechaInicioValid = new Date().toISOString().split('T')[0];
+        const ahora = new Date();
+        fechaInicioValid = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`;
     }
-    
+
     if (!fechaFin || fechaFin.length < 10 || fechaFin.startsWith('0002')) {
-        fechaFinValid = new Date().toISOString().split('T')[0];
+        const ahora = new Date();
+        fechaFinValid = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`;
     }
     
     
@@ -1979,10 +1926,10 @@ async function filtrarRegistros() {
         const data = await SupabaseAPI.getRegistrosByFecha(fechaInicioValid, fechaFinValid, filtros);
 
         if (data.success) {
-            // Actualizar estado global - VERIFICAR LA ESTRUCTURA
-            adminState.registrosData = data.data || data.registros || data.registros || [];
+            // Actualizar estado global
+            adminState.registrosData = data.data || data.registros || [];
             adminState.currentPage = 1; // Reiniciar paginación
-            
+
             // Actualizar período mostrado
             const periodoElement = document.getElementById('periodoActual');
             if (periodoElement) {
@@ -1994,9 +1941,9 @@ async function filtrarRegistros() {
                     periodoElement.textContent = 'Todos los registros';
                 }
             }
-            
+
             // Actualizar estadísticas
-            actualizarEstadisticasRegistros(data.registros);
+            actualizarEstadisticasRegistros(adminState.registrosData);
             
             // Renderizar tabla
             renderRegistrosTableAdvanced();
@@ -2013,33 +1960,25 @@ async function filtrarRegistros() {
 }
 // Función para actualizar estadísticas
 function actualizarEstadisticasRegistros(registros) {
-    // Actualizar contadores en el header
+    registros = registros || [];
+
     const totalElement = document.getElementById('totalRegistros');
-    if (totalElement) {
-        totalElement.textContent = registros.length;
-    }
     const sinCheckElement = document.getElementById('registrosSinCheck');
-    const hrsExtraElement = document.getElementById('hrsExtra');
-    
+
     if (totalElement) {
         totalElement.textContent = registros.length;
     }
-    
+
     if (sinCheckElement) {
-        const sinCheck = registros.filter(r => 
-            r.tipo_registro === 'ENTRADA' && 
-            !registros.some(s => 
-                s.empleado_id === r.empleado_id && 
-                s.tipo_registro === 'SALIDA' && 
+        const sinCheck = registros.filter(r =>
+            r.tipo_registro === 'ENTRADA' &&
+            !registros.some(s =>
+                s.empleado_id === r.empleado_id &&
+                s.tipo_registro === 'SALIDA' &&
                 formatearFecha(s.fecha_hora) === formatearFecha(r.fecha_hora)
             )
         ).length;
         sinCheckElement.textContent = sinCheck;
-    }
-    
-    if (hrsExtraElement) {
-        // Calcular horas extra (simplificado)
-        hrsExtraElement.textContent = '0'; // Implementar lógica si necesario
     }
 }
 
@@ -3402,8 +3341,7 @@ async function mostrarReporteEjecutivo() {
 
             // Si hay fechas específicas seleccionadas, filtrar por ellas
             if (fechasSeleccionadas.length > 0) {
-                const fechaGrupo = new Date(grupo.fecha).toISOString().split('T')[0];
-                return fechasSeleccionadas.includes(fechaGrupo);
+                return fechasSeleccionadas.includes(grupo.fecha);
             }
 
             return true;
