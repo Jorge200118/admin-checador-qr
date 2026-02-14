@@ -809,8 +809,8 @@ const SupabaseAPI = {
 
     async getFotosRegistro(empleadoId, fecha) {
         try {
-            // Convertir fecha a rango del día
-            const fechaObj = new Date(fecha);
+            // Convertir fecha a rango del día (append T00:00:00 to parse as local, not UTC)
+            const fechaObj = new Date(fecha + 'T00:00:00');
             const inicioHoy = new Date(fechaObj.getFullYear(), fechaObj.getMonth(), fechaObj.getDate());
             const finHoy = new Date(fechaObj.getFullYear(), fechaObj.getMonth(), fechaObj.getDate(), 23, 59, 59);
 
