@@ -362,6 +362,9 @@
                     <button class="btn btn-info" onclick="mostrarReporteEjecutivo()" title="Reporte ejecutivo de productividad">
                         <i class="fas fa-chart-line"></i> Resumen empleado
                     </button>
+                    <button class="btn btn-warning" onclick="mostrarResumenGeneral()" title="Resumen general de todos los empleados">
+                        <i class="fas fa-table"></i> Resumen General
+                    </button>
                     <button class="btn btn-secondary" onclick="limpiarFiltros()">
                         <i class="fas fa-times"></i> Limpiar
                     </button>
@@ -683,7 +686,6 @@
 
                 // Sesión válida, guardar datos globalmente
                 window.currentUser = sessionData;
-                console.log('Usuario logueado:', sessionData.nombreCompleto, '- Sucursal:', sessionData.sucursal);
 
                 // Mostrar información del usuario cuando la página cargue
                 window.addEventListener('DOMContentLoaded', function() {
@@ -696,7 +698,6 @@
 
             } catch (error) {
                 // Sesión corrupta
-                console.error('Error al verificar sesión:', error);
                 localStorage.removeItem('session_sucursal');
                 sessionStorage.removeItem('session_sucursal');
                 window.location.href = '../login-sucursal.html';
@@ -1056,6 +1057,81 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL RESUMEN GENERAL -->
+<div id="modalResumenGeneral" class="modal">
+    <div class="modal-content modal-large" style="max-width: 95%; max-height: 90vh;">
+        <div class="modal-header">
+            <h3><i class="fas fa-table"></i> Resumen General de Empleados</h3>
+            <span class="close" onclick="cerrarResumenGeneral()">&times;</span>
+        </div>
+
+        <div class="modal-body">
+            <!-- Controles superiores -->
+            <div class="resumen-controls" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 12px; background: #f8fafc; border-radius: 8px;">
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <input type="text" id="filtroResumenGeneral" placeholder="🔍 Buscar empleado..."
+                           class="form-input" style="min-width: 250px;" onkeyup="filtrarResumenGeneral()">
+                    <select id="filtroSucursalResumen" class="form-select" onchange="filtrarResumenGeneral()">
+                        <option value="">Todas las sucursales</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-success" onclick="exportarResumenGeneral()">
+                        <i class="fas fa-file-excel"></i> Exportar Excel
+                    </button>
+                    <button class="btn btn-secondary" onclick="imprimirResumenGeneral()">
+                        <i class="fas fa-print"></i> Imprimir
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tabla resumen -->
+            <div class="table-container" style="max-height: 60vh; overflow-y: auto;">
+                <table id="tablaResumenGeneral" class="registros-table-advanced">
+                    <thead>
+                        <tr>
+                            <th onclick="ordenarResumenGeneral('empleado')" style="cursor: pointer;">
+                                Empleado <i class="fas fa-sort"></i>
+                            </th>
+                            <th onclick="ordenarResumenGeneral('sucursal')" style="cursor: pointer;">
+                                Sucursal <i class="fas fa-sort"></i>
+                            </th>
+                            <th onclick="ordenarResumenGeneral('horas')" style="cursor: pointer;">
+                                Horas Trabajadas <i class="fas fa-sort"></i>
+                            </th>
+                            <th onclick="ordenarResumenGeneral('entradas')" style="cursor: pointer;">
+                                Entradas <i class="fas fa-sort"></i>
+                            </th>
+                            <th onclick="ordenarResumenGeneral('salidas')" style="cursor: pointer;">
+                                Salidas <i class="fas fa-sort"></i>
+                            </th>
+                            <th onclick="ordenarResumenGeneral('faltas')" style="cursor: pointer;">
+                                Faltas <i class="fas fa-sort"></i>
+                            </th>
+                            <th onclick="ordenarResumenGeneral('retardos')" style="cursor: pointer;">
+                                Minutos Retardo <i class="fas fa-sort"></i>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="bodyResumenGeneral">
+                        <!-- Se llena dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Estadísticas generales -->
+            <div id="statsResumenGeneral" style="margin-top: 16px; padding: 14px; background: #f8fafc; border-radius: 8px; display: flex; justify-content: space-around; font-size: 0.85rem;">
+                <!-- Se llena dinámicamente -->
+            </div>
+        </div>
+
+        <!-- Panel de detalle por empleado (slide-in) -->
+        <div id="panelDetalleEmpleado" class="panel-detalle-empleado">
+            <!-- Se llena dinámicamente -->
         </div>
     </div>
 </div>
