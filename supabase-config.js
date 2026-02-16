@@ -651,57 +651,78 @@ const SupabaseAPI = {
             // Determinar si necesitamos usar !inner basado en si hay filtros de empleado/sucursal
             const needsInner = filtros.sucursalUsuario || filtros.empleadoId;
 
-            let query = supabaseClient
-                .from('registros')
-                .select(`
-                    *,
-                    empleado:empleados${needsInner ? '!inner' : ''}(
-                        codigo_empleado,
-                        nombre,
-                        apellido,
-                        sucursal,
-                        puesto
-                    ),
-                    bloque_horario:bloques_horario(
-                        hora_entrada,
-                        hora_salida
-                    )
-                `);
+            // Paginación: traer todos los registros en lotes de 1000
+            let allData = [];
+            let from = 0;
+            const pageSize = 1000;
+            let hasMore = true;
 
-            // Aplicar filtro de fechas (sin convertir a UTC para evitar problemas de timezone)
-            if (fechaInicio) {
-                const inicioStr = `${fechaInicio} 00:00:00`;
-                query = query.gte('fecha_hora', inicioStr);
+            while (hasMore) {
+                let query = supabaseClient
+                    .from('registros')
+                    .select(`
+                        *,
+                        empleado:empleados${needsInner ? '!inner' : ''}(
+                            codigo_empleado,
+                            nombre,
+                            apellido,
+                            sucursal,
+                            puesto
+                        ),
+                        bloque_horario:bloques_horario(
+                            hora_entrada,
+                            hora_salida
+                        )
+                    `);
+
+                // Aplicar filtro de fechas (sin convertir a UTC para evitar problemas de timezone)
+                if (fechaInicio) {
+                    const inicioStr = `${fechaInicio} 00:00:00`;
+                    query = query.gte('fecha_hora', inicioStr);
+                }
+
+                if (fechaFin) {
+                    const finStr = `${fechaFin} 23:59:59`;
+                    query = query.lte('fecha_hora', finStr);
+                }
+
+                // Aplicar filtro de sucursal del usuario (si viene en filtros)
+                if (filtros.sucursalUsuario) {
+                    query = query.eq('empleado.sucursal', filtros.sucursalUsuario);
+                }
+
+                // Aplicar filtro de empleado
+                if (filtros.empleadoId) {
+                    query = query.eq('empleado_id', filtros.empleadoId);
+                }
+
+                // Aplicar filtro de tipo
+                if (filtros.tipo) {
+                    query = query.eq('tipo_registro', filtros.tipo);
+                }
+
+                // Ordenar y paginar
+                query = query.order('fecha_hora', { ascending: false })
+                             .range(from, from + pageSize - 1);
+
+                const { data, error } = await query;
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    hasMore = false;
+                } else {
+                    allData = allData.concat(data);
+                    if (data.length < pageSize) {
+                        hasMore = false;
+                    } else {
+                        from += pageSize;
+                    }
+                }
             }
-
-            if (fechaFin) {
-                const finStr = `${fechaFin} 23:59:59`;
-                query = query.lte('fecha_hora', finStr);
-            }
-
-            // Aplicar filtro de sucursal del usuario (si viene en filtros)
-            if (filtros.sucursalUsuario) {
-                query = query.eq('empleado.sucursal', filtros.sucursalUsuario);
-            }
-
-            // Aplicar filtro de empleado
-            if (filtros.empleadoId) {
-                query = query.eq('empleado_id', filtros.empleadoId);
-            }
-
-            // Aplicar filtro de tipo
-            if (filtros.tipo) {
-                query = query.eq('tipo_registro', filtros.tipo);
-            }
-
-            query = query.order('fecha_hora', { ascending: false });
-
-            const { data, error } = await query;
-
-            if (error) throw error;
 
             // Transformar datos
-            let transformedData = (data || []).map(registro => ({
+            let transformedData = allData.map(registro => ({
                 ...registro,
                 empleado_id: registro.empleado_id,
                 empleado_nombre: `${registro.empleado?.nombre || ''} ${registro.empleado?.apellido || ''}`.trim(),
@@ -720,6 +741,8 @@ const SupabaseAPI = {
                 transformedData = transformedData.filter(r => r.puesto === filtros.puesto);
             }
 
+            console.log(`📥 getRegistrosByFecha: ${transformedData.length} registros cargados en ${Math.ceil(allData.length / pageSize)} páginas`);
+
             return {
                 success: true,
                 data: transformedData,
@@ -727,6 +750,7 @@ const SupabaseAPI = {
             };
 
         } catch (error) {
+            console.error('Error en getRegistrosByFecha:', error);
             return { success: false, message: 'Error al obtener registros' };
         }
     },
