@@ -2016,7 +2016,267 @@ tbody tr:hover {
 }
 
 /* ========================================
-   35. PRINT
+   35. RESUMEN GENERAL
+   ======================================== */
+.resumen-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding: 12px;
+    background: #f8fafc;
+    border-radius: 8px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+#modalResumenGeneral .modal-content {
+    position: relative;
+}
+
+#modalResumenGeneral .table-container {
+    max-height: 60vh;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+#tablaResumenGeneral {
+    font-size: 0.85rem;
+}
+
+#tablaResumenGeneral th {
+    position: sticky;
+    top: 0;
+    background: #f8fafc;
+    z-index: 10;
+    cursor: pointer;
+    user-select: none;
+}
+
+#tablaResumenGeneral th:hover {
+    background: #f1f5f9;
+}
+
+#tablaResumenGeneral th i {
+    margin-left: 4px;
+    font-size: 0.7rem;
+    color: #94a3b8;
+}
+
+#tablaResumenGeneral tbody tr:hover {
+    background: #f8fafc;
+}
+
+#statsResumenGeneral {
+    margin-top: 16px;
+    padding: 14px;
+    background: #f8fafc;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-around;
+    font-size: 0.85rem;
+    border: 1px solid #e2e8f0;
+}
+
+#statsResumenGeneral > div {
+    text-align: center;
+    padding: 0 12px;
+}
+
+/* Responsive para resumen general */
+@media (max-width: 768px) {
+    .resumen-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    #statsResumenGeneral {
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    #statsResumenGeneral > div {
+        flex: 1;
+        min-width: 120px;
+    }
+
+    #modalResumenGeneral .modal-content {
+        max-width: 100%;
+        margin: 0;
+        border-radius: 0;
+    }
+
+    #tablaResumenGeneral {
+        font-size: 0.75rem;
+    }
+
+    #tablaResumenGeneral th,
+    #tablaResumenGeneral td {
+        padding: 8px 6px;
+    }
+}
+
+/* ========================================
+   35b. DETALLE EMPLEADO (panel slide-in dentro del resumen)
+   ======================================== */
+#modalResumenGeneral .modal-content.detalle-abierto {
+    overflow: hidden;
+}
+
+.panel-detalle-empleado {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    background: #fff;
+    z-index: 20;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 12px;
+}
+
+.panel-detalle-empleado.show {
+    display: flex;
+    animation: slideInRight 0.25s ease-out;
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(30px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.detalle-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.btn-back {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    color: #475569;
+    font-size: 0.9rem;
+    transition: all 0.15s;
+}
+
+.btn-back:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #cbd5e1;
+}
+
+.detalle-stats-mini {
+    display: flex;
+    gap: 16px;
+}
+
+.detalle-stats-mini > div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.detalle-stats-mini .stat-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    color: #94a3b8;
+    letter-spacing: 0.5px;
+}
+
+.detalle-stats-mini .stat-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.detalle-tabla-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+}
+
+.detalle-tabla {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.83rem;
+}
+
+.detalle-tabla thead th {
+    position: sticky;
+    top: 0;
+    background: #f1f5f9;
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #475569;
+    border-bottom: 2px solid #e2e8f0;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    z-index: 5;
+}
+
+.detalle-tabla tbody td {
+    padding: 9px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #334155;
+}
+
+.detalle-tabla tbody tr:hover {
+    background: #f8fafc;
+}
+
+.detalle-tabla tbody tr.detalle-falta {
+    background: #fef2f2;
+}
+
+.detalle-tabla tbody tr.detalle-falta:hover {
+    background: #fee2e2;
+}
+
+.dia-semana {
+    font-size: 0.7rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    margin-left: 4px;
+}
+
+@media (max-width: 768px) {
+    .detalle-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .detalle-stats-mini {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .detalle-tabla {
+        font-size: 0.75rem;
+    }
+
+    .detalle-tabla thead th,
+    .detalle-tabla tbody td {
+        padding: 7px 6px;
+    }
+}
+
+/* ========================================
+   36. PRINT
    ======================================== */
 @media print {
     .sidebar,
