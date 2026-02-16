@@ -753,11 +753,16 @@ function esTardanzaRegistro(registro, horaMazatlan) {
         const minLimite = parseInt(partes[1] || 0);
         const horaRegistro = horaMazatlan.getHours();
         const minRegistro = horaMazatlan.getMinutes();
-        return (horaRegistro > horaLimite) || (horaRegistro === horaLimite && minRegistro > minLimite);
+
+        // Agregar 10 minutos de tolerancia (hasta 8:10 es puntual, 8:11 ya es tarde)
+        const limiteConTolerancia = horaLimite * 60 + minLimite + 10;
+        const registroMinutos = horaRegistro * 60 + minRegistro;
+
+        return registroMinutos > limiteConTolerancia;
     }
 
-    // Fallback: si no hay horario asignado, considerar tardanza después de 8:00
-    return horaMazatlan.getHours() > 8 || (horaMazatlan.getHours() === 8 && horaMazatlan.getMinutes() > 0);
+    // Fallback: si no hay horario asignado, considerar tardanza después de 8:10 (8:11 en adelante)
+    return horaMazatlan.getHours() > 8 || (horaMazatlan.getHours() === 8 && horaMazatlan.getMinutes() > 10);
 }
 
 function calcularHorasTrabajadasGrupo(grupo) {
@@ -3575,6 +3580,747 @@ function imprimirReporteEjecutivo() {
 
 // Exportar función global
 window.mostrarReporteEjecutivo = mostrarReporteEjecutivo;
+
+// ================================
+// RESUMEN GENERAL DE EMPLEADOS
+// ================================
+
+let datosResumenGeneral = [];
+let ordenResumenGeneral = { columna: 'empleado', direccion: 'asc' };
+
+/**
+ * Calcula los minutos de retardo de un día completo.
+ * Busca la primera entrada matutina (antes de 12:00) → retardo a partir de 8:11 AM
+ * Busca la primera entrada vespertina (12:00 o después) → retardo a partir de 2:40 PM
+ * Solo se evalúan esas dos entradas, las demás checadas se ignoran para retardo.
+ */
+function calcularRetardoDia(entradasDelDia) {
+    if (!entradasDelDia || entradasDelDia.length === 0) return 0;
+
+    let retardoTotal = 0;
+    let primeraMatutina = null;
+    let primeraVespertina = null;
+
+    // Ordenar entradas por hora
+    const entradasOrdenadas = entradasDelDia.slice().sort((a, b) =>
+        new Date(a.fecha_hora) - new Date(b.fecha_hora)
+    );
+
+    for (const entrada of entradasOrdenadas) {
+        const horaMzt = getMazatlanTime(entrada.fecha_hora);
+        const h = horaMzt.getHours();
+
+        if (h < 12 && !primeraMatutina) {
+            primeraMatutina = horaMzt;
+        } else if (h >= 12 && !primeraVespertina) {
+            primeraVespertina = horaMzt;
+        }
+
+        if (primeraMatutina && primeraVespertina) break;
+    }
+
+    // Retardo matutino: después de 8:11 AM
+    if (primeraMatutina) {
+        const minutosDia = primeraMatutina.getHours() * 60 + primeraMatutina.getMinutes();
+        const limite = 8 * 60 + 11; // 8:11 AM
+        if (minutosDia > limite) {
+            retardoTotal += minutosDia - limite;
+        }
+    }
+
+    // Retardo vespertino: después de 2:40 PM
+    if (primeraVespertina) {
+        const minutosDia = primeraVespertina.getHours() * 60 + primeraVespertina.getMinutes();
+        const limite = 14 * 60 + 40; // 2:40 PM
+        if (minutosDia > limite) {
+            retardoTotal += minutosDia - limite;
+        }
+    }
+
+    return retardoTotal;
+}
+
+/**
+ * Genera datos estadísticos de todos los empleados del período actual
+ */
+function generarDatosResumenGeneral() {
+    const registros = adminState.registrosData || [];
+
+    if (registros.length === 0) {
+        alert('No hay datos de registros. Por favor filtra primero un período de fechas.');
+        return [];
+    }
+
+    // Obtener fechas del filtro actual
+    const fechaInicioStr = document.getElementById('fechaInicio').value;
+    const fechaFinStr = document.getElementById('fechaFin').value;
+
+    if (!fechaInicioStr || !fechaFinStr) {
+        alert('Por favor selecciona un rango de fechas en los filtros antes de generar el resumen.');
+        return [];
+    }
+
+    // Agrupar por empleado
+    const empleadosMap = new Map();
+
+    registros.forEach(reg => {
+        const empleadoId = reg.empleado_id;
+
+        if (!empleadosMap.has(empleadoId)) {
+            empleadosMap.set(empleadoId, {
+                empleado_id: empleadoId,
+                empleado_nombre: reg.empleado_nombre,
+                empleado_codigo: reg.empleado_codigo,
+                sucursal: reg.sucursal || 'N/A',
+                puesto: reg.puesto || 'N/A',
+                registros: []
+            });
+        }
+
+        empleadosMap.get(empleadoId).registros.push(reg);
+    });
+
+    // Calcular estadísticas por empleado
+    const estadisticas = [];
+
+    // Generar lista de fechas laborables como strings YYYY-MM-DD (sin depender de zona horaria)
+    const fechasLaborables = [];
+    {
+        const partsInicio = fechaInicioStr.split('-').map(Number);
+        const partsFin = fechaFinStr.split('-').map(Number);
+        const d = new Date(partsInicio[0], partsInicio[1] - 1, partsInicio[2], 12, 0, 0);
+        const fin = new Date(partsFin[0], partsFin[1] - 1, partsFin[2], 12, 0, 0);
+        while (d <= fin) {
+            const diaSemana = d.getDay(); // 0=domingo, 6=sábado
+            if (diaSemana !== 0 && diaSemana !== 6) {
+                const yy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                fechasLaborables.push(`${yy}-${mm}-${dd}`);
+            }
+            d.setDate(d.getDate() + 1);
+        }
+    }
+    const diasLaborables = fechasLaborables.length;
+
+    empleadosMap.forEach((empleado, empleadoId) => {
+        // Agrupar registros por fecha usando la misma función que el resto del sistema
+        const registrosPorFecha = agruparRegistrosPorEmpleadoYFecha(empleado.registros);
+
+        let totalHoras = 0;
+        let totalEntradas = 0;
+        let totalSalidas = 0;
+        let totalRetardos = 0;
+        let diasConRegistro = new Set();
+
+        registrosPorFecha.forEach(dia => {
+            // Sumar horas trabajadas - convertir a número porque viene como string de toFixed()
+            totalHoras += Number(dia.horas_trabajadas) || 0;
+
+            // Contar entradas y salidas desde los registros ya agrupados por fecha Mazatlán
+            const entradasDia = dia.registros.filter(r => r.tipo_registro === 'ENTRADA');
+            const salidasDia = dia.registros.filter(r => r.tipo_registro === 'SALIDA');
+
+            totalEntradas += entradasDia.length;
+            totalSalidas += salidasDia.length;
+
+            // Calcular retardos: primera entrada matutina (>8:11) y primera vespertina (>14:40)
+            const retardoDia = calcularRetardoDia(entradasDia);
+            totalRetardos += retardoDia;
+
+            // Guardar retardo calculado en el objeto día para el detalle
+            dia._retardoMinutos = retardoDia;
+            dia._entradasCount = entradasDia.length;
+            dia._salidasCount = salidasDia.length;
+
+            // Registrar día con actividad
+            if (dia.entrada || dia.salida) {
+                diasConRegistro.add(dia.fecha);
+            }
+        });
+
+        // Calcular faltas: días laborables sin registro
+        let faltasCount = 0;
+        for (const fechaLab of fechasLaborables) {
+            if (!diasConRegistro.has(fechaLab)) {
+                faltasCount++;
+            }
+        }
+
+        estadisticas.push({
+            empleado_id: empleadoId,
+            empleado_nombre: empleado.empleado_nombre,
+            empleado_codigo: empleado.empleado_codigo,
+            sucursal: empleado.sucursal,
+            puesto: empleado.puesto,
+            horas_trabajadas: totalHoras || 0,
+            total_entradas: totalEntradas || 0,
+            total_salidas: totalSalidas || 0,
+            total_faltas: faltasCount,
+            minutos_retardo: totalRetardos || 0,
+            dias_laborables: diasLaborables,
+            dias_trabajados: diasConRegistro.size,
+            detalle_dias: registrosPorFecha,
+            dias_con_registro: diasConRegistro
+        });
+    });
+
+    console.log('📊 Resumen General - Fechas laborables:', fechasLaborables);
+    console.log('📊 Resumen General - Estadísticas:', estadisticas.map(e => ({
+        nombre: e.empleado_nombre,
+        horas: e.horas_trabajadas,
+        entradas: e.total_entradas,
+        salidas: e.total_salidas,
+        faltas: e.total_faltas,
+        retardo: e.minutos_retardo,
+        diasRegistro: [...e.dias_con_registro],
+        diasDetalle: e.detalle_dias.map(d => d.fecha)
+    })));
+    return estadisticas;
+}
+
+/**
+ * Muestra el modal con el resumen general
+ */
+async function mostrarResumenGeneral() {
+    // Generar datos
+    datosResumenGeneral = generarDatosResumenGeneral();
+
+    if (datosResumenGeneral.length === 0) {
+        alert('No hay datos de empleados en el período actual');
+        return;
+    }
+
+    // Llenar filtro de sucursales
+    const sucursales = [...new Set(datosResumenGeneral.map(e => e.sucursal))];
+    const selectSucursal = document.getElementById('filtroSucursalResumen');
+    selectSucursal.innerHTML = '<option value="">Todas las sucursales</option>';
+    sucursales.forEach(suc => {
+        selectSucursal.innerHTML += `<option value="${suc}">${suc}</option>`;
+    });
+
+    // Renderizar tabla
+    renderizarTablaResumenGeneral(datosResumenGeneral);
+
+    // Mostrar estadísticas generales
+    mostrarEstadisticasGenerales(datosResumenGeneral);
+
+    // Mostrar modal
+    document.getElementById('modalResumenGeneral').classList.add('show');
+}
+
+/**
+ * Renderiza la tabla con los datos
+ */
+function renderizarTablaResumenGeneral(datos) {
+    const tbody = document.getElementById('bodyResumenGeneral');
+
+    if (datos.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align: center; padding: 40px; color: #94a3b8;">
+                    <i class="fas fa-search" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                    <p>No se encontraron empleados con los filtros aplicados</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = datos.map(emp => {
+        // Convertir a números para evitar errores con strings
+        const horasTrabajadas = Number(emp.horas_trabajadas) || 0;
+        const totalEntradas = Number(emp.total_entradas) || 0;
+        const totalSalidas = Number(emp.total_salidas) || 0;
+        const totalFaltas = Number(emp.total_faltas) || 0;
+        const minutosRetardo = Number(emp.minutos_retardo) || 0;
+
+        return `
+        <tr onclick="mostrarDetalleEmpleadoResumen('${emp.empleado_id}')" style="cursor: pointer;" title="Click para ver detalle por día">
+            <td>
+                <div class="empleado-info">
+                    <div class="empleado-avatar">
+                        ${emp.empleado_nombre.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div class="empleado-details">
+                        <div class="empleado-nombre">${emp.empleado_nombre}</div>
+                        <div class="empleado-codigo">${emp.empleado_codigo}</div>
+                    </div>
+                </div>
+            </td>
+            <td>
+                <span class="badge badge-sucursal">${emp.sucursal || 'N/A'}</span>
+            </td>
+            <td>
+                <span class="horas-trabajadas">${horasTrabajadas.toFixed(2)} hrs</span>
+            </td>
+            <td>
+                <span class="badge badge-success">${totalEntradas}</span>
+            </td>
+            <td>
+                <span class="badge badge-info">${totalSalidas}</span>
+            </td>
+            <td>
+                <span class="badge ${totalFaltas > 0 ? 'badge-warning' : 'badge-success'}">
+                    ${totalFaltas}
+                </span>
+            </td>
+            <td>
+                <span class="badge ${minutosRetardo > 0 ? 'badge-warning' : 'badge-secondary'}">
+                    ${minutosRetardo} min
+                </span>
+            </td>
+        </tr>
+        `;
+    }).join('');
+}
+
+/**
+ * Muestra estadísticas generales del período
+ */
+function mostrarEstadisticasGenerales(datos) {
+    const totalEmpleados = datos.length;
+    const totalHoras = datos.reduce((sum, e) => sum + (Number(e.horas_trabajadas) || 0), 0);
+    const totalFaltas = datos.reduce((sum, e) => sum + (Number(e.total_faltas) || 0), 0);
+    const totalRetardos = datos.reduce((sum, e) => sum + (Number(e.minutos_retardo) || 0), 0);
+
+    const statsDiv = document.getElementById('statsResumenGeneral');
+    statsDiv.innerHTML = `
+        <div style="text-align: center;">
+            <div style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px;">Total Empleados</div>
+            <div style="font-size: 1.4rem; font-weight: 700; color: #3b82f6;">${totalEmpleados}</div>
+        </div>
+        <div style="text-align: center;">
+            <div style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px;">Horas Totales</div>
+            <div style="font-size: 1.4rem; font-weight: 700; color: #10b981;">${totalHoras.toFixed(2)} hrs</div>
+        </div>
+        <div style="text-align: center;">
+            <div style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px;">Total Faltas</div>
+            <div style="font-size: 1.4rem; font-weight: 700; color: #f59e0b;">${totalFaltas}</div>
+        </div>
+        <div style="text-align: center;">
+            <div style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px;">Retardos (min)</div>
+            <div style="font-size: 1.4rem; font-weight: 700; color: #ef4444;">${totalRetardos}</div>
+        </div>
+    `;
+}
+
+/**
+ * Filtra la tabla según búsqueda y sucursal
+ */
+function filtrarResumenGeneral() {
+    const textoBusqueda = document.getElementById('filtroResumenGeneral').value.toLowerCase();
+    const sucursalFiltro = document.getElementById('filtroSucursalResumen').value;
+
+    let datosFiltrados = datosResumenGeneral.filter(emp => {
+        const coincideTexto = emp.empleado_nombre.toLowerCase().includes(textoBusqueda) ||
+                             emp.empleado_codigo.toLowerCase().includes(textoBusqueda);
+        const coincideSucursal = !sucursalFiltro || emp.sucursal === sucursalFiltro;
+
+        return coincideTexto && coincideSucursal;
+    });
+
+    renderizarTablaResumenGeneral(datosFiltrados);
+    mostrarEstadisticasGenerales(datosFiltrados);
+}
+
+/**
+ * Ordena la tabla por columna
+ */
+function ordenarResumenGeneral(columna) {
+    // Cambiar dirección si es la misma columna
+    if (ordenResumenGeneral.columna === columna) {
+        ordenResumenGeneral.direccion = ordenResumenGeneral.direccion === 'asc' ? 'desc' : 'asc';
+    } else {
+        ordenResumenGeneral.columna = columna;
+        ordenResumenGeneral.direccion = 'asc';
+    }
+
+    // Ordenar datos
+    datosResumenGeneral.sort((a, b) => {
+        let valorA, valorB;
+
+        switch(columna) {
+            case 'empleado':
+                valorA = a.empleado_nombre;
+                valorB = b.empleado_nombre;
+                break;
+            case 'sucursal':
+                valorA = a.sucursal;
+                valorB = b.sucursal;
+                break;
+            case 'horas':
+                valorA = Number(a.horas_trabajadas) || 0;
+                valorB = Number(b.horas_trabajadas) || 0;
+                break;
+            case 'entradas':
+                valorA = Number(a.total_entradas) || 0;
+                valorB = Number(b.total_entradas) || 0;
+                break;
+            case 'salidas':
+                valorA = Number(a.total_salidas) || 0;
+                valorB = Number(b.total_salidas) || 0;
+                break;
+            case 'faltas':
+                valorA = Number(a.total_faltas) || 0;
+                valorB = Number(b.total_faltas) || 0;
+                break;
+            case 'retardos':
+                valorA = Number(a.minutos_retardo) || 0;
+                valorB = Number(b.minutos_retardo) || 0;
+                break;
+            default:
+                return 0;
+        }
+
+        if (typeof valorA === 'string') {
+            return ordenResumenGeneral.direccion === 'asc'
+                ? valorA.localeCompare(valorB)
+                : valorB.localeCompare(valorA);
+        } else {
+            return ordenResumenGeneral.direccion === 'asc'
+                ? valorA - valorB
+                : valorB - valorA;
+        }
+    });
+
+    // Re-renderizar
+    filtrarResumenGeneral();
+}
+
+/**
+ * Exporta los datos a Excel
+ */
+function exportarResumenGeneral() {
+    if (datosResumenGeneral.length === 0) {
+        alert('No hay datos para exportar');
+        return;
+    }
+
+    // Preparar datos para CSV
+    const headers = [
+        'Código',
+        'Empleado',
+        'Sucursal',
+        'Puesto',
+        'Horas Trabajadas',
+        'Total Entradas',
+        'Total Salidas',
+        'Faltas',
+        'Minutos Retardo',
+        'Días Laborables',
+        'Días Trabajados'
+    ];
+
+    const rows = datosResumenGeneral.map(emp => [
+        emp.empleado_codigo,
+        emp.empleado_nombre,
+        emp.sucursal,
+        emp.puesto,
+        emp.horas_trabajadas.toFixed(2),
+        emp.total_entradas,
+        emp.total_salidas,
+        emp.total_faltas,
+        emp.minutos_retardo,
+        emp.dias_laborables,
+        emp.dias_trabajados
+    ]);
+
+    // Crear CSV
+    let csvContent = '\ufeff'; // BOM para UTF-8
+    csvContent += headers.join(',') + '\n';
+    rows.forEach(row => {
+        csvContent += row.map(cell => `"${cell}"`).join(',') + '\n';
+    });
+
+    // Descargar
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+
+    const fechaHoy = new Date().toISOString().split('T')[0];
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Resumen_General_${fechaHoy}.csv`);
+    link.style.visibility = 'hidden';
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+/**
+ * Imprime el resumen general
+ */
+function imprimirResumenGeneral() {
+    if (datosResumenGeneral.length === 0) {
+        alert('No hay datos para imprimir');
+        return;
+    }
+
+    // Obtener fechas del filtro
+    const fechaInicioStr = document.getElementById('fechaInicio').value;
+    const fechaFinStr = document.getElementById('fechaFin').value;
+
+    let html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Resumen General de Empleados</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    padding: 20px;
+                }
+                h1 {
+                    text-align: center;
+                    color: #0f172a;
+                    margin-bottom: 10px;
+                }
+                .periodo {
+                    text-align: center;
+                    color: #64748b;
+                    margin-bottom: 20px;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 20px;
+                    font-size: 12px;
+                }
+                th {
+                    background: #f1f5f9;
+                    padding: 8px;
+                    text-align: left;
+                    border: 1px solid #e2e8f0;
+                    font-weight: 600;
+                }
+                td {
+                    padding: 8px;
+                    border: 1px solid #e2e8f0;
+                }
+                tr:nth-child(even) {
+                    background: #f8fafc;
+                }
+                .footer {
+                    margin-top: 20px;
+                    text-align: center;
+                    color: #94a3b8;
+                    font-size: 11px;
+                }
+            </style>
+        </head>
+        <body>
+            <h1>Resumen General de Empleados</h1>
+            <div class="periodo">
+                Período: ${fechaInicioStr ? formatearFechaCorta(fechaInicioStr) : ''}
+                - ${fechaFinStr ? formatearFechaCorta(fechaFinStr) : ''}
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Empleado</th>
+                        <th>Sucursal</th>
+                        <th>Horas Trabajadas</th>
+                        <th>Entradas</th>
+                        <th>Salidas</th>
+                        <th>Faltas</th>
+                        <th>Min. Retardo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${datosResumenGeneral.map(emp => `
+                        <tr>
+                            <td>${emp.empleado_codigo}</td>
+                            <td>${emp.empleado_nombre}</td>
+                            <td>${emp.sucursal}</td>
+                            <td>${emp.horas_trabajadas.toFixed(2)} hrs</td>
+                            <td>${emp.total_entradas}</td>
+                            <td>${emp.total_salidas}</td>
+                            <td>${emp.total_faltas}</td>
+                            <td>${emp.minutos_retardo} min</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+
+            <div class="footer">
+                Generado el ${new Date().toLocaleString('es-MX')}
+            </div>
+        </body>
+        </html>
+    `;
+
+    const ventanaImpresion = window.open('', '', 'width=800,height=600');
+    ventanaImpresion.document.write(html);
+    ventanaImpresion.document.close();
+
+    setTimeout(() => {
+        ventanaImpresion.print();
+        ventanaImpresion.close();
+    }, 250);
+}
+
+/**
+ * Muestra el detalle por día de un empleado al hacer click en su fila
+ */
+function mostrarDetalleEmpleadoResumen(empleadoId) {
+    const emp = datosResumenGeneral.find(e => String(e.empleado_id) === String(empleadoId));
+    if (!emp) {
+        console.warn('Empleado no encontrado:', empleadoId);
+        return;
+    }
+
+    const panel = document.getElementById('panelDetalleEmpleado');
+    const dias = (emp.detalle_dias || []).slice().sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+    // Obtener fechas del filtro para mostrar faltas
+    const fechaInicioStr = document.getElementById('fechaInicio').value;
+    const fechaFinStr = document.getElementById('fechaFin').value;
+
+    // Construir lista completa de días laborables (lun-vie) sin depender de toISOString
+    const diasCompletos = [];
+    {
+        const pi = fechaInicioStr.split('-').map(Number);
+        const pf = fechaFinStr.split('-').map(Number);
+        const iterDate = new Date(pi[0], pi[1] - 1, pi[2], 12, 0, 0);
+        const finDate = new Date(pf[0], pf[1] - 1, pf[2], 12, 0, 0);
+        while (iterDate <= finDate) {
+            const diaSemana = iterDate.getDay();
+            if (diaSemana !== 0 && diaSemana !== 6) {
+                const yy = iterDate.getFullYear();
+                const mm = String(iterDate.getMonth() + 1).padStart(2, '0');
+                const dd = String(iterDate.getDate()).padStart(2, '0');
+                const fechaStr = `${yy}-${mm}-${dd}`;
+                const diaData = dias.find(d => d.fecha === fechaStr);
+                diasCompletos.push({
+                    fecha: fechaStr,
+                    diaSemana: iterDate.toLocaleDateString('es-MX', { weekday: 'short' }),
+                    data: diaData || null
+                });
+            }
+            iterDate.setDate(iterDate.getDate() + 1);
+        }
+    }
+
+    // Helper para formatear hora desde fecha_hora
+    function formatHoraMzt(fechaHora) {
+        if (!fechaHora) return '--:--';
+        const d = getMazatlanTime(fechaHora);
+        return d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
+    }
+
+    // Generar filas
+    const filasHTML = diasCompletos.map(dia => {
+        if (!dia.data) {
+            // Día sin registro = falta
+            return `
+                <tr class="detalle-falta">
+                    <td><strong>${formatearFechaCorta(dia.fecha)}</strong> <span class="dia-semana">${dia.diaSemana}</span></td>
+                    <td colspan="5" style="text-align: center; color: #ef4444; font-weight: 600;">
+                        <i class="fas fa-times-circle"></i> FALTA
+                    </td>
+                </tr>`;
+        }
+
+        const d = dia.data;
+        const horas = Number(d.horas_trabajadas) || 0;
+        const retardo = d._retardoMinutos || 0;
+
+        // Mostrar todas las entradas y salidas del día
+        const entradas = d.registros.filter(r => r.tipo_registro === 'ENTRADA');
+        const salidas = d.registros.filter(r => r.tipo_registro === 'SALIDA');
+        const entradasStr = entradas.map(e => formatHoraMzt(e.fecha_hora)).join(', ') || '--:--';
+        const salidasStr = salidas.map(s => formatHoraMzt(s.fecha_hora)).join(', ') || '--:--';
+
+        const retardoClass = retardo > 0 ? 'badge-warning' : 'badge-secondary';
+        const horasClass = horas >= 8 ? 'color: #10b981;' : (horas > 0 ? 'color: #f59e0b;' : 'color: #94a3b8;');
+
+        return `
+            <tr>
+                <td><strong>${formatearFechaCorta(dia.fecha)}</strong> <span class="dia-semana">${dia.diaSemana}</span></td>
+                <td>${entradasStr}</td>
+                <td>${salidasStr}</td>
+                <td style="font-weight: 600; ${horasClass}">${horas.toFixed(2)} hrs</td>
+                <td><span class="badge ${retardoClass}">${retardo} min</span></td>
+                <td><span class="badge ${d.estatus === 'COMPLETO' ? 'badge-success' : 'badge-warning'}">${d.estatus}</span></td>
+            </tr>`;
+    }).join('');
+
+    panel.innerHTML = `
+        <div class="detalle-header">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <button onclick="cerrarDetalleEmpleado()" class="btn-back" title="Volver">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <div class="empleado-avatar" style="width: 40px; height: 40px; font-size: 0.9rem;">
+                    ${emp.empleado_nombre.substring(0, 2).toUpperCase()}
+                </div>
+                <div>
+                    <div style="font-weight: 700; font-size: 1.1rem;">${emp.empleado_nombre}</div>
+                    <div style="color: #64748b; font-size: 0.8rem;">${emp.empleado_codigo} · ${emp.sucursal} · ${emp.puesto || ''}</div>
+                </div>
+            </div>
+            <div class="detalle-stats-mini">
+                <div><span class="stat-label">Horas</span><span class="stat-value" style="color:#10b981;">${(Number(emp.horas_trabajadas)||0).toFixed(2)}</span></div>
+                <div><span class="stat-label">Entradas</span><span class="stat-value" style="color:#3b82f6;">${emp.total_entradas}</span></div>
+                <div><span class="stat-label">Salidas</span><span class="stat-value" style="color:#6366f1;">${emp.total_salidas}</span></div>
+                <div><span class="stat-label">Faltas</span><span class="stat-value" style="color:#f59e0b;">${emp.total_faltas}</span></div>
+                <div><span class="stat-label">Retardo</span><span class="stat-value" style="color:#ef4444;">${emp.minutos_retardo} min</span></div>
+            </div>
+        </div>
+        <div class="detalle-tabla-container">
+            <table class="detalle-tabla">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Entradas</th>
+                        <th>Salidas</th>
+                        <th>Horas</th>
+                        <th>Retardo</th>
+                        <th>Estatus</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filasHTML}
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    panel.classList.add('show');
+    // Bloquear scroll del modal-content mientras el detalle está abierto
+    document.querySelector('#modalResumenGeneral .modal-content').classList.add('detalle-abierto');
+}
+
+/**
+ * Cierra el panel de detalle del empleado
+ */
+function cerrarDetalleEmpleado() {
+    document.getElementById('panelDetalleEmpleado').classList.remove('show');
+    const mc = document.querySelector('#modalResumenGeneral .modal-content');
+    if (mc) mc.classList.remove('detalle-abierto');
+}
+
+/**
+ * Cierra el modal
+ */
+function cerrarResumenGeneral() {
+    document.getElementById('modalResumenGeneral').classList.remove('show');
+    cerrarDetalleEmpleado();
+    datosResumenGeneral = [];
+}
+
+// Exportar funciones globales
+window.mostrarResumenGeneral = mostrarResumenGeneral;
+window.filtrarResumenGeneral = filtrarResumenGeneral;
+window.ordenarResumenGeneral = ordenarResumenGeneral;
+window.exportarResumenGeneral = exportarResumenGeneral;
+window.imprimirResumenGeneral = imprimirResumenGeneral;
+window.cerrarResumenGeneral = cerrarResumenGeneral;
+window.mostrarDetalleEmpleadoResumen = mostrarDetalleEmpleadoResumen;
+window.cerrarDetalleEmpleado = cerrarDetalleEmpleado;
 
 // ================================
 // MANEJO DE ERRORES E IMÁGENES
