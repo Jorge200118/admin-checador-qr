@@ -4917,7 +4917,7 @@ window.agregarBloqueHorario = (bloqueExistente = null) => {
     }
 };
 
-// Funciones placeholder
+// Fnciones placeholder
 window.guardarConfiguracion = () => showAlert('Info', 'Función de configuración en desarrollo', 'info');
 window.viewPhoto = (url) => window.open(url, '_blank');
 
