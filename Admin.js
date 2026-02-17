@@ -198,6 +198,7 @@ function navigateToSection(section) {
         empleados: 'Gestión de Empleados',
         horarios: 'Gestión de Horarios',
         registros: 'Registros de Asistencia',
+        justificaciones: 'Gestión de Justificaciones',
         reportes: 'Reportes y Estadísticas',
         configuracion: 'Configuración del Sistema'
     };
@@ -399,6 +400,9 @@ async function loadSectionData(section) {
             await loadRegistrosData();
             setupRegistrosFilters();
             setupRegistrosPagination();
+            break;
+        case 'justificaciones':
+            loadJustificaciones();
             break;
         case 'reportes':
             setTimeout(renderEstadisticasConDatosReales, 500);
@@ -856,6 +860,12 @@ async function obtenerEmpleadosSinEntradaRango(event) {
 
         const registros = registrosResult.data;
 
+        // Obtener justificaciones del rango para excluir días justificados
+        const justResult = await SupabaseAPI.getJustificacionesPorRango(
+            fechaInicio, fechaFin, window.currentUserSucursal
+        );
+        const justificaciones = justResult.success ? justResult.data : [];
+
         // Generar todas las fechas del rango
         const fechas = generarRangoFechas(fechaInicio, fechaFin);
         const todasLasFaltas = [];
@@ -885,8 +895,16 @@ async function obtenerEmpleadosSinEntradaRango(event) {
             // IDs de empleados que SÍ registraron entrada
             const empleadosConEntrada = new Set(registrosFecha.map(reg => reg.empleado_id));
 
-            // Empleados que NO registraron entrada (faltas)
-            const faltasDia = empleadosActivos.filter(emp => !empleadosConEntrada.has(emp.id));
+            // Empleados que NO registraron entrada y NO tienen justificación
+            const faltasDia = empleadosActivos.filter(emp => {
+                if (empleadosConEntrada.has(emp.id)) return false;
+                const tieneJustificacion = justificaciones.some(j =>
+                    j.empleado_id === emp.id &&
+                    j.fecha_inicio <= fecha &&
+                    j.fecha_fin >= fecha
+                );
+                return !tieneJustificacion;
+            });
 
             // Agregar fecha a cada falta
             faltasDia.forEach(emp => {
@@ -950,7 +968,8 @@ function descargarExcelFaltasRango(empleados, fechaInicio, fechaFin) {
     csvContent += 'REPORTE DE FALTAS POR RANGO DE FECHAS\n';
     csvContent += `Período: ${fechaInicio} al ${fechaFin}\n`;
     csvContent += `Total faltas encontradas: ${empleados.length}\n`;
-    csvContent += `Generado: ${new Date().toLocaleString()}\n\n`;
+    csvContent += `Generado: ${new Date().toLocaleString()}\n`;
+    csvContent += `Nota: Se excluyen días con justificaciones (vacaciones, incapacidad, permisos)\n\n`;
     
     // HEADERS DE TABLA
     csvContent += 'Fecha,Código,Empleado,Sucursal,Puesto,Horario,Observación\n';
@@ -4262,12 +4281,17 @@ function mostrarDetalleEmpleadoResumen(empleadoId) {
                     <div style="color: #64748b; font-size: 0.8rem;">${emp.empleado_codigo} · ${emp.sucursal} · ${emp.puesto || ''}</div>
                 </div>
             </div>
-            <div class="detalle-stats-mini">
-                <div><span class="stat-label">Horas</span><span class="stat-value" style="color:#10b981;">${(Number(emp.horas_trabajadas)||0).toFixed(2)}</span></div>
-                <div><span class="stat-label">Entradas</span><span class="stat-value" style="color:#3b82f6;">${emp.total_entradas}</span></div>
-                <div><span class="stat-label">Salidas</span><span class="stat-value" style="color:#6366f1;">${emp.total_salidas}</span></div>
-                <div><span class="stat-label">Faltas</span><span class="stat-value" style="color:#f59e0b;">${emp.total_faltas}</span></div>
-                <div><span class="stat-label">Retardo</span><span class="stat-value" style="color:#ef4444;">${emp.minutos_retardo} min</span></div>
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div class="detalle-stats-mini">
+                    <div><span class="stat-label">Horas</span><span class="stat-value" style="color:#10b981;">${(Number(emp.horas_trabajadas)||0).toFixed(2)}</span></div>
+                    <div><span class="stat-label">Entradas</span><span class="stat-value" style="color:#3b82f6;">${emp.total_entradas}</span></div>
+                    <div><span class="stat-label">Salidas</span><span class="stat-value" style="color:#6366f1;">${emp.total_salidas}</span></div>
+                    <div><span class="stat-label">Faltas</span><span class="stat-value" style="color:#f59e0b;">${emp.total_faltas}</span></div>
+                    <div><span class="stat-label">Retardo</span><span class="stat-value" style="color:#ef4444;">${emp.minutos_retardo} min</span></div>
+                </div>
+                <button onclick="imprimirDetalleEmpleado('${emp.empleado_id}')" class="btn btn-secondary" style="white-space: nowrap;">
+                    <i class="fas fa-print"></i> Imprimir
+                </button>
             </div>
         </div>
         <div class="detalle-tabla-container">
@@ -4292,6 +4316,115 @@ function mostrarDetalleEmpleadoResumen(empleadoId) {
     panel.classList.add('show');
     // Bloquear scroll del modal-content mientras el detalle está abierto
     document.querySelector('#modalResumenGeneral .modal-content').classList.add('detalle-abierto');
+}
+
+/**
+ * Imprime el detalle por día de un empleado
+ */
+function imprimirDetalleEmpleado(empleadoId) {
+    const emp = datosResumenGeneral.find(e => String(e.empleado_id) === String(empleadoId));
+    if (!emp) return;
+
+    const dias = (emp.detalle_dias || []).slice().sort((a, b) => a.fecha.localeCompare(b.fecha));
+    const fechaInicioStr = document.getElementById('fechaInicio').value;
+    const fechaFinStr = document.getElementById('fechaFin').value;
+
+    // Construir días laborables
+    const diasCompletos = [];
+    const pi = fechaInicioStr.split('-').map(Number);
+    const pf = fechaFinStr.split('-').map(Number);
+    const iterDate = new Date(pi[0], pi[1] - 1, pi[2], 12, 0, 0);
+    const finDate = new Date(pf[0], pf[1] - 1, pf[2], 12, 0, 0);
+    while (iterDate <= finDate) {
+        const diaSemana = iterDate.getDay();
+        if (diaSemana !== 0 && diaSemana !== 6) {
+            const yy = iterDate.getFullYear();
+            const mm = String(iterDate.getMonth() + 1).padStart(2, '0');
+            const dd = String(iterDate.getDate()).padStart(2, '0');
+            const fechaStr = `${yy}-${mm}-${dd}`;
+            const diaData = dias.find(d => d.fecha === fechaStr);
+            diasCompletos.push({
+                fecha: fechaStr,
+                diaSemana: iterDate.toLocaleDateString('es-MX', { weekday: 'short' }),
+                data: diaData || null
+            });
+        }
+        iterDate.setDate(iterDate.getDate() + 1);
+    }
+
+    function formatHoraMzt(fechaHora) {
+        if (!fechaHora) return '--:--';
+        const d = getMazatlanTime(fechaHora);
+        return d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
+    }
+
+    const filasHTML = diasCompletos.map(dia => {
+        if (!dia.data) {
+            return `<tr style="background: #fef2f2;">
+                <td>${formatearFechaCorta(dia.fecha)} <small>${dia.diaSemana}</small></td>
+                <td colspan="5" style="text-align: center; color: #ef4444; font-weight: 600;">FALTA</td>
+            </tr>`;
+        }
+        const d = dia.data;
+        const horas = Number(d.horas_trabajadas) || 0;
+        const retardo = d._retardoMinutos || 0;
+        const entradas = d.registros.filter(r => r.tipo_registro === 'ENTRADA');
+        const salidas = d.registros.filter(r => r.tipo_registro === 'SALIDA');
+        const entradasStr = entradas.map(e => formatHoraMzt(e.fecha_hora)).join(', ') || '--:--';
+        const salidasStr = salidas.map(s => formatHoraMzt(s.fecha_hora)).join(', ') || '--:--';
+
+        return `<tr>
+            <td>${formatearFechaCorta(dia.fecha)} <small>${dia.diaSemana}</small></td>
+            <td>${entradasStr}</td>
+            <td>${salidasStr}</td>
+            <td>${horas.toFixed(2)} hrs</td>
+            <td>${retardo} min</td>
+            <td>${d.estatus}</td>
+        </tr>`;
+    }).join('');
+
+    const html = `<!DOCTYPE html>
+        <html><head>
+            <title>Detalle - ${emp.empleado_nombre}</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 20px; }
+                h1 { font-size: 18px; margin-bottom: 4px; }
+                .sub { color: #64748b; font-size: 13px; margin-bottom: 6px; }
+                .stats { display: flex; gap: 24px; margin: 12px 0 16px; padding: 10px; background: #f8fafc; border-radius: 6px; font-size: 13px; }
+                .stats div { text-align: center; }
+                .stats .label { color: #94a3b8; font-size: 10px; text-transform: uppercase; }
+                .stats .val { font-weight: 700; font-size: 16px; }
+                table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                th { background: #f1f5f9; padding: 7px 8px; text-align: left; border: 1px solid #e2e8f0; font-weight: 600; }
+                td { padding: 6px 8px; border: 1px solid #e2e8f0; }
+                tr:nth-child(even) { background: #f8fafc; }
+                small { color: #94a3b8; text-transform: uppercase; }
+                .footer { margin-top: 16px; text-align: center; color: #94a3b8; font-size: 10px; }
+            </style>
+        </head><body>
+            <h1>${emp.empleado_nombre}</h1>
+            <div class="sub">${emp.empleado_codigo} · ${emp.sucursal} · ${emp.puesto || ''}</div>
+            <div class="sub">Período: ${fechaInicioStr ? formatearFechaCorta(fechaInicioStr) : ''} - ${fechaFinStr ? formatearFechaCorta(fechaFinStr) : ''}</div>
+            <div class="stats">
+                <div><div class="label">Horas</div><div class="val">${(Number(emp.horas_trabajadas)||0).toFixed(2)}</div></div>
+                <div><div class="label">Entradas</div><div class="val">${emp.total_entradas}</div></div>
+                <div><div class="label">Salidas</div><div class="val">${emp.total_salidas}</div></div>
+                <div><div class="label">Faltas</div><div class="val">${emp.total_faltas}</div></div>
+                <div><div class="label">Retardo</div><div class="val">${emp.minutos_retardo} min</div></div>
+            </div>
+            <table>
+                <thead><tr>
+                    <th>Fecha</th><th>Entradas</th><th>Salidas</th><th>Horas</th><th>Retardo</th><th>Estatus</th>
+                </tr></thead>
+                <tbody>${filasHTML}</tbody>
+            </table>
+            <div class="footer">Generado el ${new Date().toLocaleString('es-MX')}</div>
+        </body></html>`;
+
+    const ventana = window.open('', '', 'width=800,height=600');
+    ventana.document.write(html);
+    ventana.document.close();
+    setTimeout(() => { ventana.print(); ventana.close(); }, 250);
 }
 
 /**
@@ -4321,6 +4454,7 @@ window.imprimirResumenGeneral = imprimirResumenGeneral;
 window.cerrarResumenGeneral = cerrarResumenGeneral;
 window.mostrarDetalleEmpleadoResumen = mostrarDetalleEmpleadoResumen;
 window.cerrarDetalleEmpleado = cerrarDetalleEmpleado;
+window.imprimirDetalleEmpleado = imprimirDetalleEmpleado;
 
 // ================================
 // MANEJO DE ERRORES E IMÁGENES
@@ -4917,7 +5051,7 @@ window.agregarBloqueHorario = (bloqueExistente = null) => {
     }
 };
 
-// Fnciones placeholder
+// Funciones placeholder
 window.guardarConfiguracion = () => showAlert('Info', 'Función de configuración en desarrollo', 'info');
 window.viewPhoto = (url) => window.open(url, '_blank');
 
@@ -5084,4 +5218,387 @@ document.addEventListener('keydown', function(event) {
 });
 
 console.log('✅ Tutorial de empleados inicializado');
+
+// ================================
+// JUSTIFICACIONES
+// ================================
+let justificacionesData = [];
+
+async function loadJustificaciones() {
+    try {
+        showLoading('Cargando justificaciones...');
+
+        const filtros = {};
+        if (window.currentUserSucursal) {
+            filtros.sucursal = window.currentUserSucursal;
+        }
+
+        const result = await SupabaseAPI.getJustificaciones(filtros);
+        hideLoading();
+
+        if (result.success) {
+            justificacionesData = result.data;
+            renderJustificaciones(justificacionesData);
+            configurarFiltroSucursalJustificaciones();
+        } else {
+            showAlert('Error', 'No se pudieron cargar las justificaciones', 'error');
+        }
+    } catch (error) {
+        hideLoading();
+        showAlert('Error', 'Error al cargar justificaciones', 'error');
+    }
+}
+
+function renderJustificaciones(data) {
+    const tbody = document.querySelector('#justificacionesTable tbody');
+    if (!tbody) return;
+
+    if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;">No hay justificaciones registradas</td></tr>';
+        return;
+    }
+
+    const tipoLabels = {
+        'VACACION': '<span style="background:#3b82f6;color:white;padding:2px 8px;border-radius:4px;">Vacaciones</span>',
+        'INCAPACIDAD': '<span style="background:#ef4444;color:white;padding:2px 8px;border-radius:4px;">Incapacidad</span>',
+        'PERMISO': '<span style="background:#f59e0b;color:white;padding:2px 8px;border-radius:4px;">Permiso</span>'
+    };
+
+    tbody.innerHTML = data.map(j => {
+        const dias = calcularDiasJustificacion(j.fecha_inicio, j.fecha_fin);
+        return `
+            <tr>
+                <td>${j.empleado_nombre || ''} <br><small style="color:#888;">${j.empleado_codigo || ''}</small></td>
+                <td>${j.empleado_sucursal || ''}</td>
+                <td>${tipoLabels[j.tipo] || j.tipo}</td>
+                <td>${formatearFechaCorta(j.fecha_inicio)}</td>
+                <td>${formatearFechaCorta(j.fecha_fin)}</td>
+                <td>${dias}</td>
+                <td>${j.motivo || '-'}</td>
+                <td>${j.created_by || '-'}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary" onclick="editarJustificacion(${j.id})" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="eliminarJustificacion(${j.id})" title="Eliminar">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function calcularDiasJustificacion(fechaInicio, fechaFin) {
+    const inicio = new Date(fechaInicio + 'T00:00:00');
+    const fin = new Date(fechaFin + 'T00:00:00');
+    return Math.ceil((fin - inicio) / (1000 * 60 * 60 * 24)) + 1;
+}
+
+function formatearFechaCorta(fecha) {
+    if (!fecha) return '-';
+    const parts = fecha.split('-');
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+function filtrarJustificaciones() {
+    const tipo = document.getElementById('filterJustTipo')?.value || '';
+    const busqueda = (document.getElementById('searchJustEmpleado')?.value || '').toLowerCase();
+    const fechaInicio = document.getElementById('filterJustFechaInicio')?.value || '';
+    const fechaFin = document.getElementById('filterJustFechaFin')?.value || '';
+    const sucursal = document.getElementById('filterJustSucursal')?.value || '';
+
+    let filtered = justificacionesData;
+
+    if (tipo) {
+        filtered = filtered.filter(j => j.tipo === tipo);
+    }
+    if (busqueda) {
+        filtered = filtered.filter(j =>
+            (j.empleado_nombre || '').toLowerCase().includes(busqueda) ||
+            (j.empleado_codigo || '').toLowerCase().includes(busqueda)
+        );
+    }
+    if (fechaInicio) {
+        filtered = filtered.filter(j => j.fecha_fin >= fechaInicio);
+    }
+    if (fechaFin) {
+        filtered = filtered.filter(j => j.fecha_inicio <= fechaFin);
+    }
+    if (sucursal) {
+        filtered = filtered.filter(j => j.empleado_sucursal === sucursal);
+    }
+
+    renderJustificaciones(filtered);
+}
+
+function configurarFiltroSucursalJustificaciones() {
+    const filterSucursal = document.getElementById('filterJustSucursal');
+    if (!filterSucursal) return;
+
+    if (!window.isSuperAdmin && window.currentUserSucursal) {
+        filterSucursal.style.display = 'none';
+    }
+}
+
+// Cache de empleados para autocomplete
+let justEmpleadosCache = [];
+
+async function abrirModalJustificacion(justId = null) {
+    // Cargar empleados para autocomplete
+    const empResult = await SupabaseAPI.getEmpleados(window.currentUserSucursal);
+    if (empResult.success) {
+        justEmpleadosCache = empResult.data
+            .filter(e => e.activo)
+            .sort((a, b) => (a.nombre + a.apellido).localeCompare(b.nombre + b.apellido));
+    }
+
+    // Reset form
+    document.getElementById('justId').value = '';
+    document.getElementById('justEmpleadoId').value = '';
+    document.getElementById('justEmpleadoBuscar').value = '';
+    document.getElementById('justTipo').value = '';
+    document.getElementById('justFechaInicio').value = '';
+    document.getElementById('justFechaFin').value = '';
+    document.getElementById('justMotivo').value = '';
+    document.getElementById('justEmpleadoSeleccionado').style.display = 'none';
+    document.getElementById('justEmpleadoBuscar').style.display = '';
+    document.getElementById('justDiasResumen').style.display = 'none';
+    document.getElementById('justEmpleadoResultados').classList.remove('active');
+
+    // Limpiar errores previos
+    limpiarErroresJustificacion();
+
+    if (justId) {
+        const just = justificacionesData.find(j => j.id === justId);
+        if (just) {
+            document.getElementById('justId').value = just.id;
+            document.getElementById('justEmpleadoId').value = just.empleado_id;
+            document.getElementById('justTipo').value = just.tipo;
+            document.getElementById('justFechaInicio').value = just.fecha_inicio;
+            document.getElementById('justFechaFin').value = just.fecha_fin;
+            document.getElementById('justMotivo').value = just.motivo || '';
+            document.getElementById('modalJustificacionTitle').textContent = 'Editar Justificación';
+
+            // Mostrar badge del empleado seleccionado
+            seleccionarEmpleadoJustificacion(just.empleado_id, just.empleado_nombre, just.empleado_codigo);
+            actualizarResumenDias();
+        }
+    } else {
+        document.getElementById('modalJustificacionTitle').textContent = 'Nueva Justificación';
+    }
+
+    // Setup event listeners
+    setupJustificacionListeners();
+    openModal('modalJustificacion');
+}
+
+function setupJustificacionListeners() {
+    const inputBuscar = document.getElementById('justEmpleadoBuscar');
+    const resultados = document.getElementById('justEmpleadoResultados');
+
+    // Remover listeners previos clonando el input
+    const nuevoInput = inputBuscar.cloneNode(true);
+    inputBuscar.parentNode.replaceChild(nuevoInput, inputBuscar);
+
+    nuevoInput.addEventListener('input', function() {
+        const query = this.value.trim().toLowerCase();
+        if (query.length < 1) {
+            resultados.classList.remove('active');
+            return;
+        }
+
+        const matches = justEmpleadosCache.filter(emp => {
+            const nombre = `${emp.nombre} ${emp.apellido}`.toLowerCase();
+            const codigo = (emp.codigo_empleado || '').toLowerCase();
+            return nombre.includes(query) || codigo.includes(query);
+        }).slice(0, 8);
+
+        if (matches.length === 0) {
+            resultados.innerHTML = '<div class="just-autocomplete-no-results">No se encontraron empleados</div>';
+        } else {
+            resultados.innerHTML = matches.map(emp => `
+                <div class="just-autocomplete-item" data-id="${emp.id}" data-nombre="${emp.nombre} ${emp.apellido}" data-codigo="${emp.codigo_empleado}"
+                    onclick="seleccionarEmpleadoJustificacion(${emp.id}, '${(emp.nombre + ' ' + emp.apellido).replace(/'/g, "\\'")}', '${emp.codigo_empleado}')">
+                    <div>
+                        <div class="emp-name">${emp.nombre} ${emp.apellido}</div>
+                        <div class="emp-code">${emp.codigo_empleado} - ${emp.puesto || 'Sin puesto'}</div>
+                    </div>
+                    <span class="emp-sucursal">${emp.sucursal || ''}</span>
+                </div>
+            `).join('');
+        }
+        resultados.classList.add('active');
+    });
+
+    nuevoInput.addEventListener('focus', function() {
+        if (this.value.trim().length >= 1) {
+            nuevoInput.dispatchEvent(new Event('input'));
+        }
+    });
+
+    // Cerrar resultados al hacer click fuera
+    document.addEventListener('click', function cerrarAutocompletado(e) {
+        if (!e.target.closest('.just-autocomplete-wrapper')) {
+            resultados.classList.remove('active');
+        }
+    });
+
+    // Listeners para calcular días
+    const fechaInicio = document.getElementById('justFechaInicio');
+    const fechaFin = document.getElementById('justFechaFin');
+    fechaInicio.addEventListener('change', actualizarResumenDias);
+    fechaFin.addEventListener('change', actualizarResumenDias);
+}
+
+function seleccionarEmpleadoJustificacion(id, nombre, codigo) {
+    document.getElementById('justEmpleadoId').value = id;
+    document.getElementById('justEmpleadoBuscar').style.display = 'none';
+    document.getElementById('justEmpleadoResultados').classList.remove('active');
+
+    const badge = document.getElementById('justEmpleadoSeleccionado');
+    document.getElementById('justEmpleadoNombre').textContent = `${nombre} (${codigo})`;
+    badge.style.display = 'inline-flex';
+
+    // Quitar error si existía
+    document.getElementById('justEmpleadoBuscar').classList.remove('field-error');
+    const errorMsg = document.getElementById('justEmpleadoBuscar').parentNode.querySelector('.field-error-msg');
+    if (errorMsg) errorMsg.remove();
+}
+
+function limpiarEmpleadoJustificacion() {
+    document.getElementById('justEmpleadoId').value = '';
+    document.getElementById('justEmpleadoBuscar').value = '';
+    document.getElementById('justEmpleadoBuscar').style.display = '';
+    document.getElementById('justEmpleadoSeleccionado').style.display = 'none';
+    document.getElementById('justEmpleadoBuscar').focus();
+}
+
+function actualizarResumenDias() {
+    const fechaInicio = document.getElementById('justFechaInicio').value;
+    const fechaFin = document.getElementById('justFechaFin').value;
+    const resumen = document.getElementById('justDiasResumen');
+
+    if (fechaInicio && fechaFin && fechaFin >= fechaInicio) {
+        const dias = calcularDiasJustificacion(fechaInicio, fechaFin);
+        resumen.innerHTML = `<i class="fas fa-calendar-check"></i> ${dias} día${dias > 1 ? 's' : ''} — del ${formatearFechaCorta(fechaInicio)} al ${formatearFechaCorta(fechaFin)}`;
+        resumen.style.display = 'block';
+    } else {
+        resumen.style.display = 'none';
+    }
+}
+
+function limpiarErroresJustificacion() {
+    document.querySelectorAll('#formJustificacion .field-error').forEach(el => el.classList.remove('field-error'));
+    document.querySelectorAll('#formJustificacion .field-error-msg').forEach(el => el.remove());
+}
+
+function marcarErrorCampo(elementId, mensaje) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    el.classList.add('field-error');
+    // No agregar mensaje duplicado
+    const parent = el.closest('.form-group') || el.parentNode;
+    if (!parent.querySelector('.field-error-msg')) {
+        const msg = document.createElement('div');
+        msg.className = 'field-error-msg';
+        msg.textContent = mensaje;
+        parent.appendChild(msg);
+    }
+}
+
+function editarJustificacion(justId) {
+    abrirModalJustificacion(justId);
+}
+
+async function guardarJustificacion() {
+    limpiarErroresJustificacion();
+
+    const id = document.getElementById('justId').value;
+    const empleadoId = document.getElementById('justEmpleadoId').value;
+    const tipo = document.getElementById('justTipo').value;
+    const fechaInicio = document.getElementById('justFechaInicio').value;
+    const fechaFin = document.getElementById('justFechaFin').value;
+    const motivo = document.getElementById('justMotivo').value;
+
+    // Validación campo por campo
+    let hayErrores = false;
+
+    if (!empleadoId) {
+        marcarErrorCampo('justEmpleadoBuscar', 'Selecciona un empleado');
+        hayErrores = true;
+    }
+    if (!tipo) {
+        marcarErrorCampo('justTipo', 'Selecciona el tipo de justificación');
+        hayErrores = true;
+    }
+    if (!fechaInicio) {
+        marcarErrorCampo('justFechaInicio', 'Selecciona la fecha de inicio');
+        hayErrores = true;
+    }
+    if (!fechaFin) {
+        marcarErrorCampo('justFechaFin', 'Selecciona la fecha de fin');
+        hayErrores = true;
+    }
+    if (fechaInicio && fechaFin && fechaInicio > fechaFin) {
+        marcarErrorCampo('justFechaFin', 'Debe ser igual o posterior a fecha inicio');
+        hayErrores = true;
+    }
+
+    if (hayErrores) {
+        showAlert('Campos incompletos', 'Revisa los campos marcados en rojo', 'warning');
+        return;
+    }
+
+    const justData = {
+        empleado_id: parseInt(empleadoId),
+        tipo: tipo,
+        fecha_inicio: fechaInicio,
+        fecha_fin: fechaFin,
+        motivo: motivo,
+        created_by: window.currentUser?.nombreCompleto || 'admin'
+    };
+
+    showLoading('Guardando justificación...');
+
+    let result;
+    if (id) {
+        result = await SupabaseAPI.updateJustificacion(parseInt(id), justData);
+    } else {
+        result = await SupabaseAPI.createJustificacion(justData);
+    }
+
+    hideLoading();
+
+    if (result.success) {
+        closeModal('modalJustificacion');
+        showAlert('Éxito', id ? 'Justificación actualizada' : 'Justificación creada', 'success');
+        loadJustificaciones();
+    } else {
+        showAlert('Error', result.message || 'Error al guardar', 'error');
+    }
+}
+
+async function eliminarJustificacion(justId) {
+    if (!confirm('¿Estás seguro de eliminar esta justificación?')) return;
+
+    showLoading('Eliminando...');
+    const result = await SupabaseAPI.deleteJustificacion(justId);
+    hideLoading();
+
+    if (result.success) {
+        showAlert('Eliminado', 'Justificación eliminada correctamente', 'success');
+        loadJustificaciones();
+    } else {
+        showAlert('Error', 'No se pudo eliminar', 'error');
+    }
+}
+
+window.abrirModalJustificacion = abrirModalJustificacion;
+window.editarJustificacion = editarJustificacion;
+window.guardarJustificacion = guardarJustificacion;
+window.eliminarJustificacion = eliminarJustificacion;
+window.filtrarJustificaciones = filtrarJustificaciones;
+window.limpiarEmpleadoJustificacion = limpiarEmpleadoJustificacion;
+window.seleccionarEmpleadoJustificacion = seleccionarEmpleadoJustificacion;
 
