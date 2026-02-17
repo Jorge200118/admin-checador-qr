@@ -1249,7 +1249,7 @@ const SupabaseAPI = {
     },
 
     /**
-     * Verificar si un username ya existe
+     * Verificar si un username ya exist
      * @param {string} username - Username a verificar
      * @param {number} excludeId - ID a excluir (para edición)
      * @returns {boolean} - True si existe
