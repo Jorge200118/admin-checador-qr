@@ -48,6 +48,12 @@
                     </a>
                 </li> -->
                 <li class="nav-item">
+                    <a href="#justificaciones" data-section="justificaciones">
+                        <i class="fas fa-file-medical"></i>
+                        <span>Justificaciones</span>
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="#configuracion" data-section="configuracion">
                         <i class="fas fa-cog"></i>
                         <span>Configuración</span>
@@ -522,6 +528,66 @@
             </div>
         </section> -->
 
+        <!-- Justificaciones Section -->
+        <section id="justificaciones" class="content-section">
+            <div class="section-header">
+                <h2>Gestión de Justificaciones</h2>
+                <button class="btn btn-primary" id="btnNuevaJustificacion" onclick="abrirModalJustificacion()">
+                    <i class="fas fa-plus"></i> Nueva Justificación
+                </button>
+            </div>
+
+            <div class="filters">
+                <div class="filter-group">
+                    <select id="filterJustTipo" class="form-select" onchange="filtrarJustificaciones()">
+                        <option value="">Todos los tipos</option>
+                        <option value="VACACION">Vacaciones</option>
+                        <option value="INCAPACIDAD">Incapacidad</option>
+                        <option value="PERMISO">Permiso</option>
+                    </select>
+                    <input type="text" id="searchJustEmpleado" class="form-input"
+                        placeholder="Buscar empleado..." oninput="filtrarJustificaciones()">
+                    <input type="date" id="filterJustFechaInicio" class="form-input" onchange="filtrarJustificaciones()">
+                    <input type="date" id="filterJustFechaFin" class="form-input" onchange="filtrarJustificaciones()">
+                    <select id="filterJustSucursal" class="form-select" onchange="filtrarJustificaciones()">
+                        <option value="">Todas las sucursales</option>
+                        <option value="MATRIZ">MATRIZ</option>
+                        <option value="TAMARAL">TAMARAL</option>
+                        <option value="CABOS">CABOS</option>
+                        <option value="LA PAZ">LA PAZ</option>
+                        <option value="SAN JOSE">SAN JOSE</option>
+                        <option value="CULIACAN">CULIACAN</option>
+                        <option value="JUAN JOSE RIOS">JUAN JOSE RIOS</option>
+                        <option value="EL FUERTE">EL FUERTE</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-container">
+                        <table id="justificacionesTable">
+                            <thead>
+                                <tr>
+                                    <th>Empleado</th>
+                                    <th>Sucursal</th>
+                                    <th>Tipo</th>
+                                    <th>Fecha Inicio</th>
+                                    <th>Fecha Fin</th>
+                                    <th>Días</th>
+                                    <th>Motivo</th>
+                                    <th>Creado por</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- Configuración Section -->
         <section id="configuracion" class="content-section">
             <div class="section-header">
@@ -648,6 +714,65 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal Justificación -->
+    <div id="modalJustificacion" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalJustificacionTitle">Nueva Justificación</h3>
+                <span class="close" onclick="closeModal('modalJustificacion')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="formJustificacion">
+                    <input type="hidden" id="justId">
+                    <input type="hidden" id="justEmpleadoId">
+                    <div class="form-group">
+                        <label>Empleado: <span class="required-asterisk">*</span></label>
+                        <div class="just-autocomplete-wrapper">
+                            <input type="text" id="justEmpleadoBuscar" class="form-input"
+                                placeholder="Escribe nombre o código del empleado..."
+                                autocomplete="off" required>
+                            <div id="justEmpleadoResultados" class="just-autocomplete-results"></div>
+                        </div>
+                        <div id="justEmpleadoSeleccionado" class="just-empleado-badge" style="display:none;">
+                            <span id="justEmpleadoNombre"></span>
+                            <button type="button" class="just-badge-remove" onclick="limpiarEmpleadoJustificacion()">&times;</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo: <span class="required-asterisk">*</span></label>
+                        <select id="justTipo" class="form-select" required>
+                            <option value="">Seleccionar tipo...</option>
+                            <option value="VACACION">Vacaciones</option>
+                            <option value="INCAPACIDAD">Incapacidad</option>
+                            <option value="PERMISO">Permiso</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Fecha Inicio: <span class="required-asterisk">*</span></label>
+                        <input type="date" id="justFechaInicio" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Fecha Fin: <span class="required-asterisk">*</span></label>
+                        <input type="date" id="justFechaFin" class="form-input" required>
+                    </div>
+                    <div id="justDiasResumen" class="just-dias-resumen" style="display:none;"></div>
+                    <div class="form-group">
+                        <label>Motivo / Notas:</label>
+                        <textarea id="justMotivo" class="form-input" rows="3"
+                            placeholder="Descripción o notas adicionales..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('modalJustificacion')">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnGuardarJustificacion" onclick="guardarJustificacion()">
+                    <i class="fas fa-save"></i> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
     // Configuración global para evitar errores
     window.ADMIN_CONFIG = {
