@@ -1112,6 +1112,142 @@ const SupabaseAPI = {
         }
     },
 
+    // ==========================================
+    // JUSTIFICACIONES
+    // ==========================================
+
+    async getJustificaciones(filtros = {}) {
+        try {
+            let query = supabaseClient
+                .from('justificaciones')
+                .select(`
+                    *,
+                    empleado:empleados!inner(
+                        id,
+                        codigo_empleado,
+                        nombre,
+                        apellido,
+                        sucursal,
+                        puesto
+                    )
+                `)
+                .order('fecha_inicio', { ascending: false });
+
+            if (filtros.sucursal) {
+                query = query.eq('empleado.sucursal', filtros.sucursal);
+            }
+            if (filtros.tipo) {
+                query = query.eq('tipo', filtros.tipo);
+            }
+            if (filtros.empleadoId) {
+                query = query.eq('empleado_id', filtros.empleadoId);
+            }
+            if (filtros.fechaInicio) {
+                query = query.gte('fecha_inicio', filtros.fechaInicio);
+            }
+            if (filtros.fechaFin) {
+                query = query.lte('fecha_fin', filtros.fechaFin);
+            }
+
+            const { data, error } = await query;
+            if (error) throw error;
+
+            const transformedData = (data || []).map(j => ({
+                ...j,
+                empleado_nombre: `${j.empleado?.nombre || ''} ${j.empleado?.apellido || ''}`.trim(),
+                empleado_codigo: j.empleado?.codigo_empleado,
+                empleado_sucursal: j.empleado?.sucursal
+            }));
+
+            return { success: true, data: transformedData };
+        } catch (error) {
+            return { success: false, message: 'Error al obtener justificaciones' };
+        }
+    },
+
+    async createJustificacion(justData) {
+        try {
+            const { data, error } = await supabaseClient
+                .from('justificaciones')
+                .insert({
+                    empleado_id: justData.empleado_id,
+                    tipo: justData.tipo,
+                    fecha_inicio: justData.fecha_inicio,
+                    fecha_fin: justData.fecha_fin,
+                    motivo: justData.motivo || null,
+                    created_by: justData.created_by || null
+                })
+                .select()
+                .single();
+
+            if (error) throw error;
+            return { success: true, data: data };
+        } catch (error) {
+            return { success: false, message: error.message || 'Error al crear justificacion' };
+        }
+    },
+
+    async updateJustificacion(justId, justData) {
+        try {
+            const { data, error } = await supabaseClient
+                .from('justificaciones')
+                .update({
+                    empleado_id: justData.empleado_id,
+                    tipo: justData.tipo,
+                    fecha_inicio: justData.fecha_inicio,
+                    fecha_fin: justData.fecha_fin,
+                    motivo: justData.motivo || null
+                })
+                .eq('id', justId)
+                .select()
+                .single();
+
+            if (error) throw error;
+            return { success: true, data: data };
+        } catch (error) {
+            return { success: false, message: error.message || 'Error al actualizar justificacion' };
+        }
+    },
+
+    async deleteJustificacion(justId) {
+        try {
+            const { error } = await supabaseClient
+                .from('justificaciones')
+                .delete()
+                .eq('id', justId);
+
+            if (error) throw error;
+            return { success: true };
+        } catch (error) {
+            return { success: false, message: 'Error al eliminar justificacion' };
+        }
+    },
+
+    async getJustificacionesPorRango(fechaInicio, fechaFin, sucursal = null) {
+        try {
+            let query = supabaseClient
+                .from('justificaciones')
+                .select(`
+                    *,
+                    empleado:empleados!inner(
+                        id, nombre, apellido, sucursal
+                    )
+                `)
+                .lte('fecha_inicio', fechaFin)
+                .gte('fecha_fin', fechaInicio);
+
+            if (sucursal) {
+                query = query.eq('empleado.sucursal', sucursal);
+            }
+
+            const { data, error } = await query;
+            if (error) throw error;
+            return { success: true, data: data || [] };
+        } catch (error) {
+            return { success: false, data: [] };
+        }
+    },
+
     /**
      * Verificar si un username ya existe
      * @param {string} username - Username a verificar
