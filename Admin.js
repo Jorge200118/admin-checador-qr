@@ -673,8 +673,34 @@ function agruparRegistrosPorEmpleadoYFecha(registros) {
             }
         }
 
-        // Convertir minutos totales a formato decimal
-        const horasDecimal = (totalMinutos / 60).toFixed(1);
+        // Calcular descanso real y aplicar ajuste obligatorio de 60 minutos
+        // Empleados exentos del descuento de descanso obligatorio
+        const exentosDescanso = ['A01'];
+        const esExento = exentosDescanso.includes(grupo.empleado_codigo);
+
+        let descansoRealMinutos = 0;
+        let descansoAjuste = 0;
+
+        if (!esExento && pares.length > 1) {
+            // Calcular tiempo de descanso entre pares consecutivos
+            for (let p = 0; p < pares.length - 1; p++) {
+                const salidaDescanso = new Date(pares[p].salida.fecha_hora);
+                const entradaDescanso = new Date(pares[p + 1].entrada.fecha_hora);
+                descansoRealMinutos += Math.floor((entradaDescanso - salidaDescanso) / (1000 * 60));
+            }
+            // Si el descanso real fue menor a 60 min, descontar la diferencia
+            if (descansoRealMinutos < 60) {
+                descansoAjuste = 60 - descansoRealMinutos;
+            }
+        } else if (!esExento && pares.length === 1) {
+            // No tomó descanso: descontar 60 minutos obligatorios
+            descansoAjuste = 60;
+        }
+
+        const minutosAjustados = Math.max(0, totalMinutos - descansoAjuste);
+
+        // Convertir minutos ajustados a formato decimal
+        const horasDecimal = (minutosAjustados / 60).toFixed(1);
         const horasFormato = horasDecimal;
 
         // Determinar estatus
@@ -693,7 +719,10 @@ function agruparRegistrosPorEmpleadoYFecha(registros) {
             entrada: entradaRegistro,
             salida: salidaRegistro,
             horas_trabajadas: horasFormato,
-            minutos_totales: totalMinutos,
+            minutos_totales: minutosAjustados,
+            minutos_brutos: totalMinutos,
+            descanso_real_minutos: descansoRealMinutos,
+            descanso_ajuste_minutos: descansoAjuste,
             pares_entrada_salida: pares,
             estatus: estatus
         };
