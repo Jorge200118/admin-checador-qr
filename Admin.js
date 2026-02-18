@@ -1258,6 +1258,31 @@ async function eliminarRegistro(ids) {
     if (!confirm(msg)) return;
 
     try {
+        // Obtener los datos antes de borrar para auditoría
+        const { data: registrosABorrar, error: fetchError } = await supabaseClient
+            .from('registros')
+            .select('*')
+            .in('id', ids);
+
+        if (fetchError) throw fetchError;
+
+        // Obtener usuario actual
+        const session = JSON.parse(localStorage.getItem('session_sucursal') || sessionStorage.getItem('session_sucursal'));
+        const usuario = session?.username || 'desconocido';
+
+        // Insertar auditoría para cada registro
+        const auditorias = registrosABorrar.map(reg => ({
+            tabla: 'registros',
+            operacion: 'DELETE',
+            registro_id: reg.id,
+            usuario_id: usuario,
+            datos_anteriores: JSON.stringify(reg),
+            datos_nuevos: null
+        }));
+
+        await supabaseClient.from('auditoria').insert(auditorias);
+
+        // Ahora sí borrar
         const { error } = await supabaseClient
             .from('registros')
             .delete()
