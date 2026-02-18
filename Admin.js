@@ -1275,9 +1275,9 @@ async function eliminarRegistro(ids) {
             tabla: 'registros',
             operacion: 'DELETE',
             registro_id: reg.id,
-            usuario_id: usuario,
             datos_anteriores: JSON.stringify(reg),
-            datos_nuevos: null
+            datos_nuevos: null,
+            user_agent: usuario
         }));
 
         const { error: auditError } = await supabaseClient.from('auditoria').insert(auditorias);
