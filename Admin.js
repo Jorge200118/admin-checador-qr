@@ -1280,7 +1280,10 @@ async function eliminarRegistro(ids) {
             datos_nuevos: null
         }));
 
-        await supabaseClient.from('auditoria').insert(auditorias);
+        const { error: auditError } = await supabaseClient.from('auditoria').insert(auditorias);
+        if (auditError) {
+            console.error('Error al insertar auditoría:', auditError);
+        }
 
         // Ahora sí borrar
         const { error } = await supabaseClient
