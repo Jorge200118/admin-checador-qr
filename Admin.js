@@ -595,10 +595,7 @@ function renderRegistrosTableAdvanced() {
 
             <td>
                 <div class="acciones-cell">
-                    <button class="btn-accion editar" onclick="editarRegistro(${grupo.entrada?.id || grupo.salida?.id})" title="Editar">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn-accion eliminar" onclick="eliminarRegistro(${grupo.entrada?.id || grupo.salida?.id})" title="Eliminar">
+                    <button class="btn-accion eliminar" onclick="eliminarRegistro([${grupo.registros.map(r => r.id).join(',')}])" title="Eliminar">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -1248,9 +1245,31 @@ function editarRegistro(id) {
     showAlert('Info', 'Función de edición en desarrollo', 'info');
 }
 
-function eliminarRegistro(id) {
-    if (confirm('¿Estás seguro de eliminar este registro?')) {
-        showAlert('Info', 'Función de eliminación en desarrollo', 'info');
+async function eliminarRegistro(ids) {
+    if (!ids || ids.length === 0) {
+        showAlert('Error', 'No se encontró el registro a eliminar', 'error');
+        return;
+    }
+
+    const msg = ids.length === 1
+        ? '¿Estás seguro de eliminar este registro? Esta acción no se puede deshacer.'
+        : `¿Estás seguro de eliminar estos ${ids.length} registros del día? Esta acción no se puede deshacer.`;
+
+    if (!confirm(msg)) return;
+
+    try {
+        const { error } = await supabaseClient
+            .from('registros')
+            .delete()
+            .in('id', ids);
+
+        if (error) throw error;
+
+        showAlert('Éxito', 'Registro(s) eliminado(s) correctamente', 'success');
+        reloadRegistros();
+    } catch (error) {
+        console.error('Error al eliminar registro:', error);
+        showAlert('Error', 'No se pudo eliminar el registro', 'error');
     }
 }
 
