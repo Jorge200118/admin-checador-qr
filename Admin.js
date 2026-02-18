@@ -3681,6 +3681,7 @@ window.mostrarReporteEjecutivo = mostrarReporteEjecutivo;
 // ================================
 
 let datosResumenGeneral = [];
+let justificacionesResumenGeneral = [];
 let ordenResumenGeneral = { columna: 'empleado', direccion: 'asc' };
 
 /**
@@ -3738,7 +3739,7 @@ function calcularRetardoDia(entradasDelDia) {
 /**
  * Genera datos estadísticos de todos los empleados del período actual
  */
-function generarDatosResumenGeneral() {
+function generarDatosResumenGeneral(justificaciones = []) {
     const registros = adminState.registrosData || [];
 
     if (registros.length === 0) {
@@ -3834,11 +3835,19 @@ function generarDatosResumenGeneral() {
             }
         });
 
-        // Calcular faltas: días laborables sin registro
+        // Calcular faltas: días laborables sin registro y sin justificación
         let faltasCount = 0;
         for (const fechaLab of fechasLaborables) {
             if (!diasConRegistro.has(fechaLab)) {
-                faltasCount++;
+                // Verificar si tiene justificación para ese día
+                const tieneJustificacion = justificaciones.some(j =>
+                    j.empleado_id === empleadoId &&
+                    j.fecha_inicio <= fechaLab &&
+                    j.fecha_fin >= fechaLab
+                );
+                if (!tieneJustificacion) {
+                    faltasCount++;
+                }
             }
         }
 
@@ -3878,8 +3887,20 @@ function generarDatosResumenGeneral() {
  * Muestra el modal con el resumen general
  */
 async function mostrarResumenGeneral() {
+    // Obtener justificaciones del rango para excluir de faltas
+    const fechaInicioStr = document.getElementById('fechaInicio').value;
+    const fechaFinStr = document.getElementById('fechaFin').value;
+    let justificaciones = [];
+    if (fechaInicioStr && fechaFinStr) {
+        const justResult = await SupabaseAPI.getJustificacionesPorRango(
+            fechaInicioStr, fechaFinStr, window.currentUserSucursal
+        );
+        justificaciones = justResult.success ? justResult.data : [];
+    }
+    justificacionesResumenGeneral = justificaciones;
+
     // Generar datos
-    datosResumenGeneral = generarDatosResumenGeneral();
+    datosResumenGeneral = generarDatosResumenGeneral(justificaciones);
 
     if (datosResumenGeneral.length === 0) {
         alert('No hay datos de empleados en el período actual');
@@ -4309,7 +4330,24 @@ function mostrarDetalleEmpleadoResumen(empleadoId) {
     // Generar filas
     const filasHTML = diasCompletos.map(dia => {
         if (!dia.data) {
-            // Día sin registro = falta
+            // Verificar si tiene justificación para ese día
+            const justificacion = justificacionesResumenGeneral.find(j =>
+                j.empleado_id === emp.empleado_id &&
+                j.fecha_inicio <= dia.fecha &&
+                j.fecha_fin >= dia.fecha
+            );
+            if (justificacion) {
+                // Día justificado - no es falta
+                const tipoJust = justificacion.tipo || 'Justificación';
+                return `
+                <tr style="background: #f0fdf4;">
+                    <td><strong>${formatearFechaCorta(dia.fecha)}</strong> <span class="dia-semana">${dia.diaSemana}</span></td>
+                    <td colspan="5" style="text-align: center; color: #16a34a; font-weight: 600;">
+                        <i class="fas fa-check-circle"></i> ${tipoJust.toUpperCase()}
+                    </td>
+                </tr>`;
+            }
+            // Día sin registro y sin justificación = falta
             return `
                 <tr class="detalle-falta">
                     <td><strong>${formatearFechaCorta(dia.fecha)}</strong> <span class="dia-semana">${dia.diaSemana}</span></td>
@@ -4436,6 +4474,19 @@ function imprimirDetalleEmpleado(empleadoId) {
 
     const filasHTML = diasCompletos.map(dia => {
         if (!dia.data) {
+            // Verificar si tiene justificación
+            const justificacion = justificacionesResumenGeneral.find(j =>
+                j.empleado_id === emp.empleado_id &&
+                j.fecha_inicio <= dia.fecha &&
+                j.fecha_fin >= dia.fecha
+            );
+            if (justificacion) {
+                const tipoJust = justificacion.tipo || 'Justificación';
+                return `<tr style="background: #f0fdf4;">
+                <td>${formatearFechaCorta(dia.fecha)} <small>${dia.diaSemana}</small></td>
+                <td colspan="5" style="text-align: center; color: #16a34a; font-weight: 600;">${tipoJust.toUpperCase()}</td>
+            </tr>`;
+            }
             return `<tr style="background: #fef2f2;">
                 <td>${formatearFechaCorta(dia.fecha)} <small>${dia.diaSemana}</small></td>
                 <td colspan="5" style="text-align: center; color: #ef4444; font-weight: 600;">FALTA</td>
