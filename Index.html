@@ -652,6 +652,40 @@
                 <span class="close">&times;</span>
             </div>
             <div class="modal-body">
+
+                <!-- PASO 1: Buscar en nómina (solo al crear) -->
+                <div id="empBuscadorNomina" style="display:none; margin-bottom:16px;">
+                    <label style="font-weight:600; display:block; margin-bottom:6px;">
+                        Buscar empleado en nómina:
+                    </label>
+                    <div style="position:relative;">
+                        <input type="text" id="empBuscarInput" class="form-input"
+                            placeholder="Nombre, apellido o código..."
+                            autocomplete="off"
+                            style="padding-right:40px;">
+                        <span id="empBuscarSpinner" style="display:none; position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:14px;">⏳</span>
+                    </div>
+                    <div id="empBuscarResultados" style="
+                        display:none;
+                        border:1px solid #ddd;
+                        border-top:none;
+                        border-radius:0 0 6px 6px;
+                        max-height:240px;
+                        overflow-y:auto;
+                        background:#fff;
+                        box-shadow:0 4px 8px rgba(0,0,0,0.1);
+                    "></div>
+                    <div id="empSeleccionado" style="
+                        display:none;
+                        margin-top:8px;
+                        padding:10px 14px;
+                        background:#f0fdf4;
+                        border:1px solid #86efac;
+                        border-radius:6px;
+                        font-size:13px;
+                    "></div>
+                </div>
+
                 <form id="formEmpleado" enctype="multipart/form-data">
                     <div class="form-group">
                         <label>Código de Empleado:</label>
@@ -665,7 +699,6 @@
                         <label>Apellido:</label>
                         <input type="text" id="empApellido" name="apellido" class="form-input" required>
                     </div>
-                    <!-- AGREGAR ESTOS DOS CAMPOS NUEVOS -->
                     <div class="form-group">
                         <label>Sucursal:</label>
                         <select id="empSucursal" name="sucursal" class="form-select">
@@ -682,10 +715,9 @@
                     </div>
                     <div class="form-group">
                         <label>Puesto:</label>
-                        <input type="text" id="empPuesto" name="puesto" class="form-input" 
+                        <input type="text" id="empPuesto" name="puesto" class="form-input"
                             placeholder="Ej: VENTAS, ALMACÉN, ENCARGADO DE PATIO">
                     </div>
-                    <!-- FIN DE CAMPOS NUEVOS -->
                     <div class="form-group">
                         <label>Horario:</label>
                         <select id="empHorario" name="horario_id" class="form-select" required>
