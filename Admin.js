@@ -7,7 +7,7 @@
 // CONFIGURACIÓN GLOBAL
 // ================================
 const ADMIN_CONFIG = {
-    apiUrl: 'https://checador-qr.ngrok.app/api',
+    apiUrl: 'https://aceros-cabos-proveedores.ngrok.app/api',
     refreshInterval: 30000,
     autoLogoutTime: 3600000,
     maxFileSize: 5 * 1024 * 1024,
@@ -265,7 +265,7 @@ async function loadInitialData() {
             loadHorarios(),
             loadRecentRegistros()
         ]);
-        
+
         results.forEach((result, index) => {
             const names = ['Dashboard', 'Empleados', 'Horarios', 'Registros'];
             if (result.status === 'rejected') {
@@ -1723,11 +1723,15 @@ function openEmployeeModal(employeeId = null) {
 
     if (employeeId) {
         if (title) title.textContent = 'Editar Empleado';
+        _toggleBuscadorNomina(false);
         loadEmployeeData(employeeId);
     } else {
         if (title) title.textContent = 'Nuevo Empleado';
         if (elements.formEmpleado) elements.formEmpleado.reset();
         clearPhotoPreview();
+        _toggleBuscadorNomina(true);
+        _cargarCodigosExistentes(); // carga en background los que ya están en Supabase
+        _cargarNomina();            // precarga la nómina para que la búsqueda sea instantánea
 
         // Si NO es superadmin, ocultar el select de sucursal y pre-llenarlo
         if (!window.isSuperAdmin && window.currentUserSucursal) {
@@ -4904,6 +4908,176 @@ document.addEventListener('visibilitychange', () => {
 });
 
 window.addEventListener('beforeunload', killAllSpinners);
+
+// ================================
+// QR-CHECK: BUSCADOR DE NÓMINA
+// ================================
+
+let _nominaCache = null;        // todos los empleados de nómina (cargados una vez)
+let _nominaDebounce = null;     // timer debounce para el input
+let _codigosEnSupabase = new Set(); // códigos que ya están dados de alta
+
+// Carga empleados de nómina desde el backend (una sola vez por sesión del modal)
+async function _cargarNomina() {
+    if (_nominaCache) return _nominaCache;
+    try {
+        const res = await fetch(`${ADMIN_CONFIG.apiUrl}/empleados/qr-check/para-alta?limit=1000`);
+        if (!res.ok) throw new Error('Error al consultar nómina');
+        const json = await res.json();
+        _nominaCache = json.data || [];
+        return _nominaCache;
+    } catch (e) {
+        console.error('Error cargando nómina:', e);
+        return [];
+    }
+}
+
+// Construye el Set de códigos que ya existen en Supabase
+async function _cargarCodigosExistentes() {
+    try {
+        const result = await SupabaseAPI.getEmpleados();
+        const lista = result.data || result || [];
+        _codigosEnSupabase = new Set(lista.map(e => String(e.codigo_empleado).trim()));
+    } catch (e) {
+        console.error('Error cargando códigos existentes:', e);
+        _codigosEnSupabase = new Set();
+    }
+}
+
+// Muestra/oculta el buscador según si es nuevo o edición
+function _toggleBuscadorNomina(esNuevo) {
+    const buscador = document.getElementById('empBuscadorNomina');
+    if (!buscador) return;
+
+    if (esNuevo) {
+        buscador.style.display = 'block';
+        // Limpiar estado previo
+        document.getElementById('empBuscarInput').value = '';
+        document.getElementById('empBuscarResultados').style.display = 'none';
+        document.getElementById('empSeleccionado').style.display = 'none';
+        _setupBuscadorNomina();
+    } else {
+        buscador.style.display = 'none';
+    }
+}
+
+function _setupBuscadorNomina() {
+    const input = document.getElementById('empBuscarInput');
+    const resultados = document.getElementById('empBuscarResultados');
+    if (!input || input._nominaListenerAdded) return;
+    input._nominaListenerAdded = true;
+
+    input.addEventListener('input', () => {
+        clearTimeout(_nominaDebounce);
+        const q = input.value.trim();
+        if (q.length < 2) {
+            resultados.style.display = 'none';
+            return;
+        }
+        _nominaDebounce = setTimeout(() => _buscarEnNomina(q), 300);
+    });
+
+    // Cerrar al hacer click fuera
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#empBuscadorNomina')) {
+            resultados.style.display = 'none';
+        }
+    });
+}
+
+async function _buscarEnNomina(q) {
+    const spinner = document.getElementById('empBuscarSpinner');
+    const resultados = document.getElementById('empBuscarResultados');
+    if (spinner) spinner.style.display = 'inline';
+
+    const lista = await _cargarNomina();
+    if (spinner) spinner.style.display = 'none';
+
+    const qLower = q.toLowerCase();
+    const filtrados = lista.filter(e =>
+        e.nombre_completo?.toLowerCase().includes(qLower) ||
+        String(e.codigo_empleado).includes(q)
+    ).slice(0, 15);
+
+    if (filtrados.length === 0) {
+        resultados.innerHTML = '<div style="padding:12px; color:#888; font-size:13px;">Sin resultados</div>';
+        resultados.style.display = 'block';
+        return;
+    }
+
+    resultados.innerHTML = filtrados.map(e => {
+        const yaExiste = _codigosEnSupabase.has(String(e.codigo_empleado).trim());
+        return `
+            <div
+                data-codigo="${e.codigo_empleado}"
+                data-nombre="${e.nombre}"
+                data-paterno="${e.ap_paterno}"
+                data-materno="${e.ap_materno}"
+                data-puesto="${e.puesto}"
+                data-sucursal="${e.sucursal}"
+                data-yaexiste="${yaExiste}"
+                onclick="_seleccionarEmpleadoNomina(this)"
+                style="
+                    padding:10px 14px;
+                    cursor:${yaExiste ? 'default' : 'pointer'};
+                    border-bottom:1px solid #f0f0f0;
+                    background:${yaExiste ? '#f9f9f9' : '#fff'};
+                    opacity:${yaExiste ? '0.6' : '1'};
+                    font-size:13px;
+                    display:flex; justify-content:space-between; align-items:center;
+                "
+                ${yaExiste ? '' : 'onmouseover="this.style.background=\'#f0f9ff\'" onmouseout="this.style.background=\'#fff\'"'}
+            >
+                <div>
+                    <strong>${e.nombre_completo}</strong>
+                    <span style="color:#888; margin-left:8px;">${e.codigo_empleado}</span>
+                    <br>
+                    <span style="color:#555; font-size:12px;">${e.puesto} · ${e.sucursal}</span>
+                </div>
+                ${yaExiste ? '<span style="font-size:11px; color:#888; background:#e5e7eb; padding:2px 8px; border-radius:10px;">Ya registrado</span>' : ''}
+            </div>
+        `;
+    }).join('');
+
+    resultados.style.display = 'block';
+}
+
+function _seleccionarEmpleadoNomina(el) {
+    if (el.dataset.yaexiste === 'true') return; // bloquear si ya existe
+
+    const nombre = el.dataset.nombre || '';
+    const paterno = el.dataset.paterno || '';
+    const materno = el.dataset.materno || '';
+    const apellidoCompleto = [paterno, materno].filter(Boolean).join(' ');
+
+    // Llenar el formulario
+    const set = (id, val) => { const f = document.getElementById(id); if (f) f.value = val; };
+    set('empCodigo',   el.dataset.codigo);
+    set('empNombre',   nombre);
+    set('empApellido', apellidoCompleto);
+    set('empPuesto',   el.dataset.puesto);
+    set('empSucursal', el.dataset.sucursal);
+
+    // Autoseleccionar horario "partido de oficina" por defecto
+    const horarios = adminState.horariosData || [];
+    const horarioPartido = horarios.find(h =>
+        h.nombre && h.nombre.toLowerCase().includes('partido') && h.nombre.toLowerCase().includes('oficina')
+    ) || horarios.find(h =>
+        h.nombre && h.nombre.toLowerCase().includes('partido')
+    );
+    if (horarioPartido) set('empHorario', horarioPartido.id);
+
+    // Mostrar resumen del seleccionado
+    const box = document.getElementById('empSeleccionado');
+    if (box) {
+        box.innerHTML = `✅ <strong>${nombre} ${apellidoCompleto}</strong> · ${el.dataset.codigo} · ${el.dataset.puesto} · ${el.dataset.sucursal}`;
+        box.style.display = 'block';
+    }
+
+    // Ocultar dropdown
+    document.getElementById('empBuscarResultados').style.display = 'none';
+    document.getElementById('empBuscarInput').value = `${nombre} ${apellidoCompleto}`;
+}
 
 // ================================
 // EXPORTAR FUNCIONES GLOBALES
