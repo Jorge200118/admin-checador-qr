@@ -54,6 +54,18 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="#estadisticas" data-section="estadisticas">
+                        <i class="fas fa-chart-pie"></i>
+                        <span>Estadísticas</span>
+                    </a>
+                </li>
+                <li class="nav-item" style="display:none">
+                    <a href="#creditos" data-section="creditos">
+                        <i class="fas fa-credit-card"></i>
+                        <span>Créditos</span>
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="#configuracion" data-section="configuracion">
                         <i class="fas fa-cog"></i>
                         <span>Configuración</span>
@@ -73,6 +85,11 @@
                     <span class="status-dot online"></span>
                     <span>Sistema activo</span>
                 </div>
+                <!-- ── BADGE DE ALERTAS ── -->
+                <button class="btn btn-alertas" id="btnAlertas" onclick="abrirPanelAlertas()" title="Alertas del día" style="position:relative;background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:8px 14px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:14px;">
+                    <i class="fas fa-bell"></i>
+                    <span id="badgeAlertas" style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;align-items:center;justify-content:center;display:none;"></span>
+                </button>
                 <button class="btn btn-logout" onclick="cerrarSesion()">
                     <i class="fas fa-sign-out-alt"></i>
                     Salir
@@ -224,6 +241,7 @@
                                     <th>Horario</th>
                                     <th>Estado</th>
                                     <th>Fecha Alta</th>
+                                    <th>Expediente</th>
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
@@ -642,6 +660,253 @@
                 </div>
             </div>
         </section>
+
+        <!-- ==================== SECCIÓN ESTADÍSTICAS DE PLANTILLA ==================== -->
+        <section id="estadisticas" class="content-section">
+            <!-- Header -->
+            <div class="section-header">
+                <div>
+                    <h2 style="margin:0 0 2px">Estadísticas de Plantilla</h2>
+                    <span id="estActualizadoEn" style="font-size:12px;color:#94a3b8"></span>
+                </div>
+                <div class="header-actions-group">
+                    <button class="btn btn-secondary" onclick="cargarEstadisticas()" title="Recargar datos">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button class="btn btn-primary" onclick="exportarEstadisticasExcel()">
+                        <i class="fas fa-file-excel"></i> Exportar
+                    </button>
+                </div>
+            </div>
+
+            <!-- KPIs — 4 tarjetas con barra de color superior -->
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;">
+                <!-- Activos -->
+                <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05);">
+                    <div style="height:4px;background:linear-gradient(90deg,#3b82f6,#60a5fa)"></div>
+                    <div style="padding:20px 20px 18px">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+                            <span style="font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em">Plantilla Activa</span>
+                            <div style="width:36px;height:36px;border-radius:9px;background:#eff6ff;display:flex;align-items:center;justify-content:center">
+                                <i class="fas fa-users" style="color:#3b82f6;font-size:15px"></i>
+                            </div>
+                        </div>
+                        <div id="estTotalActivos" style="font-size:2rem;font-weight:800;color:#0f172a;line-height:1">–</div>
+                        <div style="font-size:12px;color:#94a3b8;margin-top:6px">empleados activos hoy</div>
+                    </div>
+                </div>
+                <!-- Bajas -->
+                <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05);">
+                    <div style="height:4px;background:linear-gradient(90deg,#ef4444,#f87171)"></div>
+                    <div style="padding:20px 20px 18px">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+                            <span style="font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em">Bajas (12 meses)</span>
+                            <div style="width:36px;height:36px;border-radius:9px;background:#fef2f2;display:flex;align-items:center;justify-content:center">
+                                <i class="fas fa-user-minus" style="color:#ef4444;font-size:15px"></i>
+                            </div>
+                        </div>
+                        <div id="estTotalBajas" style="font-size:2rem;font-weight:800;color:#0f172a;line-height:1">–</div>
+                        <div style="font-size:12px;color:#94a3b8;margin-top:6px">últimos 365 días</div>
+                    </div>
+                </div>
+                <!-- Ingresos -->
+                <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05);">
+                    <div style="height:4px;background:linear-gradient(90deg,#10b981,#34d399)"></div>
+                    <div style="padding:20px 20px 18px">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+                            <span style="font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em">Nuevos Ingresos</span>
+                            <div style="width:36px;height:36px;border-radius:9px;background:#f0fdf4;display:flex;align-items:center;justify-content:center">
+                                <i class="fas fa-user-plus" style="color:#10b981;font-size:15px"></i>
+                            </div>
+                        </div>
+                        <div id="estIngresos30" style="font-size:2rem;font-weight:800;color:#0f172a;line-height:1">–</div>
+                        <div style="font-size:12px;color:#94a3b8;margin-top:6px">últimos 30 días</div>
+                    </div>
+                </div>
+                <!-- Antigüedad -->
+                <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05);">
+                    <div style="height:4px;background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div>
+                    <div style="padding:20px 20px 18px">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+                            <span style="font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em">Antigüedad Prom.</span>
+                            <div style="width:36px;height:36px;border-radius:9px;background:#fffbeb;display:flex;align-items:center;justify-content:center">
+                                <i class="fas fa-star" style="color:#f59e0b;font-size:15px"></i>
+                            </div>
+                        </div>
+                        <div id="estAntigüedad" style="font-size:2rem;font-weight:800;color:#0f172a;line-height:1">–</div>
+                        <div style="font-size:12px;color:#94a3b8;margin-top:6px">años en promedio</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fila 1: Donas + Ingresos por mes -->
+            <div style="display:grid;grid-template-columns:1fr 1.6fr;gap:16px;margin-bottom:16px;align-items:start;">
+                <!-- Col izquierda: 2 donas apiladas -->
+                <div style="display:flex;flex-direction:column;gap:16px;">
+                    <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)">
+                        <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px">
+                            <div style="width:8px;height:8px;border-radius:50%;background:#3b82f6"></div>
+                            <span style="font-size:13px;font-weight:600;color:#0f172a">Distribución por Sexo</span>
+                        </div>
+                        <div style="padding:16px 20px 20px">
+                            <canvas id="chartSexo" style="max-height:200px"></canvas>
+                        </div>
+                    </div>
+                    <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)">
+                        <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px">
+                            <div style="width:8px;height:8px;border-radius:50%;background:#8b5cf6"></div>
+                            <span style="font-size:13px;font-weight:600;color:#0f172a">Estado Civil</span>
+                        </div>
+                        <div style="padding:16px 20px 20px">
+                            <canvas id="chartEstadoCivil" style="max-height:200px"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <!-- Col derecha: Ingresos por mes (barras verticales grandes) -->
+                <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)">
+                    <div style="padding:14px 20px 12px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center">
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <div style="width:8px;height:8px;border-radius:50%;background:#10b981"></div>
+                            <span style="font-size:13px;font-weight:600;color:#0f172a">Ingresos por Mes</span>
+                        </div>
+                        <span style="font-size:11px;color:#94a3b8">Año en curso</span>
+                    </div>
+                    <div style="padding:20px 20px 16px">
+                        <canvas id="chartIngresosMes" style="min-height:320px"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fila 2: Puestos + Áreas (barras horizontales) -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+                <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)">
+                    <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px">
+                        <div style="width:8px;height:8px;border-radius:50%;background:#8b5cf6"></div>
+                        <span style="font-size:13px;font-weight:600;color:#0f172a">Por Puesto</span>
+                        <span style="font-size:11px;color:#94a3b8;margin-left:auto">Top 15</span>
+                    </div>
+                    <div style="padding:16px 20px 20px">
+                        <canvas id="chartDepartamentos"></canvas>
+                    </div>
+                </div>
+                <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)">
+                    <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px">
+                        <div style="width:8px;height:8px;border-radius:50%;background:#f59e0b"></div>
+                        <span style="font-size:13px;font-weight:600;color:#0f172a">Por Área</span>
+                        <span style="font-size:11px;color:#94a3b8;margin-left:auto">Top 15</span>
+                    </div>
+                    <div style="padding:16px 20px 20px">
+                        <canvas id="chartAreas"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de rotación — tarjeta full-width -->
+            <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)">
+                <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px">
+                    <div style="width:8px;height:8px;border-radius:50%;background:#ef4444"></div>
+                    <span style="font-size:13px;font-weight:600;color:#0f172a">Índice de Rotación</span>
+                    <span style="font-size:11px;color:#94a3b8;margin-left:auto">Últimos 6 meses · <span style="color:#10b981">verde</span> &lt;2% · <span style="color:#f59e0b">amarillo</span> 2–5% · <span style="color:#ef4444">rojo</span> &gt;5%</span>
+                </div>
+                <div style="padding:0">
+                    <table id="tablaRotacion" style="width:100%;border-collapse:collapse">
+                        <thead>
+                            <tr style="background:#f8fafc">
+                                <th style="padding:10px 20px;text-align:left;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #f1f5f9">Mes</th>
+                                <th style="padding:10px 20px;text-align:right;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #f1f5f9">P. Inicial</th>
+                                <th style="padding:10px 20px;text-align:right;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #f1f5f9">Altas</th>
+                                <th style="padding:10px 20px;text-align:right;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #f1f5f9">Bajas</th>
+                                <th style="padding:10px 20px;text-align:right;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #f1f5f9">P. Final</th>
+                                <th style="padding:10px 20px;text-align:center;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #f1f5f9">% Rotación</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyRotacion">
+                            <tr><td colspan="6" style="text-align:center;color:#64748b;padding:24px">Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== SECCIÓN CONTROL DE CRÉDITOS ==================== -->
+        <section id="creditos" class="content-section" style="display:none">
+            <div class="section-header">
+                <h2>Control de Créditos INFONAVIT / FONACOT</h2>
+                <div class="header-actions-group">
+                    <button class="btn btn-primary" onclick="exportarCreditosExcel()">
+                        <i class="fas fa-file-excel"></i> Exportar Excel
+                    </button>
+                </div>
+            </div>
+
+            <!-- KPIs créditos -->
+            <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px;">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:rgba(59,130,246,.15)"><i class="fas fa-home" style="color:#3b82f6"></i></div>
+                    <div class="stat-info"><h3 id="credConInfonavit">–</h3><p>Con INFONAVIT</p></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:rgba(16,185,129,.15)"><i class="fas fa-credit-card" style="color:#10b981"></i></div>
+                    <div class="stat-info"><h3 id="credConFonacot">–</h3><p>Con FONACOT</p></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:rgba(245,158,11,.15)"><i class="fas fa-layer-group" style="color:#f59e0b"></i></div>
+                    <div class="stat-info"><h3 id="credConAmbos">–</h3><p>Con Ambos</p></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:rgba(239,68,68,.15)"><i class="fas fa-ban" style="color:#ef4444"></i></div>
+                    <div class="stat-info"><h3 id="credSinCredito">–</h3><p>Sin Crédito (activos)</p></div>
+                </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class="filters" style="margin-bottom:16px;">
+                <div class="filter-group" style="flex-wrap:wrap;gap:10px;">
+                    <input type="text" id="searchCreditos" placeholder="Buscar por nombre o ID..." class="form-input" oninput="filtrarTablaCreditos()" style="min-width:220px;">
+                    <select id="filtroCreditoTipo" class="form-select" onchange="cargarCreditos()">
+                        <option value="">Con algún crédito</option>
+                        <option value="infonavit">Solo INFONAVIT</option>
+                        <option value="fonacot">Solo FONACOT</option>
+                        <option value="ambos">Ambos créditos</option>
+                        <option value="sin">Sin crédito</option>
+                    </select>
+                    <select id="filtroCreditoDpto" class="form-select" onchange="cargarCreditos()">
+                        <option value="">Todos los departamentos</option>
+                    </select>
+                    <select id="filtroCreditoStatus" class="form-select" onchange="cargarCreditos()">
+                        <option value="">Activos e Inactivos</option>
+                        <option value="1">Solo Activos</option>
+                        <option value="0">Solo Bajas</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Tabla -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-container">
+                        <table id="tablaCreditosEmpleados">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nombre</th>
+                                    <th>Puesto</th>
+                                    <th>Departamento</th>
+                                    <th>INFONAVIT</th>
+                                    <th>FONACOT</th>
+                                    <th>Sueldo Diario</th>
+                                    <th>Status</th>
+                                    <th>Expediente</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyCreditos">
+                                <tr><td colspan="9" style="text-align:center;color:#64748b">Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
     <!-- Modals -->
@@ -875,6 +1140,7 @@
     </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
@@ -1286,6 +1552,59 @@
         <!-- Panel de detalle por empleado (slide-in) -->
         <div id="panelDetalleEmpleado" class="panel-detalle-empleado">
             <!-- Se llena dinámicamente -->
+        </div>
+    </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════════════════
+     MODAL: PANEL DE ALERTAS DEL DÍA
+     ════════════════════════════════════════════════════════════════════ -->
+<div id="modalAlertas" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.55);align-items:flex-start;justify-content:flex-end;">
+    <div style="background:#0f172a;border-left:1px solid #1e293b;height:100%;width:100%;max-width:420px;display:flex;flex-direction:column;animation:slideInRight .3s ease;">
+        <!-- Header -->
+        <div style="padding:20px 24px;border-bottom:1px solid #1e293b;display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <i class="fas fa-bell" style="color:#f59e0b;font-size:18px;"></i>
+                <h3 style="margin:0;color:#f1f5f9;font-size:16px;">Alertas del día</h3>
+                <span id="alertasTotalBadge" style="background:#ef4444;color:#fff;border-radius:20px;padding:2px 8px;font-size:12px;font-weight:700;"></span>
+            </div>
+            <button onclick="cerrarPanelAlertas()" style="background:none;border:none;color:#64748b;font-size:20px;cursor:pointer;padding:0 4px;">×</button>
+        </div>
+        <!-- Contenido -->
+        <div id="alertasContenido" style="flex:1;overflow-y:auto;padding:16px 24px;">
+            <div style="color:#64748b;text-align:center;padding:40px 0;">
+                <i class="fas fa-spinner fa-spin" style="font-size:24px;"></i>
+                <p style="margin-top:12px;">Cargando alertas...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     MODAL: EXPEDIENTE DIGITAL DEL EMPLEADO
+     ════════════════════════════════════════════════════════════════════ -->
+<div id="modalExpediente" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.6);align-items:flex-start;justify-content:flex-end;">
+    <div style="background:#0f172a;border-left:1px solid #1e293b;height:100%;width:100%;max-width:680px;display:flex;flex-direction:column;animation:slideInRight .3s ease;overflow:hidden;">
+        <!-- Header -->
+        <div style="padding:20px 28px;border-bottom:1px solid #1e293b;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#6366f1);display:flex;align-items:center;justify-content:center;">
+                    <i class="fas fa-id-card" style="color:#fff;font-size:18px;"></i>
+                </div>
+                <div>
+                    <h3 id="expedienteNombre" style="margin:0;color:#f1f5f9;font-size:17px;font-weight:600;">Expediente Digital</h3>
+                    <span id="expedienteCodigo" style="color:#64748b;font-size:13px;"></span>
+                </div>
+            </div>
+            <button onclick="cerrarExpediente()" style="background:none;border:none;color:#64748b;font-size:22px;cursor:pointer;padding:0 4px;line-height:1;">×</button>
+        </div>
+        <!-- Contenido scrollable -->
+        <div id="expedienteContenido" style="flex:1;overflow-y:auto;padding:24px 28px;">
+            <div style="color:#64748b;text-align:center;padding:60px 0;">
+                <i class="fas fa-spinner fa-spin" style="font-size:28px;"></i>
+                <p style="margin-top:14px;">Cargando expediente...</p>
+            </div>
         </div>
     </div>
 </div>
