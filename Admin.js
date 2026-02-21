@@ -144,7 +144,8 @@ async function initializeAdmin() {
         handleMissingImages();
 
         await loadInitialData();
-        
+        cargarAlertas(); // Alertas del día — sin await para no bloquear el resto de la UI
+
         startAutoRefresh();
         setupAutoLogout();
         
@@ -200,6 +201,8 @@ function navigateToSection(section) {
         registros: 'Registros de Asistencia',
         justificaciones: 'Gestión de Justificaciones',
         reportes: 'Reportes y Estadísticas',
+        estadisticas: 'Estadísticas de Plantilla',
+        creditos: 'Control de Créditos INFONAVIT / FONACOT',
         configuracion: 'Configuración del Sistema'
     };
     
@@ -406,6 +409,12 @@ async function loadSectionData(section) {
             break;
         case 'reportes':
             setTimeout(renderEstadisticasConDatosReales, 500);
+            break;
+        case 'estadisticas':
+            cargarEstadisticas();
+            break;
+        case 'creditos':
+            cargarCreditos();
             break;
         case 'configuracion':
             break;
@@ -671,9 +680,13 @@ function agruparRegistrosPorEmpleadoYFecha(registros) {
         }
 
         // Calcular descanso real y aplicar ajuste obligatorio de 60 minutos
+        // Solo aplica de lunes a viernes (sábado = día corrido, sin descuento)
+        const diaSemana = new Date(grupo.fecha + 'T12:00:00').getDay(); // 0=dom, 6=sab
+        const esDiaSemanaLaboral = diaSemana >= 1 && diaSemana <= 5;
+
         // Empleados exentos del descuento de descanso obligatorio
         const exentosDescanso = ['A01','PX005'];
-        const esExento = exentosDescanso.includes(grupo.empleado_codigo);
+        const esExento = exentosDescanso.includes(grupo.empleado_codigo) || !esDiaSemanaLaboral;
 
         let descansoRealMinutos = 0;
         let descansoAjuste = 0;
@@ -1484,7 +1497,7 @@ function renderEmployeesTable() {
     if (filteredEmployees.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="7" style="text-align: center; color: #6b7280; padding: 20px;">
+                <td colspan="10" style="text-align: center; color: #6b7280; padding: 20px;">
                     No hay empleados para mostrar
                 </td>
             </tr>
@@ -1523,6 +1536,13 @@ function renderEmployeesTable() {
                 </span>
             </td>
             <td>${formatDate(emp.fecha_alta)}</td>
+            <td>
+                <button class="btn btn-sm" onclick="abrirExpediente('${emp.codigo_empleado}')"
+                    title="Ver expediente completo"
+                    style="background:#1e293b;border:1px solid #3b82f6;color:#3b82f6;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px;">
+                    <i class="fas fa-folder-open"></i>
+                </button>
+            </td>
             <td>
                 <div class="action-buttons">
                     <button class="btn btn-sm btn-primary" onclick="editEmployee(${emp.id})" title="Editar">
@@ -4626,17 +4646,21 @@ function killAllSpinners() {
         }
     });
     
-    // MODIFICAR ESTA PARTE - No eliminar modales de fotos
+    // No eliminar modales permanentes con ID conocido
     document.querySelectorAll('[style*="position: fixed"]').forEach(el => {
-        // NO ELIMINAR si es modal de fotos o tiene ID específico
-        if (el.id && (el.id.includes('modal-fotos') || el.id.includes('modalQR'))) {
-            return; // No tocar
+        if (el.id && (
+            el.id.includes('modal-fotos') ||
+            el.id.includes('modalQR') ||
+            el.id === 'modalAlertas' ||
+            el.id === 'modalExpediente'
+        )) {
+            return; // No tocar modales permanentes
         }
-        
-        if (el.style.zIndex > 1000 && 
+
+        if (el.style.zIndex > 1000 &&
             (el.style.background || el.innerHTML.includes('loading')) &&
-            !el.innerHTML.includes('📸') && // No eliminar si tiene emoji de cámara
-            !el.innerHTML.includes('Registro #')) { // No eliminar si tiene texto de registro
+            !el.innerHTML.includes('📸') &&
+            !el.innerHTML.includes('Registro #')) {
             el.remove();
         }
     });
@@ -4656,6 +4680,10 @@ function addRequiredStyles() {
         @keyframes slideOut {
             from { transform: translateX(0); opacity: 1; }
             to { transform: translateX(100%); opacity: 0; }
+        }
+        @keyframes slideInRight {
+            from { transform: translateX(100%); }
+            to   { transform: translateX(0); }
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -5080,6 +5108,337 @@ function _seleccionarEmpleadoNomina(el) {
 }
 
 // ================================
+// ALERTAS DEL DÍA
+// ================================
+
+/**
+ * Carga alertas desde el backend y actualiza el badge.
+ * Se llama en initializeAdmin(). Si hay alertas urgentes (cumpleaños/bajas hoy)
+ * abre el panel automáticamente.
+ */
+async function cargarAlertas() {
+    try {
+        const res = await fetch(`${ADMIN_CONFIG.apiUrl}/empleados/alertas`);
+        const json = await res.json();
+
+        if (!json.success || !json.data) return;
+
+        // Filtrar por sucursal del usuario logueado (superadmin ve todo)
+        const todasAlertas = json.data;
+        const miSucursal = window.currentUserSucursal || null;
+        const alertas = miSucursal
+            ? todasAlertas.filter(a => (a.sucursal || '').toUpperCase() === miSucursal.toUpperCase())
+            : todasAlertas;
+
+        window._alertasData = alertas; // cache (ya filtrado)
+
+        // Actualizar badge
+        const badge = document.getElementById('badgeAlertas');
+        if (badge) {
+            if (alertas.length > 0) {
+                badge.textContent = alertas.length > 99 ? '99+' : alertas.length;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        // Abrir automáticamente si hay cumpleaños hoy o bajas recientes
+        const hayUrgentes = alertas.some(a => a.tipo === 'cumpleanos' || a.tipo === 'baja');
+        if (hayUrgentes) {
+            setTimeout(() => abrirPanelAlertas(), 800);
+        }
+    } catch (e) {
+        console.warn('No se pudieron cargar alertas:', e.message);
+    }
+}
+
+function abrirPanelAlertas() {
+    const modal = document.getElementById('modalAlertas');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    const alertas = window._alertasData || [];
+    // Mostrar todas al abrir, sin filtro aplicado
+    renderAlertasContenido(alertas, null);
+
+    modal.onclick = (e) => { if (e.target === modal) cerrarPanelAlertas(); };
+}
+
+function cerrarPanelAlertas() {
+    const modal = document.getElementById('modalAlertas');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+}
+
+function renderAlertasContenido(alertas, sucursalFiltro) {
+    const cont = document.getElementById('alertasContenido');
+    const totalBadge = document.getElementById('alertasTotalBadge');
+    if (!cont) return;
+
+    // Filtrar por sucursal si se especificó
+    const lista = sucursalFiltro
+        ? alertas.filter(a => (a.sucursal || '').toLowerCase() === sucursalFiltro.toLowerCase())
+        : alertas;
+
+    if (totalBadge) totalBadge.textContent = lista.length + (lista.length === 1 ? ' alerta' : ' alertas');
+
+    // El selector de sucursal solo aplica para superadmin (usuarios normales ya tienen cache filtrado)
+    const esSuperAdmin = !window.currentUserSucursal;
+    const sucursales = esSuperAdmin
+        ? [...new Set(alertas.map(a => a.sucursal || 'Sin sucursal'))].sort()
+        : [];
+
+    let selectorHtml = '';
+    if (esSuperAdmin && sucursales.length > 1) {
+        selectorHtml = `
+        <div style="margin-bottom:16px;">
+            <select id="filtroSucursalAlertas"
+                onchange="filtrarAlertasPorSucursal(this.value)"
+                style="width:100%;padding:8px 12px;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:8px;font-size:13px;cursor:pointer;outline:none;">
+                <option value="">Todas las sucursales (${alertas.length})</option>
+                ${sucursales.map(s => {
+                    const count = alertas.filter(a => (a.sucursal || 'Sin sucursal') === s).length;
+                    return `<option value="${s}" ${sucursalFiltro === s ? 'selected' : ''}>${s} (${count})</option>`;
+                }).join('')}
+            </select>
+        </div>`;
+    }
+
+    if (lista.length === 0) {
+        cont.innerHTML = selectorHtml + `
+            <div style="text-align:center;padding:40px 0;color:#475569;">
+                <i class="fas fa-check-circle" style="font-size:36px;color:#22c55e;"></i>
+                <p style="margin-top:14px;font-size:15px;">Sin alertas para esta sucursal</p>
+            </div>`;
+        return;
+    }
+
+    const grupos = {
+        cumpleanos: { label: 'Cumpleaños hoy', icon: 'fa-birthday-cake', color: '#f59e0b', items: [] },
+        aniversario: { label: 'Aniversarios laborales', icon: 'fa-star', color: '#6366f1', items: [] },
+        baja:        { label: 'Bajas recientes (7 días)', icon: 'fa-user-minus', color: '#ef4444', items: [] }
+    };
+
+    lista.forEach(a => { if (grupos[a.tipo]) grupos[a.tipo].items.push(a); });
+
+    let html = selectorHtml;
+
+    Object.values(grupos).forEach(grupo => {
+        if (grupo.items.length === 0) return;
+
+        // Agrupar por sucursal dentro de cada tipo
+        const porSucursal = {};
+        grupo.items.forEach(a => {
+            const suc = a.sucursal || 'Sin sucursal';
+            if (!porSucursal[suc]) porSucursal[suc] = [];
+            porSucursal[suc].push(a);
+        });
+
+        html += `
+        <div style="margin-bottom:24px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #1e293b;">
+                <i class="fas ${grupo.icon}" style="color:${grupo.color};font-size:14px;"></i>
+                <span style="color:${grupo.color};font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.5px;">${grupo.label}</span>
+                <span style="background:${grupo.color}22;color:${grupo.color};border-radius:20px;padding:1px 8px;font-size:11px;font-weight:700;">${grupo.items.length}</span>
+            </div>`;
+
+        Object.entries(porSucursal).sort(([a],[b]) => a.localeCompare(b)).forEach(([sucursal, items]) => {
+            // Sub-encabezado de sucursal (solo si no hay filtro activo, para no repetir)
+            if (!sucursalFiltro) {
+                html += `<div style="display:flex;align-items:center;gap:6px;margin:10px 0 6px;">
+                    <i class="fas fa-building" style="color:#475569;font-size:10px;"></i>
+                    <span style="color:#64748b;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;">${sucursal}</span>
+                </div>`;
+            }
+
+            html += `<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;">`;
+
+            items.forEach(a => {
+                let detalle = '';
+                if (a.tipo === 'cumpleanos') {
+                    detalle = `🎂 Cumple ${a.anos} año${a.anos !== 1 ? 's' : ''}`;
+                } else if (a.tipo === 'aniversario') {
+                    detalle = `🏆 ${a.anos} año${a.anos !== 1 ? 's' : ''} en la empresa`;
+                } else if (a.tipo === 'baja') {
+                    const dias = a.anos === 0 ? 'hoy' : `hace ${a.anos} día${a.anos !== 1 ? 's' : ''}`;
+                    detalle = `📤 Dado de baja ${dias}`;
+                }
+
+                html += `
+                <div style="background:#1e293b;border-radius:8px;padding:11px 14px;border-left:3px solid ${grupo.color};display:flex;flex-direction:column;gap:3px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;">
+                        <span style="color:#f1f5f9;font-weight:600;font-size:13px;">${a.nombre_completo || '—'}</span>
+                        <span style="color:#64748b;font-size:11px;">#${a.empleado}</span>
+                    </div>
+                    <span style="color:#94a3b8;font-size:12px;">${a.puesto || '—'}</span>
+                    <span style="color:${grupo.color};font-size:12px;font-weight:500;">${detalle}</span>
+                </div>`;
+            });
+
+            html += `</div>`;
+        });
+
+        html += `</div>`;
+    });
+
+    cont.innerHTML = html;
+}
+
+function filtrarAlertasPorSucursal(sucursal) {
+    const alertas = window._alertasData || [];
+    renderAlertasContenido(alertas, sucursal || null);
+}
+
+// ================================
+// EXPEDIENTE DIGITAL DEL EMPLEADO
+// ================================
+
+async function abrirExpediente(codigoEmpleado) {
+    const modal = document.getElementById('modalExpediente');
+    const cont  = document.getElementById('expedienteContenido');
+    const nomEl = document.getElementById('expedienteNombre');
+    const codEl = document.getElementById('expedienteCodigo');
+    if (!modal || !cont) return;
+
+    // Resetear y mostrar
+    nomEl.textContent = 'Expediente Digital';
+    codEl.textContent = `Empleado #${codigoEmpleado}`;
+    cont.innerHTML = `
+        <div style="color:#64748b;text-align:center;padding:60px 0;">
+            <i class="fas fa-spinner fa-spin" style="font-size:28px;"></i>
+            <p style="margin-top:14px;">Cargando expediente...</p>
+        </div>`;
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    modal.onclick = (e) => { if (e.target === modal) cerrarExpediente(); };
+
+    try {
+        const res  = await fetch(`${ADMIN_CONFIG.apiUrl}/empleados/expediente/${codigoEmpleado}`);
+        const json = await res.json();
+
+        if (!json.success || !json.data) throw new Error(json.message || 'No encontrado');
+
+        const d = json.data;
+        nomEl.textContent = d.NombreCompleto || `${d.Nombre} ${d.ApellidoPaterno} ${d.ApellidoMaterno}`;
+        codEl.textContent = `Empleado #${d.Empleado}`;
+
+        // Calcular antigüedad
+        let antiguedadStr = '—';
+        if (d.FechaIngreso) {
+            const fi  = new Date(d.FechaIngreso);
+            const hoy = new Date();
+            const anos  = hoy.getFullYear() - fi.getFullYear();
+            const meses = hoy.getMonth() - fi.getMonth();
+            const totalMeses = anos * 12 + meses;
+            const anosR = Math.floor(totalMeses / 12);
+            const mesesR = totalMeses % 12;
+            antiguedadStr = `${anosR} año${anosR !== 1 ? 's' : ''} ${mesesR > 0 ? `y ${mesesR} mes${mesesR !== 1 ? 'es' : ''}` : ''}`;
+        }
+
+        const statusColor = (d.StatusEmpleado || '').toLowerCase().includes('activ') ? '#22c55e' : '#ef4444';
+
+        const fila = (label, valor, opts = {}) => {
+            if (!valor && !opts.mostrarVacio) return '';
+            return `
+            <div style="display:flex;padding:9px 0;border-bottom:1px solid #1e293b22;gap:12px;">
+                <span style="color:#64748b;font-size:12px;min-width:160px;flex-shrink:0;">${label}</span>
+                <span style="color:${opts.color || '#e2e8f0'};font-size:13px;font-weight:${opts.bold ? '600' : '400'};">${valor || '—'}</span>
+            </div>`;
+        };
+
+        const seccion = (titulo, icono, color, contenido) => `
+        <div style="margin-bottom:24px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #1e293b;">
+                <div style="width:28px;height:28px;border-radius:6px;background:${color}22;display:flex;align-items:center;justify-content:center;">
+                    <i class="fas ${icono}" style="color:${color};font-size:12px;"></i>
+                </div>
+                <span style="color:${color};font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.5px;">${titulo}</span>
+            </div>
+            <div>${contenido}</div>
+        </div>`;
+
+        const formatFecha = (f) => {
+            if (!f) return null;
+            try { return new Date(f).toLocaleDateString('es-MX', { day:'2-digit', month:'long', year:'numeric' }); }
+            catch { return f; }
+        };
+
+        const dirCompleta = [d.Calle, d.NumExterior ? `#${d.NumExterior}` : null, d.NumInterior ? `Int. ${d.NumInterior}` : null].filter(Boolean).join(' ');
+
+        cont.innerHTML = `
+        ${seccion('Datos Personales', 'fa-user', '#3b82f6', `
+            ${fila('Nombre completo', d.NombreCompleto, { bold: true })}
+            ${fila('Fecha de nacimiento', formatFecha(d.FechaNacimiento))}
+            ${fila('Sexo', d.Sexo)}
+            ${fila('Estado civil', d.EstadoCivil)}
+            ${fila('Tipo de sangre', d.TipoSangre)}
+            ${fila('Lugar de nacimiento', d.LugarNacimiento)}
+            ${fila('Escolaridad', d.Escolaridad)}
+            ${fila('Profesión', d.Profesion)}
+        `)}
+
+        ${seccion('Datos de Contacto', 'fa-address-book', '#06b6d4', `
+            ${fila('Dirección', dirCompleta)}
+            ${fila('Colonia', d.Colonia)}
+            ${fila('C.P.', d.CodigoPostal)}
+            ${fila('Delegación / Municipio', [d.Delegacion, d.Municipio].filter(Boolean).join(' / '))}
+            ${fila('Teléfono 1', d.Telefono1)}
+            ${fila('Teléfono 2', d.Telefono2)}
+            ${fila('Correo electrónico', d.Email)}
+        `)}
+
+        ${seccion('Datos Laborales', 'fa-briefcase', '#10b981', `
+            ${fila('Puesto', d.Puesto)}
+            ${fila('Sucursal', d.Sucursal, { bold: true })}
+            ${fila('Área', d.Area)}
+            ${fila('Departamento', d.Departamento)}
+            ${fila('Fecha de ingreso', formatFecha(d.FechaIngreso))}
+            ${fila('Antigüedad', antiguedadStr, { color: '#22c55e', bold: true })}
+            ${fila('Grupo de nómina', d.GrupoNomina)}
+            ${fila('Horario', d.Horario)}
+            ${fila('Forma de pago', d.FormaPago)}
+            ${fila('Tipo de empleado', d.TipoEmpleado)}
+            ${fila('Tipo de percepción', d.TipoPercepcion)}
+            ${fila('Jefe inmediato', d.JefeInmediato)}
+            ${fila('Forma de checar', d.FormaChecar)}
+            ${fila('Status', `<span style="background:${statusColor}22;color:${statusColor};border-radius:20px;padding:2px 10px;font-size:12px;font-weight:600;">${d.StatusEmpleado || '—'}</span>`, { color: 'inherit' })}
+        `)}
+
+        ${seccion('Documentos IMSS / Legales', 'fa-shield-alt', '#8b5cf6', `
+            ${fila('RFC', d.RFC, { bold: true })}
+            ${fila('CURP', d.CURP)}
+            ${fila('INE', d.INE)}
+            ${fila('Registro IMSS', d.NumeroIMSS)}
+            ${fila('Folio alta IMSS', d.FolioAltaIMSS)}
+            ${fila('Crédito INFONAVIT', d.CreditoInfonavit)}
+            ${fila('FONACOT', d.NumeroFonacot)}
+            ${fila('Tipo de régimen', d.TipoRegimenContratacion)}
+            ${fila('Sindicalizado', d.Sindicalizado)}
+        `)}
+        `;
+    } catch (err) {
+        cont.innerHTML = `
+            <div style="text-align:center;padding:60px 0;color:#ef4444;">
+                <i class="fas fa-exclamation-triangle" style="font-size:30px;"></i>
+                <p style="margin-top:14px;">No se pudo cargar el expediente</p>
+                <p style="color:#64748b;font-size:13px;">${err.message}</p>
+            </div>`;
+    }
+}
+
+function cerrarExpediente() {
+    const modal = document.getElementById('modalExpediente');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+}
+
+// ================================
 // EXPORTAR FUNCIONES GLOBALES
 // ================================
 window.refreshDashboard = () => loadDashboardData();
@@ -5097,6 +5456,13 @@ window.toggleHorarioStatus = toggleHorarioStatus;
 window.deleteHorario = deleteHorario;
 window.closeModal = closeModal;
 window.generarReporteAsistencia = generarReporteAsistencia;
+
+// Alertas y Expediente
+window.abrirPanelAlertas = abrirPanelAlertas;
+window.cerrarPanelAlertas = cerrarPanelAlertas;
+window.filtrarAlertasPorSucursal = filtrarAlertasPorSucursal;
+window.abrirExpediente = abrirExpediente;
+window.cerrarExpediente = cerrarExpediente;
 
 // Funciones específicas para registros avanzados
 window.filtrarRegistros = filtrarRegistros;
@@ -5902,4 +6268,510 @@ window.eliminarJustificacion = eliminarJustificacion;
 window.filtrarJustificaciones = filtrarJustificaciones;
 window.limpiarEmpleadoJustificacion = limpiarEmpleadoJustificacion;
 window.seleccionarEmpleadoJustificacion = seleccionarEmpleadoJustificacion;
+
+// ================================
+// ESTADÍSTICAS DE PLANTILLA
+// ================================
+
+let _estCharts = {};   // instancias de Chart.js para destruir al recargar
+let _estDatos  = null; // cache de datos para exportar
+
+async function cargarEstadisticas() {
+    try {
+        ['estTotalActivos','estTotalBajas','estIngresos30','estAntigüedad'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = '…';
+        });
+
+        const params = new URLSearchParams();
+        if (window.currentUserSucursal) params.set('sucursal', window.currentUserSucursal);
+        const res  = await fetch(`${ADMIN_CONFIG.apiUrl}/empleados/estadisticas?${params}`);
+        const json = await res.json();
+
+        if (!json.success) throw new Error(json.message);
+
+        _estDatos = json.data;
+
+        // KPIs
+        const k = json.data.kpis;
+        document.getElementById('estTotalActivos').textContent = k.total_activos ?? '–';
+        document.getElementById('estTotalBajas').textContent   = k.total_bajas   ?? '–';
+        document.getElementById('estIngresos30').textContent   = k.ingresos_30d  ?? '–';
+        document.getElementById('estAntigüedad').textContent   = k.promedio_antiguedad ?? '–';
+
+        // Fecha actualización
+        const el = document.getElementById('estActualizadoEn');
+        if (el) el.textContent = `Actualizado: ${new Date(json.actualizadoEn).toLocaleString('es-MX')}`;
+
+        // Destruir charts anteriores
+        Object.values(_estCharts).forEach(c => c.destroy());
+        _estCharts = {};
+
+        _renderChartDona('chartSexo',            json.data.sexo,        'sexo');
+        _renderChartDona('chartEstadoCivil',      json.data.estadoCivil, 'estado_civil');
+        _renderChartBarrasV('chartIngresosMes',   json.data.ingresosMes);
+        _renderChartBarrasH('chartDepartamentos', json.data.puestos,     'puesto',  '#8b5cf6');
+        _renderChartBarrasH('chartAreas',         json.data.areas,       'area',    '#f59e0b');
+        _renderTablaRotacion(json.data.rotacion);
+
+    } catch (err) {
+        console.error('cargarEstadisticas:', err);
+    }
+}
+
+const COLORES_DONA = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#06b6d4','#f97316','#ec4899'];
+const MESES_ES     = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+const LABEL_SEXO = { 'M': 'Masculino', 'H': 'Masculino', 'F': 'Femenino', 'NO ESPECIFICADO': 'No especificado' };
+const LABEL_EC   = { 'C': 'Casado/a', 'S': 'Soltero/a', 'U': 'Unión libre', 'D': 'Divorciado/a', 'V': 'Viudo/a', 'NO ESPECIFICADO': 'No especificado' };
+
+function _labelLegible(val, mapa) {
+    if (!val) return 'Sin dato';
+    const v = String(val).trim().toUpperCase();
+    return mapa[v] || (v.charAt(0) + v.slice(1).toLowerCase());
+}
+
+const _ttBase = {
+    backgroundColor: 'rgba(15,23,42,0.9)',
+    titleColor: '#f8fafc',
+    bodyColor: '#cbd5e1',
+    borderColor: '#334155',
+    borderWidth: 1,
+    padding: 12,
+    cornerRadius: 8,
+    displayColors: true,
+    boxWidth: 8,
+    boxHeight: 8
+};
+
+// Plugin: centro de dona con total y etiqueta
+const pluginCentroTotal = {
+    id: 'centroTotal',
+    afterDraw(chart) {
+        if (chart.config.type !== 'doughnut') return;
+        const { ctx, chartArea: { top, bottom, left, right } } = chart;
+        const total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+        const cx = (left + right) / 2, cy = (top + bottom) / 2;
+        ctx.save();
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 28px Inter, sans-serif';
+        ctx.fillText(total, cx, cy - 10);
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '500 11px Inter, sans-serif';
+        ctx.fillText('total', cx, cy + 12);
+        ctx.restore();
+    }
+};
+
+// Plugin: valor al final de barra horizontal
+const pluginValorBarra = {
+    id: 'valorBarra',
+    afterDatasetsDraw(chart) {
+        if (chart.options.indexAxis !== 'y') return;
+        const { ctx } = chart;
+        chart.getDatasetMeta(0).data.forEach((bar, i) => {
+            const val = chart.data.datasets[0].data[i];
+            if (!val) return;
+            ctx.save();
+            ctx.fillStyle = '#64748b';
+            ctx.font = '600 11px Inter, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(val, bar.x + 6, bar.y);
+            ctx.restore();
+        });
+    }
+};
+
+// Plugin: valor encima de barra vertical
+const pluginValorBarraV = {
+    id: 'valorBarraV',
+    afterDatasetsDraw(chart) {
+        if (chart.options.indexAxis === 'y') return;
+        const { ctx } = chart;
+        chart.getDatasetMeta(0).data.forEach((bar, i) => {
+            const val = chart.data.datasets[0].data[i];
+            if (!val) return;
+            ctx.save();
+            ctx.fillStyle = '#475569';
+            ctx.font = '600 11px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(val, bar.x, bar.y - 4);
+            ctx.restore();
+        });
+    }
+};
+
+function _renderChartDona(canvasId, datos, campoLabel) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx || !datos || !datos.length) return;
+
+    const mapaLabel = campoLabel === 'sexo' ? LABEL_SEXO : campoLabel === 'estado_civil' ? LABEL_EC : null;
+    const labels  = datos.map(d => mapaLabel ? _labelLegible(d[campoLabel], mapaLabel) : (d[campoLabel] || 'Sin dato'));
+    const valores = datos.map(d => d.total);
+    const total   = valores.reduce((a, b) => a + b, 0);
+    const colores = COLORES_DONA.slice(0, datos.length);
+
+    _estCharts[canvasId] = new Chart(ctx, {
+        type: 'doughnut',
+        plugins: [pluginCentroTotal],
+        data: {
+            labels,
+            datasets: [{
+                data: valores,
+                backgroundColor: colores,
+                borderWidth: 2,
+                borderColor: '#ffffff',
+                hoverOffset: 6,
+                hoverBorderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            cutout: '68%',
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        color: '#374151',
+                        font: { size: 11, family: 'Inter, sans-serif' },
+                        boxWidth: 10, boxHeight: 10,
+                        borderRadius: 3,
+                        padding: 10,
+                        generateLabels(chart) {
+                            return chart.data.labels.map((lbl, i) => {
+                                const val = valores[i];
+                                const pct = total > 0 ? ((val / total) * 100).toFixed(0) : 0;
+                                return {
+                                    text: `${lbl}  ${pct}%`,
+                                    fillStyle: colores[i],
+                                    strokeStyle: 'transparent',
+                                    index: i
+                                };
+                            });
+                        }
+                    }
+                },
+                tooltip: {
+                    ..._ttBase,
+                    callbacks: {
+                        label: c => {
+                            const pct = total > 0 ? ((c.parsed / total) * 100).toFixed(1) : 0;
+                            return `  ${c.parsed} empleados (${pct}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function _renderChartBarrasV(canvasId, datos) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx || !datos || !datos.length) return;
+
+    const valores = Array(12).fill(0);
+    datos.forEach(d => { valores[d.mes - 1] = d.total; });
+    const mesActual = new Date().getMonth(); // 0-based
+
+    _estCharts[canvasId] = new Chart(ctx, {
+        type: 'bar',
+        plugins: [pluginValorBarraV],
+        data: {
+            labels: MESES_ES,
+            datasets: [{
+                label: 'Ingresos',
+                data: valores,
+                backgroundColor: valores.map((v, i) => {
+                    if (v === 0) return '#f1f5f9';
+                    if (i === mesActual) return '#10b981';
+                    return '#3b82f6';
+                }),
+                borderRadius: { topLeft: 5, topRight: 5 },
+                borderSkipped: false,
+                maxBarThickness: 40,
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    ..._ttBase,
+                    callbacks: {
+                        title: items => `${MESES_ES[items[0].dataIndex]} — Ingresos`,
+                        label: c => `  ${c.parsed.y} empleado${c.parsed.y !== 1 ? 's' : ''}`
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: '#64748b', font: { size: 11 } },
+                    grid:  { display: false },
+                    border: { color: '#e2e8f0' }
+                },
+                y: {
+                    ticks: { color: '#94a3b8', font: { size: 10 }, stepSize: 1, precision: 0 },
+                    grid:  { color: '#f1f5f9', drawTicks: false },
+                    border: { dash: [3,3], color: 'transparent' },
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+function _renderChartBarrasH(canvasId, datos, campoLabel, colorBase = '#3b82f6') {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx || !datos || !datos.length) return;
+
+    // Tomar top 10 para que no se amontone
+    const top10 = datos.slice(0, 10);
+    const labels = top10.map(d => d[campoLabel] || 'Sin dato');
+    const valores = top10.map(d => d.total);
+    const maxVal  = Math.max(...valores, 1);
+
+    // Opacidad proporcional al valor
+    const bgColors = valores.map(v => {
+        const alpha = 0.25 + 0.75 * (v / maxVal);
+        return colorBase + Math.round(alpha * 255).toString(16).padStart(2,'0');
+    });
+
+    _estCharts[canvasId] = new Chart(ctx, {
+        type: 'bar',
+        plugins: [pluginValorBarra],
+        data: {
+            labels,
+            datasets: [{
+                label: 'Empleados',
+                data: valores,
+                backgroundColor: bgColors,
+                borderRadius: { topRight: 4, bottomRight: 4 },
+                borderSkipped: false,
+                maxBarThickness: 20
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            layout: { padding: { right: 32 } },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    ..._ttBase,
+                    callbacks: {
+                        title: items => items[0].label,
+                        label: c => `  ${c.parsed.x} empleados`
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { display: false },
+                    grid:  { display: false },
+                    border: { display: false },
+                    beginAtZero: true
+                },
+                y: {
+                    ticks: {
+                        color: '#374151',
+                        font: { size: 11, weight: '500' },
+                        callback(val) {
+                            const lbl = this.getLabelForValue(val);
+                            return lbl && lbl.length > 24 ? lbl.slice(0, 22) + '…' : lbl;
+                        }
+                    },
+                    grid: { display: false },
+                    border: { display: false }
+                }
+            }
+        }
+    });
+}
+
+function _renderTablaRotacion(rotacion) {
+    const tbody = document.getElementById('tbodyRotacion');
+    if (!tbody) return;
+    if (!rotacion || !rotacion.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:24px">Sin datos de rotación</td></tr>';
+        return;
+    }
+    const maxTasa = Math.max(...rotacion.map(r => parseFloat(r.tasa) || 0), 0.1);
+    tbody.innerHTML = rotacion.map((r, idx) => {
+        const tasa  = parseFloat(r.tasa);
+        const color = tasa > 5 ? '#ef4444' : tasa > 2 ? '#f59e0b' : '#10b981';
+        const bgBadge = tasa > 5 ? 'rgba(239,68,68,.12)' : tasa > 2 ? 'rgba(245,158,11,.12)' : 'rgba(16,185,129,.12)';
+        const barW  = Math.min(100, (tasa / Math.max(maxTasa, 5)) * 100).toFixed(1);
+        const rowBg = idx % 2 === 0 ? '#ffffff' : '#fafafa';
+        return `
+        <tr style="background:${rowBg}">
+            <td style="padding:12px 20px;font-size:13px;font-weight:600;color:#0f172a">${MESES_ES[r.mes - 1]} ${r.anio}</td>
+            <td style="padding:12px 20px;text-align:right;font-size:13px;color:#64748b">${r.plantilla_inicial}</td>
+            <td style="padding:12px 20px;text-align:right;font-size:13px;font-weight:600;color:#10b981">+${r.altas}</td>
+            <td style="padding:12px 20px;text-align:right;font-size:13px;font-weight:600;color:#ef4444">−${r.bajas}</td>
+            <td style="padding:12px 20px;text-align:right;font-size:13px;color:#64748b">${r.plantilla_final}</td>
+            <td style="padding:12px 20px">
+                <div style="display:flex;align-items:center;gap:10px;justify-content:flex-end">
+                    <div style="flex:1;max-width:80px;height:5px;background:#f1f5f9;border-radius:3px;overflow:hidden">
+                        <div style="width:${barW}%;height:100%;background:${color};border-radius:3px"></div>
+                    </div>
+                    <span style="background:${bgBadge};color:${color};padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;min-width:52px;text-align:center;white-space:nowrap">${r.tasa}%</span>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function exportarEstadisticasExcel() {
+    if (!_estDatos) return;
+    const wb = XLSX.utils.book_new();
+
+    // Hoja KPIs
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([{
+        'Activos':         _estDatos.kpis.total_activos,
+        'Bajas':           _estDatos.kpis.total_bajas,
+        'Ingresos 30 días':_estDatos.kpis.ingresos_30d,
+        'Antigüedad prom': _estDatos.kpis.promedio_antiguedad
+    }]), 'KPIs');
+
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(_estDatos.sexo),         'Por Sexo');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(_estDatos.estadoCivil),  'Estado Civil');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(_estDatos.puestos),      'Por Puesto');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(_estDatos.areas),        'Áreas');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(_estDatos.rotacion),     'Rotación');
+
+    XLSX.writeFile(wb, `Estadisticas_Plantilla_${new Date().toLocaleDateString('es-MX').replace(/\//g,'-')}.xlsx`);
+}
+
+// ================================
+// CONTROL DE CRÉDITOS
+// ================================
+
+let _creditosDatos = []; // cache completo para filtro local por nombre/ID
+
+async function cargarCreditos() {
+    try {
+        document.getElementById('tbodyCreditos').innerHTML =
+            '<tr><td colspan="9" style="text-align:center;color:#64748b">Cargando...</td></tr>';
+
+        const tipo  = document.getElementById('filtroCreditoTipo')?.value   || '';
+        const dpto  = document.getElementById('filtroCreditoDpto')?.value   || '';
+        const status= document.getElementById('filtroCreditoStatus')?.value || '';
+
+        const params = new URLSearchParams();
+        if (tipo)   params.set('tipo',         tipo);
+        if (dpto)   params.set('departamento', dpto);
+        if (status) params.set('status',       status);
+        // Filtrar por sucursal del usuario (igual que alertas)
+        if (window.currentUserSucursal) params.set('sucursal', window.currentUserSucursal);
+
+        const res  = await fetch(`${ADMIN_CONFIG.apiUrl}/empleados/creditos?${params}`);
+        const json = await res.json();
+
+        if (!json.success) throw new Error(json.message);
+
+        // KPIs
+        const r = json.data.resumen;
+        document.getElementById('credConInfonavit').textContent = r.con_infonavit ?? '–';
+        document.getElementById('credConFonacot').textContent   = r.con_fonacot   ?? '–';
+        document.getElementById('credConAmbos').textContent     = r.con_ambos     ?? '–';
+        document.getElementById('credSinCredito').textContent   = r.sin_credito   ?? '–';
+
+        // Poblar selector de departamentos (se resetea cada carga para reflejar sucursal)
+        const selectDpto = document.getElementById('filtroCreditoDpto');
+        if (selectDpto) {
+            const valorActual = selectDpto.value;
+            selectDpto.innerHTML = '<option value="">Todos los departamentos</option>';
+            json.data.departamentos.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = opt.textContent = d.departamento;
+                if (d.departamento === valorActual) opt.selected = true;
+                selectDpto.appendChild(opt);
+            });
+        }
+
+        // Guardar y renderizar
+        _creditosDatos = json.data.empleados;
+        _renderTablaCreditos(_creditosDatos);
+
+    } catch (err) {
+        console.error('cargarCreditos:', err);
+        document.getElementById('tbodyCreditos').innerHTML =
+            '<tr><td colspan="9" style="text-align:center;color:#ef4444">Error al cargar datos</td></tr>';
+    }
+}
+
+function _renderTablaCreditos(empleados) {
+    const tbody = document.getElementById('tbodyCreditos');
+    if (!tbody) return;
+    if (!empleados || !empleados.length) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#64748b">Sin resultados</td></tr>';
+        return;
+    }
+    tbody.innerHTML = empleados.map(e => {
+        const tieneInfo = e.credito_infonavit != null && String(e.credito_infonavit).trim() !== '';
+        const tieneFon  = e.numero_fonacot    != null && String(e.numero_fonacot).trim()    !== '';
+        const statusBadge = e.status_empleado
+            ? '<span style="background:rgba(16,185,129,.15);color:#10b981;padding:2px 8px;border-radius:12px;font-size:11px">Activo</span>'
+            : '<span style="background:rgba(239,68,68,.15);color:#ef4444;padding:2px 8px;border-radius:12px;font-size:11px">Baja</span>';
+        const sueldo = e.sueldo_diario_promedio != null
+            ? `$${Number(e.sueldo_diario_promedio).toLocaleString('es-MX', {minimumFractionDigits:2})}` : '–';
+        return `
+        <tr>
+            <td style="font-family:monospace;font-size:12px">${e.empleado}</td>
+            <td>${e.nombre_completo}</td>
+            <td style="font-size:12px;color:#94a3b8">${e.puesto || '–'}</td>
+            <td style="font-size:12px;color:#94a3b8">${e.departamento || '–'}</td>
+            <td>${tieneInfo ? `<span style="font-family:monospace;color:#3b82f6">${e.credito_infonavit}</span>` : '<span style="color:#475569">–</span>'}</td>
+            <td>${tieneFon  ? `<span style="font-family:monospace;color:#10b981">${e.numero_fonacot}</span>`   : '<span style="color:#475569">–</span>'}</td>
+            <td style="font-size:12px">${sueldo}</td>
+            <td>${statusBadge}</td>
+            <td>
+                <button onclick="verExpedienteEmpleado('${e.empleado}')"
+                    style="background:rgba(59,130,246,.15);border:none;color:#3b82f6;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">
+                    <i class="fas fa-id-card"></i>
+                </button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function filtrarTablaCreditos() {
+    const q = (document.getElementById('searchCreditos')?.value || '').toLowerCase().trim();
+    if (!q) { _renderTablaCreditos(_creditosDatos); return; }
+    const filtrados = _creditosDatos.filter(e =>
+        (e.nombre_completo || '').toLowerCase().includes(q) ||
+        (e.empleado        || '').toLowerCase().includes(q)
+    );
+    _renderTablaCreditos(filtrados);
+}
+
+function exportarCreditosExcel() {
+    if (!_creditosDatos.length) return;
+    const datos = _creditosDatos.map(e => ({
+        'ID':              e.empleado,
+        'Nombre':          e.nombre_completo,
+        'Puesto':          e.puesto,
+        'Departamento':    e.departamento,
+        'INFONAVIT':       e.credito_infonavit,
+        'FONACOT':         e.numero_fonacot,
+        'Sueldo Diario':   e.sueldo_diario_promedio,
+        'Sucursal':        e.sucursal,
+        'Status':          e.status_empleado ? 'Activo' : 'Baja'
+    }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(datos), 'Créditos');
+    XLSX.writeFile(wb, `Creditos_${new Date().toLocaleDateString('es-MX').replace(/\//g,'-')}.xlsx`);
+}
+
+// Exponer al scope global (llamadas desde HTML onclick)
+window.exportarEstadisticasExcel = exportarEstadisticasExcel;
+window.exportarCreditosExcel     = exportarCreditosExcel;
+window.filtrarTablaCreditos      = filtrarTablaCreditos;
+window.cargarCreditos            = cargarCreditos;
 
