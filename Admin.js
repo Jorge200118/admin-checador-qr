@@ -672,7 +672,7 @@ function agruparRegistrosPorEmpleadoYFecha(registros) {
 
         // Calcular descanso real y aplicar ajuste obligatorio de 60 minutos
         // Empleados exentos del descuento de descanso obligatorio
-        const exentosDescanso = ['A01'];
+        const exentosDescanso = ['A01','PX005'];
         const esExento = exentosDescanso.includes(grupo.empleado_codigo);
 
         let descansoRealMinutos = 0;
