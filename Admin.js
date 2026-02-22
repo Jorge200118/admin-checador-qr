@@ -162,6 +162,23 @@ async function initializeAdmin() {
 }
 
 // ================================
+// SIDEBAR MÓVIL
+// ================================
+function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    sidebar.classList.toggle('show');
+    overlay.classList.toggle('show');
+}
+
+function closeSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    sidebar.classList.remove('show');
+    overlay.classList.remove('show');
+}
+
+// ================================
 // NAVEGACIÓN
 // ================================
 function setupNavigation() {
@@ -171,6 +188,10 @@ function setupNavigation() {
             const section = this.querySelector('a').dataset.section;
             if (section) {
                 navigateToSection(section);
+                // Cerrar sidebar en móvil al navegar
+                if (window.innerWidth <= 1024) {
+                    closeSidebar();
+                }
             }
         });
     });
