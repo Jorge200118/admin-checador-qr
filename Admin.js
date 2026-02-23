@@ -127,6 +127,9 @@ async function initializeAdmin() {
         if (session.username === 'superadmin') {
             window.currentUserSucursal = null; // null = ver todas las sucursales
             window.isSuperAdmin = true;
+            // Mostrar nav item de Sucursales solo para superadmin
+            const navSucursales = document.getElementById('navSucursales');
+            if (navSucursales) navSucursales.style.display = '';
         } else {
             window.currentUserSucursal = session.sucursal;
             window.isSuperAdmin = false;
@@ -224,6 +227,7 @@ function navigateToSection(section) {
         reportes: 'Reportes y Estadísticas',
         estadisticas: 'Estadísticas de Plantilla',
         creditos: 'Control de Créditos INFONAVIT / FONACOT',
+        sucursales: 'Vista Global de Sucursales',
         configuracion: 'Configuración del Sistema'
     };
     
@@ -437,11 +441,63 @@ async function loadSectionData(section) {
         case 'creditos':
             cargarCreditos();
             break;
+        case 'sucursales':
+            cargarSucursales();
+            break;
         case 'configuracion':
             break;
         default:
     }
 }
+
+// ================================
+// SECCIÓN DE SUCURSALES (VISTA GLOBAL SUPERADMIN)
+// ================================
+const SUCURSALES_LIST = ['MATRIZ','LA PAZ','SAN JOSE','TAMARAL','CABOS','EL FUERTE','JUAN JOSE RIOS','CULIACAN'];
+
+async function cargarSucursales() {
+    const tbody = document.getElementById('sucursalesTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#64748b"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>';
+
+    const resultados = await Promise.all(
+        SUCURSALES_LIST.map(suc => SupabaseAPI.getDashboardEstadisticas(suc))
+    );
+
+    let totalPresentes = 0, totalRegistros = 0, totalTarde = 0;
+    let rows = '';
+
+    resultados.forEach((res, i) => {
+        const d = res.success ? (res.data || {}) : {};
+        const presentes  = d.empleadosPresentes ?? '—';
+        const registros  = d.registrosHoy       ?? '—';
+        const tarde      = d.llegadasTarde       ?? '—';
+        const tablets    = d.tabletsActivas      ?? '—';
+
+        if (res.success) {
+            totalPresentes += d.empleadosPresentes || 0;
+            totalRegistros += d.registrosHoy       || 0;
+            totalTarde     += d.llegadasTarde       || 0;
+        }
+
+        rows += `<tr>
+            <td><strong>${SUCURSALES_LIST[i]}</strong></td>
+            <td>${presentes}</td>
+            <td>${registros}</td>
+            <td>${tarde}</td>
+            <td>${tablets}</td>
+        </tr>`;
+    });
+
+    tbody.innerHTML = rows;
+
+    const el = id => document.getElementById(id);
+    if (el('totalPresentesGlobal')) el('totalPresentesGlobal').textContent = totalPresentes;
+    if (el('totalRegistrosGlobal')) el('totalRegistrosGlobal').textContent = totalRegistros;
+    if (el('totalTardeGlobal'))     el('totalTardeGlobal').textContent     = totalTarde;
+}
+
+window.cargarSucursales = cargarSucursales;
 
 // ================================
 // SECCIÓN DE REGISTROS AVANZADA
