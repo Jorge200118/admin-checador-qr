@@ -215,6 +215,9 @@
                     <button class="btn btn-info" id="btnTutorialEmpleado" onclick="iniciarTutorialEmpleado()">
                         <i class="fas fa-question-circle"></i> Tutorial
                     </button>
+                    <button class="btn btn-warning" id="btnSincronizarBajas" onclick="sincronizarBajas()">
+                        <i class="fas fa-sync-alt"></i> Sincronizar Bajas
+                    </button>
                     <button class="btn btn-primary" id="btnNuevoEmpleado">
                         <i class="fas fa-plus"></i> Nuevo Empleado
                     </button>
@@ -1629,6 +1632,42 @@
     </div>
 </div>
 
+
+<!-- ════════════════════════════════════════════════════════════════════
+     MODAL: SINCRONIZACIÓN DE BAJAS
+     ════════════════════════════════════════════════════════════════════ -->
+<div id="modalSincBajas" class="modal">
+    <div class="modal-content" style="max-width:640px;">
+        <div class="modal-header">
+            <h3><i class="fas fa-user-minus" style="color:#f59e0b;margin-right:8px;"></i>Sincronizar Bajas de BMS</h3>
+            <span class="close" onclick="closeModal('modalSincBajas')">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div id="sincBajasEstado" style="text-align:center;padding:24px;color:#64748b;">
+                <i class="fas fa-spinner fa-spin" style="font-size:24px;margin-bottom:12px;display:block;"></i>
+                Consultando empleados en BMS...
+            </div>
+            <div id="sincBajasLista" style="display:none;">
+                <p id="sincBajasDescripcion" style="margin:0 0 16px;color:#475569;font-size:14px;"></p>
+                <div id="sincBajasTabla" style="max-height:380px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;"></div>
+            </div>
+            <div id="sincBajasVacio" style="display:none;text-align:center;padding:32px;color:#22c55e;">
+                <i class="fas fa-check-circle" style="font-size:32px;margin-bottom:12px;display:block;"></i>
+                Todos los empleados activos están vigentes en BMS. No hay bajas pendientes.
+            </div>
+            <div id="sincBajasResultado" style="display:none;text-align:center;padding:24px;">
+                <i class="fas fa-check-circle" style="font-size:32px;color:#22c55e;margin-bottom:12px;display:block;"></i>
+                <p id="sincBajasResultadoTexto" style="margin:0;font-weight:600;color:#0f172a;"></p>
+            </div>
+        </div>
+        <div class="modal-footer" id="sincBajasFooter">
+            <button class="btn btn-secondary" onclick="closeModal('modalSincBajas')">Cancelar</button>
+            <button class="btn btn-warning" id="btnConfirmarBajas" onclick="confirmarBajas()">
+                <i class="fas fa-user-minus"></i> Marcar como inactivos
+            </button>
+        </div>
+    </div>
+</div>
 
 <!-- ════════════════════════════════════════════════════════════════════
      MODAL: PANEL DE ALERTAS DEL DÍA

@@ -15,6 +15,12 @@ const ADMIN_CONFIG = {
 };
 
 // ================================
+// EMPLEADOS EXENTOS DE BAJA AUTOMÁTICA
+// Códigos de empleados fuera de nómina que siguen trabajando
+// ================================
+const EMPLEADOS_EXENTOS_BAJA = []; // Agregar códigos aquí, ej: ['A01', 'PX005']
+
+// ================================
 // HELPERS DE ZONA HORARIA - MAZATLÁN (UTC-7)
 // ================================
 /**
@@ -2088,6 +2094,53 @@ function limpiarFiltros() {
     filtrarRegistros();
 }
 
+// Filtra registros descartando los que sean POSTERIORES a la fecha_baja de BMS
+// Solo aplica a empleados inactivos en Supabase (activo: false)
+async function filtrarRegistrosPorFechaBaja(registros) {
+    // Identificar códigos de empleados inactivos presentes en los registros
+    const inactivos = (adminState.employeesData || [])
+        .filter(e => !e.activo)
+        .map(e => String(e.codigo_empleado).trim());
+
+    if (inactivos.length === 0) return registros;
+
+    // Obtener únicos que aparecen en los registros
+    const codigosEnRegistros = [...new Set(
+        registros
+            .map(r => String(r.empleado_codigo || '').trim())
+            .filter(c => inactivos.includes(c))
+    )];
+
+    if (codigosEnRegistros.length === 0) return registros;
+
+    // Consultar fecha_baja de cada uno en BMS (en paralelo, lotes de 10)
+    const mapaFechaBaja = {};
+    const LOTE = 10;
+    for (let i = 0; i < codigosEnRegistros.length; i += LOTE) {
+        const lote = codigosEnRegistros.slice(i, i + LOTE);
+        await Promise.all(lote.map(async codigo => {
+            try {
+                const res = await fetch(`${ADMIN_CONFIG.apiUrl}/empleados/expediente/${encodeURIComponent(codigo)}`);
+                if (!res.ok) return;
+                const json = await res.json();
+                if (!json.success || !json.data) return;
+                const fb = json.data.FechaBaja ? json.data.FechaBaja.split('T')[0] : null;
+                if (fb && fb !== '2078-12-31') mapaFechaBaja[codigo] = fb;
+            } catch { /* si falla, no filtramos ese empleado */ }
+        }));
+    }
+
+    // Descartar registros posteriores a la fecha_baja
+    return registros.filter(r => {
+        const codigo = String(r.empleado_codigo || '').trim();
+        const fechaBaja = mapaFechaBaja[codigo];
+        if (!fechaBaja) return true; // Sin fecha_baja conocida → se muestra
+        const fechaRegistro = r.fecha_hora ? r.fecha_hora.split('T')[0] : null;
+        if (!fechaRegistro) return true;
+        return fechaRegistro <= fechaBaja; // Solo mostrar hasta la fecha de baja
+    });
+}
+
 // Función actualizada para filtrar registros
 async function filtrarRegistros() {
     const fechaInicio = document.getElementById('fechaInicio').value;
@@ -2132,8 +2185,13 @@ async function filtrarRegistros() {
         const data = await SupabaseAPI.getRegistrosByFecha(fechaInicioValid, fechaFinValid, filtros);
 
         if (data.success) {
+            let registros = data.data || data.registros || [];
+
+            // Filtrar registros posteriores a la fecha_baja de empleados inactivos en BMS
+            registros = await filtrarRegistrosPorFechaBaja(registros);
+
             // Actualizar estado global
-            adminState.registrosData = data.data || data.registros || [];
+            adminState.registrosData = registros;
             adminState.currentPage = 1; // Reiniciar paginación
 
             // Actualizar período mostrado
@@ -2557,6 +2615,116 @@ async function toggleEmployeeStatus(empleadoId) {
     } finally {
         hideLoading();
     }
+}
+
+// Cache de bajas detectadas para usarlas al confirmar
+let _bajasDetectadas = [];
+
+async function sincronizarBajas() {
+    _bajasDetectadas = [];
+
+    // Abrir modal y mostrar estado de carga
+    openModal('modalSincBajas');
+    document.getElementById('sincBajasEstado').style.display = 'block';
+    document.getElementById('sincBajasLista').style.display = 'none';
+    document.getElementById('sincBajasVacio').style.display = 'none';
+    document.getElementById('sincBajasResultado').style.display = 'none';
+    document.getElementById('sincBajasFooter').style.display = 'flex';
+    document.getElementById('btnConfirmarBajas').style.display = 'inline-flex';
+
+    try {
+        // 1. Obtener empleados activos de Supabase
+        const empResult = await SupabaseAPI.getEmpleados(window.isSuperAdmin ? null : window.currentUserSucursal);
+        if (!empResult.success) throw new Error('Error obteniendo empleados');
+
+        const activos = empResult.data.filter(e => e.activo);
+        const hoy = new Date().toISOString().split('T')[0];
+
+        // 2. Filtrar exentos
+        const aVerificar = activos.filter(e => !EMPLEADOS_EXENTOS_BAJA.includes(String(e.codigo_empleado).trim()));
+
+        document.getElementById('sincBajasEstado').innerHTML =
+            `<i class="fas fa-spinner fa-spin" style="font-size:24px;margin-bottom:12px;display:block;"></i>Verificando ${aVerificar.length} empleados en BMS...`;
+
+        // 3. Consultar expediente en lotes de 10
+        const LOTE = 10;
+        for (let i = 0; i < aVerificar.length; i += LOTE) {
+            const lote = aVerificar.slice(i, i + LOTE);
+            const resultados = await Promise.all(lote.map(async emp => {
+                try {
+                    const res = await fetch(`${ADMIN_CONFIG.apiUrl}/empleados/expediente/${encodeURIComponent(emp.codigo_empleado)}`);
+                    if (!res.ok) return null;
+                    const json = await res.json();
+                    if (!json.success || !json.data) return null;
+                    const fechaBaja = json.data.FechaBaja ? json.data.FechaBaja.split('T')[0] : null;
+                    if (fechaBaja && fechaBaja !== '2078-12-31' && fechaBaja <= hoy) {
+                        return { emp, fechaBaja };
+                    }
+                    return null;
+                } catch { return null; }
+            }));
+            resultados.forEach(r => { if (r) _bajasDetectadas.push(r); });
+        }
+
+        document.getElementById('sincBajasEstado').style.display = 'none';
+
+        // 4. Mostrar resultados en el modal
+        if (_bajasDetectadas.length === 0) {
+            document.getElementById('sincBajasVacio').style.display = 'block';
+            document.getElementById('btnConfirmarBajas').style.display = 'none';
+            return;
+        }
+
+        document.getElementById('sincBajasDescripcion').textContent =
+            `Se encontraron ${_bajasDetectadas.length} empleado(s) dados de baja en BMS que aún están activos en el sistema. Revisa la lista y confirma para marcarlos como inactivos.`;
+
+        const filas = _bajasDetectadas.map(({ emp, fechaBaja }) => `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #f1f5f9;">
+                <div>
+                    <div style="font-weight:600;color:#0f172a;font-size:14px;">${emp.nombre} ${emp.apellido}</div>
+                    <div style="font-size:12px;color:#64748b;">${emp.codigo_empleado} · ${emp.sucursal || '—'} · ${emp.puesto || '—'}</div>
+                </div>
+                <div style="text-align:right;flex-shrink:0;margin-left:12px;">
+                    <span style="background:#fee2e2;color:#dc2626;border-radius:6px;padding:3px 10px;font-size:12px;font-weight:600;">
+                        Baja: ${fechaBaja}
+                    </span>
+                </div>
+            </div>
+        `).join('');
+
+        document.getElementById('sincBajasTabla').innerHTML = filas;
+        document.getElementById('sincBajasLista').style.display = 'block';
+
+    } catch (error) {
+        document.getElementById('sincBajasEstado').innerHTML =
+            `<i class="fas fa-exclamation-circle" style="font-size:24px;color:#ef4444;margin-bottom:12px;display:block;"></i>Error: ${error.message}`;
+        document.getElementById('btnConfirmarBajas').style.display = 'none';
+    }
+}
+
+async function confirmarBajas() {
+    if (_bajasDetectadas.length === 0) return;
+
+    document.getElementById('sincBajasLista').style.display = 'none';
+    document.getElementById('sincBajasEstado').innerHTML =
+        `<i class="fas fa-spinner fa-spin" style="font-size:24px;margin-bottom:12px;display:block;"></i>Aplicando cambios...`;
+    document.getElementById('sincBajasEstado').style.display = 'block';
+    document.getElementById('btnConfirmarBajas').disabled = true;
+
+    let exitosos = 0;
+    for (const { emp } of _bajasDetectadas) {
+        const r = await SupabaseAPI.toggleEmpleadoActivo(emp.id, false);
+        if (r.success) exitosos++;
+    }
+
+    document.getElementById('sincBajasEstado').style.display = 'none';
+    document.getElementById('sincBajasResultadoTexto').textContent =
+        `${exitosos} de ${_bajasDetectadas.length} empleado(s) marcados como inactivos correctamente.`;
+    document.getElementById('sincBajasResultado').style.display = 'block';
+    document.getElementById('sincBajasFooter').innerHTML =
+        `<button class="btn btn-primary" onclick="closeModal('modalSincBajas'); loadEmployees();">Cerrar y actualizar</button>`;
+
+    _bajasDetectadas = [];
 }
 
 async function deleteEmployee(empleadoId) {
