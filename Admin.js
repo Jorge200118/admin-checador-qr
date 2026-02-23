@@ -2657,7 +2657,7 @@ async function sincronizarBajas() {
                     const json = await res.json();
                     if (!json.success || !json.data) return null;
                     const fechaBaja = json.data.FechaBaja ? json.data.FechaBaja.split('T')[0] : null;
-                    if (fechaBaja && fechaBaja !== '2078-12-31' && fechaBaja === hoy) {
+                    if (fechaBaja && fechaBaja !== '2078-12-31' && fechaBaja <= hoy) {
                         return { emp, fechaBaja };
                     }
                     return null;
