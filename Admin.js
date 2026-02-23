@@ -1069,6 +1069,7 @@ function generarRangoFechas(fechaInicio, fechaFin) {
 
     // Crear nueva instancia en cada iteración para evitar mutación
     for (let d = new Date(inicio); d <= fin; d.setDate(d.getDate() + 1)) {
+        if (d.getDay() === 0) continue; // Excluir domingos (0 = domingo)
         // Usar toLocaleDateString con formato ISO
         const year = d.getFullYear();
         const month = String(d.getMonth() + 1).padStart(2, '0');
