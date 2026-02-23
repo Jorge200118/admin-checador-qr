@@ -611,7 +611,7 @@ function renderRegistrosTableAdvanced() {
     if (registros.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="11" style="text-align: center; color: #6b7280; padding: 40px;">
+                <td colspan="12" style="text-align: center; color: #6b7280; padding: 40px;">
                     <i class="fas fa-inbox" style="font-size: 48px; margin-bottom: 10px; opacity: 0.3;"></i><br>
                     No hay registros para mostrar<br>
                     <small>Intenta ajustar los filtros o el rango de fechas</small>
@@ -639,6 +639,9 @@ function renderRegistrosTableAdvanced() {
                         <div class="empleado-codigo">${grupo.empleado_codigo || 'Sin código'}</div>
                     </div>
                 </div>
+            </td>
+            <td>
+                <span style="font-size:11px;font-weight:600;color:#475569;background:#f1f5f9;padding:3px 8px;border-radius:4px;white-space:nowrap;">${grupo.sucursal || '—'}</span>
             </td>
             <td>
                 <span class="fecha-badge">${formatDateBadge(grupo.fecha)}</span>
@@ -711,6 +714,7 @@ function agruparRegistrosPorEmpleadoYFecha(registros) {
                 empleado_id: registro.empleado_id,
                 empleado_nombre: registro.empleado_nombre,
                 empleado_codigo: registro.empleado_codigo,
+                sucursal: registro.sucursal || registro.empleado?.sucursal || '',
                 fecha: fecha,
                 registros: [],  // Array de todos los registros del día
                 tablet_id: registro.tablet_id,
