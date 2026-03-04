@@ -5613,7 +5613,11 @@ async function abrirExpediente(codigoEmpleado) {
 
         const formatFecha = (f) => {
             if (!f) return null;
-            try { return new Date(f).toLocaleDateString('es-MX', { day:'2-digit', month:'long', year:'numeric' }); }
+            try {
+                const dt = new Date(f);
+                const local = new Date(dt.getTime() + dt.getTimezoneOffset() * 60000);
+                return local.toLocaleDateString('es-MX', { day:'2-digit', month:'long', year:'numeric' });
+            }
             catch { return f; }
         };
 
