@@ -5471,7 +5471,7 @@ function renderAlertasContenido(alertas, sucursalFiltro) {
         cumpleanos:          { label: 'Cumpleaños hoy',                  icon: 'fa-birthday-cake',  color: '#f59e0b', items: [] },
         aniversario:         { label: 'Aniversarios laborales',           icon: 'fa-star',           color: '#6366f1', items: [] },
         baja:                { label: 'Bajas recientes (7 días)',         icon: 'fa-user-minus',     color: '#ef4444', items: [] },
-        vencimiento_contrato:{ label: 'Contratos por vencer (7 días)',   icon: 'fa-file-contract',  color: '#f97316', items: [] }
+        vencimiento_contrato:{ label: 'Contratos por vencer (7 días)',   icon: 'fa-file-alt',       color: '#f97316', items: [] }
     };
 
     lista.forEach(a => { if (grupos[a.tipo]) grupos[a.tipo].items.push(a); });
