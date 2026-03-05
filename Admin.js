@@ -5394,7 +5394,7 @@ async function cargarAlertas() {
         }
 
         // Abrir automáticamente si hay cumpleaños hoy o bajas recientes
-        const hayUrgentes = alertas.some(a => a.tipo === 'cumpleanos' || a.tipo === 'baja');
+        const hayUrgentes = alertas.some(a => a.tipo === 'cumpleanos' || a.tipo === 'baja' || a.tipo === 'vencimiento_contrato');
         if (hayUrgentes) {
             setTimeout(() => abrirPanelAlertas(), 800);
         }
@@ -5468,9 +5468,10 @@ function renderAlertasContenido(alertas, sucursalFiltro) {
     }
 
     const grupos = {
-        cumpleanos: { label: 'Cumpleaños hoy', icon: 'fa-birthday-cake', color: '#f59e0b', items: [] },
-        aniversario: { label: 'Aniversarios laborales', icon: 'fa-star', color: '#6366f1', items: [] },
-        baja:        { label: 'Bajas recientes (7 días)', icon: 'fa-user-minus', color: '#ef4444', items: [] }
+        cumpleanos:          { label: 'Cumpleaños hoy',                  icon: 'fa-birthday-cake',  color: '#f59e0b', items: [] },
+        aniversario:         { label: 'Aniversarios laborales',           icon: 'fa-star',           color: '#6366f1', items: [] },
+        baja:                { label: 'Bajas recientes (7 días)',         icon: 'fa-user-minus',     color: '#ef4444', items: [] },
+        vencimiento_contrato:{ label: 'Contratos por vencer (7 días)',   icon: 'fa-file-contract',  color: '#f97316', items: [] }
     };
 
     lista.forEach(a => { if (grupos[a.tipo]) grupos[a.tipo].items.push(a); });
@@ -5516,6 +5517,11 @@ function renderAlertasContenido(alertas, sucursalFiltro) {
                 } else if (a.tipo === 'baja') {
                     const dias = a.anos === 0 ? 'hoy' : `hace ${a.anos} día${a.anos !== 1 ? 's' : ''}`;
                     detalle = `📤 Dado de baja ${dias}`;
+                } else if (a.tipo === 'vencimiento_contrato') {
+                    const diasRestantes = a.anos;
+                    const cuando = diasRestantes === 0 ? 'hoy' : `en ${diasRestantes} día${diasRestantes !== 1 ? 's' : ''}`;
+                    const fechaVenc = a.fecha_ref ? new Date(a.fecha_ref).toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'numeric' }) : '—';
+                    detalle = `📋 Vence ${cuando} (${fechaVenc})`;
                 }
 
                 html += `
