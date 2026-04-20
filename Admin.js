@@ -4033,6 +4033,23 @@ function generarDatosResumenGeneral(justificaciones = []) {
     // Agrupar por empleado
     const empleadosMap = new Map();
 
+    // Pre-poblar con todos los empleados activos para capturar a los que no tienen registros
+    (adminState.employeesData || [])
+        .filter(emp => emp.activo)
+        .forEach(emp => {
+            const sucursal = emp.sucursal || 'N/A';
+            // Si el usuario no es superadmin, filtrar solo su sucursal
+            if (window.currentUserSucursal && sucursal !== window.currentUserSucursal) return;
+            empleadosMap.set(emp.id, {
+                empleado_id: emp.id,
+                empleado_nombre: `${emp.nombre} ${emp.apellido || ''}`.trim(),
+                empleado_codigo: emp.codigo_empleado || '',
+                sucursal: sucursal,
+                puesto: emp.puesto || 'N/A',
+                registros: []
+            });
+        });
+
     registros.forEach(reg => {
         const empleadoId = reg.empleado_id;
 
