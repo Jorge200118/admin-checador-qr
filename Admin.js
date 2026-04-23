@@ -234,6 +234,7 @@ function navigateToSection(section) {
         estadisticas: 'Estadísticas de Plantilla',
         creditos: 'Control de Créditos INFONAVIT / FONACOT',
         sucursales: 'Vista Global de Sucursales',
+        dispositivos: 'Dispositivos PWA Vinculados',
         configuracion: 'Configuración del Sistema'
     };
     
@@ -449,6 +450,10 @@ async function loadSectionData(section) {
             break;
         case 'sucursales':
             cargarSucursales();
+            break;
+        case 'dispositivos':
+            cargarDispositivos();
+            setupDispositivosFilters();
             break;
         case 'configuracion':
             break;
@@ -7051,4 +7056,96 @@ window.exportarEstadisticasExcel = exportarEstadisticasExcel;
 window.exportarCreditosExcel     = exportarCreditosExcel;
 window.filtrarTablaCreditos      = filtrarTablaCreditos;
 window.cargarCreditos            = cargarCreditos;
+
+// ================================
+// SECCIÓN DE DISPOSITIVOS PWA
+// ================================
+let dispositivosState = { soloActivos: true, busqueda: '' };
+
+function setupDispositivosFilters() {
+    const search = document.getElementById('dispBusqueda');
+    const toggle = document.getElementById('dispSoloActivos');
+    if (search && !search.dataset.wired) {
+        search.addEventListener('input', (e) => {
+            dispositivosState.busqueda = e.target.value;
+            cargarDispositivos();
+        });
+        search.dataset.wired = '1';
+    }
+    if (toggle && !toggle.dataset.wired) {
+        toggle.addEventListener('change', (e) => {
+            dispositivosState.soloActivos = e.target.checked;
+            cargarDispositivos();
+        });
+        toggle.dataset.wired = '1';
+    }
+}
+
+async function cargarDispositivos() {
+    const tbody = document.getElementById('dispTbody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#64748b"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>';
+
+    const lista = await DispositivosAPI.listar(dispositivosState);
+    if (!lista.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#64748b">Sin dispositivos</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = lista.map(d => {
+        const emp = d.empleado || {};
+        const nombre = `${emp.nombre || ''} ${emp.apellido || ''}`.trim() || '—';
+        const codigo = emp.codigo_empleado || '—';
+        const venc = d.fecha_vinculacion ? new Date(d.fecha_vinculacion).toLocaleDateString() : '—';
+        const uso = d.ultimo_uso ? new Date(d.ultimo_uso).toLocaleString() : 'Nunca';
+        const ua = resumirUA(d.user_agent);
+        const estado = d.activo
+            ? '<span class="disp-badge activo">Activo</span>'
+            : `<span class="disp-badge inactivo">Desvinculado ${d.desvinculado_en ? new Date(d.desvinculado_en).toLocaleDateString() : ''}</span>`;
+        const accion = d.activo
+            ? `<button class="btn-desvincular" data-id="${d.id}" data-nombre="${nombre.replace(/"/g,'&quot;')}">Desvincular</button>`
+            : '';
+        return `<tr>
+            <td>${codigo}</td>
+            <td>${nombre}</td>
+            <td>${venc}</td>
+            <td>${uso}</td>
+            <td>${ua}</td>
+            <td>${estado}</td>
+            <td>${accion}</td>
+        </tr>`;
+    }).join('');
+
+    tbody.querySelectorAll('.btn-desvincular').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-id');
+            const nombre = btn.getAttribute('data-nombre');
+            confirmarDesvinculacion(id, nombre);
+        });
+    });
+}
+
+function resumirUA(ua) {
+    if (!ua) return '—';
+    if (/iPhone/.test(ua)) return 'iPhone';
+    if (/iPad/.test(ua)) return 'iPad';
+    if (/Android/.test(ua)) {
+        const m = ua.match(/Android\s([\d.]+)/);
+        return m ? `Android ${m[1]}` : 'Android';
+    }
+    return ua.slice(0, 40);
+}
+
+async function confirmarDesvinculacion(id, nombre) {
+    if (!confirm(`¿Desvincular el dispositivo de ${nombre}?\n\nEl empleado podrá vincular otro dispositivo después de esto.`)) return;
+    const res = await DispositivosAPI.desvincular(id, 'admin');
+    if (res.success) {
+        alert('Dispositivo desvinculado');
+        cargarDispositivos();
+    } else {
+        alert('Error al desvincular');
+    }
+}
+
+window.cargarDispositivos = cargarDispositivos;
 

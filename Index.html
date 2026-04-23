@@ -72,6 +72,12 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="#dispositivos" data-section="dispositivos">
+                        <i class="fas fa-mobile-alt"></i>
+                        <span>Dispositivos PWA</span>
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="#configuracion" data-section="configuracion">
                         <i class="fas fa-cog"></i>
                         <span>Configuración</span>
@@ -977,6 +983,45 @@
                             </thead>
                             <tbody id="sucursalesTableBody">
                                 <tr><td colspan="5" style="text-align:center;padding:20px;color:#64748b">Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dispositivos PWA Section -->
+        <section id="dispositivos" class="content-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Dispositivos PWA vinculados</h3>
+                    <button class="btn btn-sm btn-primary" onclick="cargarDispositivos()">
+                        <i class="fas fa-refresh"></i> Actualizar
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="disp-toolbar">
+                        <input type="text" id="dispBusqueda" placeholder="Buscar por nombre o código..." class="form-input disp-search" />
+                        <label class="disp-toggle">
+                            <input type="checkbox" id="dispSoloActivos" checked>
+                            Solo activos
+                        </label>
+                    </div>
+                    <div class="table-container">
+                        <table id="dispTabla">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Empleado</th>
+                                    <th>Vinculado</th>
+                                    <th>Último uso</th>
+                                    <th>Dispositivo</th>
+                                    <th>Estado</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="dispTbody">
+                                <tr><td colspan="7" style="text-align:center;padding:20px;color:#64748b">Cargando...</td></tr>
                             </tbody>
                         </table>
                     </div>

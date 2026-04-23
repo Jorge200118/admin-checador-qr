@@ -2563,3 +2563,50 @@ tbody tr:hover {
         font-size: 1.1rem;
     }
 }
+
+
+/* =========================
+   DISPOSITIVOS PWA
+   ========================= */
+.disp-toolbar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+.disp-search {
+    flex: 1;
+    min-width: 220px;
+    max-width: 400px;
+}
+.disp-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: #475569;
+    cursor: pointer;
+}
+
+.disp-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+.disp-badge.activo { background: #dcfce7; color: #166534; }
+.disp-badge.inactivo { background: #fee2e2; color: #991b1b; }
+
+.btn-desvincular {
+    background: #dc2626;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+}
+.btn-desvincular:hover { background: #b91c1c; }
