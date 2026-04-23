@@ -5,7 +5,7 @@
 -- 1. Tabla de dispositivos vinculados al empleado
 CREATE TABLE IF NOT EXISTS empleado_dispositivos (
     id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    empleado_id         uuid NOT NULL REFERENCES empleados(id) ON DELETE CASCADE,
+    empleado_id         integer NOT NULL REFERENCES empleados(id) ON DELETE CASCADE,
     device_id           text UNIQUE NOT NULL,
     pin_hash            text NOT NULL,
     pin_salt            text NOT NULL,
