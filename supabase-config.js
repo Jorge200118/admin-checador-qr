@@ -1275,3 +1275,61 @@ const SupabaseAPI = {
         }
     }
 };
+
+// ==========================================
+// API DE DISPOSITIVOS PWA
+// ==========================================
+const DispositivosAPI = {
+    async listar({ soloActivos = true, busqueda = '' } = {}) {
+        let query = supabaseClient
+            .from('empleado_dispositivos')
+            .select(`
+                id,
+                device_id,
+                fecha_vinculacion,
+                ultimo_uso,
+                activo,
+                user_agent,
+                desvinculado_por,
+                desvinculado_en,
+                empleado:empleados(id, codigo_empleado, nombre, apellido)
+            `)
+            .order('ultimo_uso', { ascending: false, nullsFirst: false });
+
+        if (soloActivos) query = query.eq('activo', true);
+
+        const { data, error } = await query;
+        if (error) {
+            console.error('Error listando dispositivos:', error);
+            return [];
+        }
+
+        let filtrados = data || [];
+        if (busqueda) {
+            const b = busqueda.toLowerCase();
+            filtrados = filtrados.filter(d => {
+                if (!d.empleado) return false;
+                return (d.empleado.codigo_empleado || '').toLowerCase().includes(b) ||
+                       (d.empleado.nombre || '').toLowerCase().includes(b) ||
+                       (d.empleado.apellido || '').toLowerCase().includes(b);
+            });
+        }
+        return filtrados;
+    },
+
+    async desvincular(id, desvinculadoPor = 'admin') {
+        const { error } = await supabaseClient
+            .from('empleado_dispositivos')
+            .update({
+                activo: false,
+                desvinculado_por: desvinculadoPor,
+                desvinculado_en: new Date().toISOString()
+            })
+            .eq('id', id);
+        if (error) {
+            console.error('Error desvinculando:', error);
+            return { success: false };
+        }
+        return { success: true };
+    }
+};
