@@ -7092,16 +7092,26 @@ async function cargarDispositivos() {
         return;
     }
 
+    const tz = { timeZone: 'America/Mazatlan' };
+    const fmtFecha = (ts) => ts ? new Date(ts).toLocaleDateString('es-MX', tz) : '—';
+    const fmtFechaHora = (ts) => {
+        if (!ts) return 'Nunca';
+        const d = new Date(ts);
+        const fecha = d.toLocaleDateString('es-MX', tz);
+        const hora = d.toLocaleTimeString('es-MX', { ...tz, hour: '2-digit', minute: '2-digit' });
+        return `${fecha} ${hora}`;
+    };
+
     tbody.innerHTML = lista.map(d => {
         const emp = d.empleado || {};
         const nombre = `${emp.nombre || ''} ${emp.apellido || ''}`.trim() || '—';
         const codigo = emp.codigo_empleado || '—';
-        const venc = d.fecha_vinculacion ? new Date(d.fecha_vinculacion).toLocaleDateString() : '—';
-        const uso = d.ultimo_uso ? new Date(d.ultimo_uso).toLocaleString() : 'Nunca';
+        const venc = fmtFecha(d.fecha_vinculacion);
+        const uso = fmtFechaHora(d.ultimo_uso);
         const ua = resumirUA(d.user_agent);
         const estado = d.activo
             ? '<span class="disp-badge activo">Activo</span>'
-            : `<span class="disp-badge inactivo">Desvinculado ${d.desvinculado_en ? new Date(d.desvinculado_en).toLocaleDateString() : ''}</span>`;
+            : `<span class="disp-badge inactivo">Desvinculado ${fmtFecha(d.desvinculado_en)}</span>`;
         const accion = d.activo
             ? `<button class="btn-desvincular" data-id="${d.id}" data-nombre="${nombre.replace(/"/g,'&quot;')}">Desvincular</button>`
             : '';
