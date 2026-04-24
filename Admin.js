@@ -7081,30 +7081,6 @@ function setupDispositivosFilters() {
     }
 }
 
-function parseTimestampLocal(ts) {
-    if (!ts) return null;
-    // Supabase regresa timestamp sin TZ como "2026-04-24T16:07:01" o "2026-04-24 16:07:01"
-    // Interpretarlo como hora local, no UTC
-    const s = String(ts).replace('T', ' ').split('.')[0];
-    const [fecha, hora] = s.split(' ');
-    if (!fecha || !hora) return new Date(ts);
-    const [y, mo, d] = fecha.split('-').map(Number);
-    const [h, mi, se] = hora.split(':').map(Number);
-    return new Date(y, mo - 1, d, h, mi, se || 0);
-}
-
-function formatDispDate(ts) {
-    const d = parseTimestampLocal(ts);
-    return d ? d.toLocaleDateString('es-MX') : '—';
-}
-
-function formatDispDateTime(ts) {
-    const d = parseTimestampLocal(ts);
-    if (!d) return 'Nunca';
-    const pad = (n) => String(n).padStart(2, '0');
-    return `${d.toLocaleDateString('es-MX')} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
 async function cargarDispositivos() {
     const tbody = document.getElementById('dispTbody');
     if (!tbody) return;
@@ -7120,12 +7096,12 @@ async function cargarDispositivos() {
         const emp = d.empleado || {};
         const nombre = `${emp.nombre || ''} ${emp.apellido || ''}`.trim() || '—';
         const codigo = emp.codigo_empleado || '—';
-        const venc = formatDispDate(d.fecha_vinculacion);
-        const uso = formatDispDateTime(d.ultimo_uso);
+        const venc = d.fecha_vinculacion ? new Date(d.fecha_vinculacion).toLocaleDateString() : '—';
+        const uso = d.ultimo_uso ? new Date(d.ultimo_uso).toLocaleString() : 'Nunca';
         const ua = resumirUA(d.user_agent);
         const estado = d.activo
             ? '<span class="disp-badge activo">Activo</span>'
-            : `<span class="disp-badge inactivo">Desvinculado ${formatDispDate(d.desvinculado_en)}</span>`;
+            : `<span class="disp-badge inactivo">Desvinculado ${d.desvinculado_en ? new Date(d.desvinculado_en).toLocaleDateString() : ''}</span>`;
         const accion = d.activo
             ? `<button class="btn-desvincular" data-id="${d.id}" data-nombre="${nombre.replace(/"/g,'&quot;')}">Desvincular</button>`
             : '';

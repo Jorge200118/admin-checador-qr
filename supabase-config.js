@@ -1318,15 +1318,12 @@ const DispositivosAPI = {
     },
 
     async desvincular(id, desvinculadoPor = 'admin') {
-        const ahora = new Date();
-        const pad = (n) => String(n).padStart(2, '0');
-        const desvEn = `${ahora.getFullYear()}-${pad(ahora.getMonth()+1)}-${pad(ahora.getDate())} ${pad(ahora.getHours())}:${pad(ahora.getMinutes())}:${pad(ahora.getSeconds())}`;
         const { error } = await supabaseClient
             .from('empleado_dispositivos')
             .update({
                 activo: false,
                 desvinculado_por: desvinculadoPor,
-                desvinculado_en: desvEn
+                desvinculado_en: new Date().toISOString()
             })
             .eq('id', id);
         if (error) {
