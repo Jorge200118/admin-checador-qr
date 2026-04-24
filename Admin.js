@@ -7093,10 +7093,22 @@ async function cargarDispositivos() {
     }
 
     const tz = { timeZone: 'America/Mazatlan' };
-    const fmtFecha = (ts) => ts ? new Date(ts).toLocaleDateString('es-MX', tz) : '—';
+    // Supabase regresa timestamps sin TZ como "2026-04-24T16:18:46" (es UTC pero sin la Z).
+    // Hay que añadir la Z para que Date los interprete como UTC.
+    const parseTs = (ts) => {
+        if (!ts) return null;
+        const s = String(ts);
+        // Si ya trae Z u offset (+/-HH:MM), usar tal cual
+        if (/Z$|[+-]\d{2}:\d{2}$/.test(s)) return new Date(s);
+        return new Date(s.replace(' ', 'T') + 'Z');
+    };
+    const fmtFecha = (ts) => {
+        const d = parseTs(ts);
+        return d ? d.toLocaleDateString('es-MX', tz) : '—';
+    };
     const fmtFechaHora = (ts) => {
-        if (!ts) return 'Nunca';
-        const d = new Date(ts);
+        const d = parseTs(ts);
+        if (!d) return 'Nunca';
         const fecha = d.toLocaleDateString('es-MX', tz);
         const hora = d.toLocaleTimeString('es-MX', { ...tz, hour: '2-digit', minute: '2-digit' });
         return `${fecha} ${hora}`;
