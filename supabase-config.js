@@ -845,6 +845,7 @@ const SupabaseAPI = {
                     fecha_hora,
                     tipo_registro,
                     foto_registro,
+                    tablet_id,
                     empleado:empleados(
                         codigo_empleado,
                         nombre,
@@ -865,16 +866,27 @@ const SupabaseAPI = {
                 fecha_hora: registro.fecha_hora,
                 tipo_registro: registro.tipo_registro,
                 foto_url: registro.foto_registro,
+                tablet_id: registro.tablet_id,
                 empleado: {
                     codigo_empleado: registro.empleado?.codigo_empleado,
                     nombre_completo: `${registro.empleado?.nombre || ''} ${registro.empleado?.apellido || ''}`.trim()
                 }
             }));
 
+            const primerEmpleado = data?.[0]?.empleado;
+            const nombreCompleto = primerEmpleado
+                ? `${primerEmpleado.nombre || ''} ${primerEmpleado.apellido || ''}`.trim()
+                : '';
+
             return {
                 success: true,
                 data: transformedData,
-                empleado: transformedData.length > 0 ? transformedData[0].empleado : null
+                empleado: primerEmpleado ? {
+                    codigo: primerEmpleado.codigo_empleado,
+                    nombre: nombreCompleto,
+                    codigo_empleado: primerEmpleado.codigo_empleado,
+                    nombre_completo: nombreCompleto
+                } : null
             };
 
         } catch (error) {
