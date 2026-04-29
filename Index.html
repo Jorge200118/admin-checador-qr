@@ -83,6 +83,12 @@
                         <span>Dispositivos PWA</span>
                     </a>
                 </li>
+                <li class="nav-item" data-superadmin-only="true">
+                    <a href="#geocercas" data-section="geocercas">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>Geocercas</span>
+                    </a>
+                </li>
                 <li class="nav-item">
                     <a href="#configuracion" data-section="configuracion">
                         <i class="fas fa-cog"></i>
@@ -1207,6 +1213,41 @@
                 </div>
             </div>
         </section>
+
+        <!-- Geocercas Section (solo superadmin) -->
+        <section id="geocercas" class="content-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Geocercas por sucursal</h3>
+                    <button class="btn btn-sm btn-primary" onclick="loadGeocercas()">
+                        <i class="fas fa-refresh"></i> Actualizar
+                    </button>
+                </div>
+                <div class="card-body">
+                    <p style="color:#64748b;font-size:13px;margin-bottom:12px">
+                        Configura el centro y radio de cada sucursal. Cuando la geocerca está activa,
+                        los empleados de esa sucursal no podrán checar desde la PWA si están fuera del radio.
+                    </p>
+                    <div class="table-container">
+                        <table id="tablaGeocercas">
+                            <thead>
+                                <tr>
+                                    <th>Sucursal</th>
+                                    <th>Estado</th>
+                                    <th>Coordenadas</th>
+                                    <th>Radio</th>
+                                    <th>Última actualización</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="geocercasTbody">
+                                <tr><td colspan="6" style="text-align:center;padding:20px;color:#64748b">Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
     <!-- Modals -->
@@ -1961,6 +2002,55 @@
         </div>
     </div>
 </div>
+
+    <!-- Modal Geocerca -->
+    <div id="modalGeocerca" class="modal">
+        <div class="modal-content" style="max-width:720px">
+            <div class="modal-header">
+                <h3 id="modalGeocercaTitle">Geocerca: SUCURSAL</h3>
+                <span class="close" onclick="closeModal('modalGeocerca')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="mapaGeocerca" style="height:380px;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:14px"></div>
+                <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">
+                    <button class="btn btn-sm btn-secondary" type="button" onclick="centrarEnMiUbicacion()">
+                        <i class="fas fa-location-arrow"></i> Mi ubicación
+                    </button>
+                    <span style="font-size:12px;color:#64748b">Haz clic en el mapa para colocar/mover el pin.</span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                    <div>
+                        <label style="font-size:12px;font-weight:600">Latitud</label>
+                        <input type="number" id="geoLat" class="form-input" step="0.0000001" placeholder="—">
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:600">Longitud</label>
+                        <input type="number" id="geoLng" class="form-input" step="0.0000001" placeholder="—">
+                    </div>
+                </div>
+                <div style="margin-bottom:12px">
+                    <label style="font-size:12px;font-weight:600">
+                        Radio: <span id="geoRadioLabel">150</span> m
+                    </label>
+                    <input type="range" id="geoRadio" min="50" max="500" step="10" value="150" style="width:100%">
+                </div>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px">
+                    <input type="checkbox" id="geoActiva">
+                    <span>Geocerca activa (bloquea registros de PWA fuera del radio)</span>
+                </label>
+                <p id="geoActivaHint" style="font-size:12px;color:#64748b;margin-top:6px;display:none">
+                    Pon primero el pin en el mapa para poder activar.
+                </p>
+            </div>
+            <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px;padding:14px">
+                <button class="btn btn-secondary" onclick="closeModal('modalGeocerca')">Cancelar</button>
+                <button class="btn btn-primary" onclick="guardarGeocerca()">Guardar</button>
+            </div>
+            <input type="hidden" id="geoSucursalId">
+            <input type="hidden" id="geoSucursalNombre">
+            <input type="hidden" id="geoActivaInicial">
+        </div>
+    </div>
 
 <!-- Overlay para cerrar sidebar en móvil -->
 <div id="sidebarOverlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
