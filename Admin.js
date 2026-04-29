@@ -7939,11 +7939,91 @@ function centrarEnMiUbicacion() {
     );
 }
 
-// Stubs restantes (se implementan en Task 9):
-async function toggleGeocercaActiva(_id, _nuevoEstado) {
-    showAlert('Info', 'Toggle en desarrollo', 'info');
-}
 async function guardarGeocerca() {
-    showAlert('Info', 'Guardar en desarrollo', 'info');
+    if (!window.isSuperAdmin) return;
+
+    const sucursalId = Number(document.getElementById('geoSucursalId').value);
+    const sucursalNombre = document.getElementById('geoSucursalNombre').value;
+    const lat = parseFloat(document.getElementById('geoLat').value);
+    const lng = parseFloat(document.getElementById('geoLng').value);
+    const radio = parseInt(document.getElementById('geoRadio').value, 10);
+    const activa = document.getElementById('geoActiva').checked;
+    const activaInicial = document.getElementById('geoActivaInicial').value === '1';
+
+    if (activa && (!Number.isFinite(lat) || !Number.isFinite(lng))) {
+        showAlert('Falta el pin', 'Coloca el pin en el mapa antes de activar la geocerca.', 'error');
+        return;
+    }
+
+    // Confirm si está pasando de inactiva → activa
+    if (activa && !activaInicial) {
+        const confirmado = confirm(
+            `Vas a bloquear los registros de la PWA fuera del radio para empleados de ${sucursalNombre}. ¿Continuar?`
+        );
+        if (!confirmado) return;
+    }
+
+    const username = JSON.parse(
+        localStorage.getItem('session_sucursal') || sessionStorage.getItem('session_sucursal') || '{}'
+    ).username || null;
+
+    const datos = {
+        latitud: Number.isFinite(lat) ? lat : null,
+        longitud: Number.isFinite(lng) ? lng : null,
+        radio_metros: radio,
+        geocerca_activa: activa,
+        actualizado_por: username
+    };
+
+    const res = await SupabaseAPI.updateSucursalGeocerca(sucursalId, datos);
+    if (!res.success) {
+        showAlert('Error', res.message, 'error');
+        return;
+    }
+    closeModal('modalGeocerca');
+    showAlert('Guardado', `Geocerca de ${sucursalNombre} actualizada`, 'success');
+    loadGeocercas();
+}
+
+async function toggleGeocercaActiva(sucursalId, nuevoEstado) {
+    if (!window.isSuperAdmin) return;
+
+    // Necesitamos los datos actuales para no pisar lat/lng/radio
+    const result = await SupabaseAPI.getSucursalesGeocerca();
+    if (!result.success) {
+        showAlert('Error', result.message, 'error');
+        return;
+    }
+    const sucursal = result.data.find(s => s.id === sucursalId);
+    if (!sucursal) return;
+
+    if (nuevoEstado && (sucursal.latitud == null || sucursal.longitud == null)) {
+        showAlert('Falta el pin', 'Configura primero la geocerca antes de activarla.', 'error');
+        return;
+    }
+    if (nuevoEstado) {
+        const ok = confirm(
+            `Vas a bloquear los registros de la PWA fuera del radio para empleados de ${sucursal.nombre}. ¿Continuar?`
+        );
+        if (!ok) return;
+    }
+
+    const username = JSON.parse(
+        localStorage.getItem('session_sucursal') || sessionStorage.getItem('session_sucursal') || '{}'
+    ).username || null;
+
+    const res = await SupabaseAPI.updateSucursalGeocerca(sucursalId, {
+        latitud: sucursal.latitud,
+        longitud: sucursal.longitud,
+        radio_metros: sucursal.radio_metros,
+        geocerca_activa: nuevoEstado,
+        actualizado_por: username
+    });
+    if (!res.success) {
+        showAlert('Error', res.message, 'error');
+        return;
+    }
+    showAlert('Listo', `Geocerca ${nuevoEstado ? 'activada' : 'desactivada'} para ${sucursal.nombre}`, 'success');
+    loadGeocercas();
 }
 
