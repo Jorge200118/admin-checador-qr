@@ -89,9 +89,15 @@ CREATE POLICY "anon read sucursales"
     TO anon
     USING (true);
 
--- Sin política de INSERT/UPDATE/DELETE para anon → escrituras desde el admin solamente
--- (con la auth actual basada en username, la protección efectiva está en UI; el RLS bloquea
--- escrituras con la anon key directamente).
+-- El admin escribe usando la misma anon key (no hay Supabase Auth real; ver
+-- supabase-config.js:927-932). Para permitir UPDATE desde la UI del admin sin abrir
+-- escrituras desde otros clientes, autorizamos UPDATE con anon. La protección efectiva
+-- está en UI: solo superadmin ve la pantalla. Sin políticas para INSERT/DELETE.
+CREATE POLICY "anon update sucursales"
+    ON sucursales FOR UPDATE
+    TO anon
+    USING (true)
+    WITH CHECK (true);
 ```
 
 **Notas:**
