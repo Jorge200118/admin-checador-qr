@@ -608,6 +608,16 @@ function regShortcut(tipo) {
     } else if (tipo === 'mes') {
         inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
         fin    = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0); // último día del mes
+    } else if (tipo === 'quincena') {
+        // 1ra quincena: días 1–15. 2da quincena: 16 al último día del mes.
+        const dia = hoy.getDate();
+        if (dia <= 15) {
+            inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+            fin    = new Date(hoy.getFullYear(), hoy.getMonth(), 15);
+        } else {
+            inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 16);
+            fin    = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+        }
     } else {
         return;
     }

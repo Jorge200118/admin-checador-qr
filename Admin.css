@@ -807,6 +807,27 @@ tbody tr:hover {
     color: #7c3aed;
 }
 
+.chip-shortcut {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .15s ease;
+    line-height: 1;
+}
+.chip-shortcut:hover {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: #fff;
+}
+.chip-shortcut:active {
+    transform: scale(.97);
+}
+
 .tablet-info {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.75rem;

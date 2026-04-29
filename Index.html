@@ -346,12 +346,6 @@
                             <span class="date-separator">-</span>
                             <input type="date" id="fechaFin" class="form-input" placeholder="Fecha fin">
                         </div>
-                        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
-                            <button type="button" class="btn btn-sm btn-secondary" onclick="regShortcut('hoy')">Hoy</button>
-                            <button type="button" class="btn btn-sm btn-secondary" onclick="regShortcut('ayer')">Ayer</button>
-                            <button type="button" class="btn btn-sm btn-secondary" onclick="regShortcut('semana')">Esta semana</button>
-                            <button type="button" class="btn btn-sm btn-secondary" onclick="regShortcut('mes')">Este mes</button>
-                        </div>
                     </div>
                     
                     <!-- Filtro de empleado con autocompletar -->
@@ -408,6 +402,16 @@
                     </div>
                 </div>
                 
+                <!-- Atajos de período -->
+                <div class="period-shortcuts" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid #f1f5f9;">
+                    <span style="font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Atajos:</span>
+                    <button type="button" class="chip-shortcut" onclick="regShortcut('hoy')">Hoy</button>
+                    <button type="button" class="chip-shortcut" onclick="regShortcut('ayer')">Ayer</button>
+                    <button type="button" class="chip-shortcut" onclick="regShortcut('semana')">Esta semana</button>
+                    <button type="button" class="chip-shortcut" onclick="regShortcut('quincena')">Esta quincena</button>
+                    <button type="button" class="chip-shortcut" onclick="regShortcut('mes')">Este mes</button>
+                </div>
+
                 <!-- Botones de acción -->
                 <div class="filter-actions">
                     <button class="btn btn-primary filter-btn" onclick="filtrarRegistros()">
