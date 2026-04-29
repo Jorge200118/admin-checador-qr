@@ -1145,6 +1145,10 @@ const SupabaseAPI = {
                 `)
                 .order('fecha_inicio', { ascending: false });
 
+            // Por defecto, excluir las eliminadas (soft-delete)
+            if (!filtros.incluirEliminadas) {
+                query = query.is('eliminado_en', null);
+            }
             if (filtros.sucursal) {
                 query = query.eq('empleado.sucursal', filtros.sucursal);
             }
@@ -1179,16 +1183,20 @@ const SupabaseAPI = {
 
     async createJustificacion(justData) {
         try {
+            const payload = {
+                empleado_id: justData.empleado_id,
+                tipo: justData.tipo,
+                fecha_inicio: justData.fecha_inicio,
+                fecha_fin: justData.fecha_fin,
+                motivo: justData.motivo || null,
+                created_by: justData.created_by || null
+            };
+            if (justData.documento_url !== undefined)    payload.documento_url    = justData.documento_url;
+            if (justData.documento_nombre !== undefined) payload.documento_nombre = justData.documento_nombre;
+
             const { data, error } = await supabaseClient
                 .from('justificaciones')
-                .insert({
-                    empleado_id: justData.empleado_id,
-                    tipo: justData.tipo,
-                    fecha_inicio: justData.fecha_inicio,
-                    fecha_fin: justData.fecha_fin,
-                    motivo: justData.motivo || null,
-                    created_by: justData.created_by || null
-                })
+                .insert(payload)
                 .select()
                 .single();
 
@@ -1201,15 +1209,19 @@ const SupabaseAPI = {
 
     async updateJustificacion(justId, justData) {
         try {
+            const payload = {
+                empleado_id: justData.empleado_id,
+                tipo: justData.tipo,
+                fecha_inicio: justData.fecha_inicio,
+                fecha_fin: justData.fecha_fin,
+                motivo: justData.motivo || null
+            };
+            if (justData.documento_url !== undefined)    payload.documento_url    = justData.documento_url;
+            if (justData.documento_nombre !== undefined) payload.documento_nombre = justData.documento_nombre;
+
             const { data, error } = await supabaseClient
                 .from('justificaciones')
-                .update({
-                    empleado_id: justData.empleado_id,
-                    tipo: justData.tipo,
-                    fecha_inicio: justData.fecha_inicio,
-                    fecha_fin: justData.fecha_fin,
-                    motivo: justData.motivo || null
-                })
+                .update(payload)
                 .eq('id', justId)
                 .select()
                 .single();
@@ -1221,17 +1233,65 @@ const SupabaseAPI = {
         }
     },
 
-    async deleteJustificacion(justId) {
+    async uploadJustificacionDocumento(file, empleadoId) {
+        try {
+            const ext  = (file.name.split('.').pop() || 'bin').toLowerCase();
+            const safeBase = file.name.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 60);
+            const path = `${empleadoId}/${Date.now()}_${safeBase}.${ext}`;
+
+            const { error: upErr } = await supabaseClient.storage
+                .from('justificaciones-docs')
+                .upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false });
+            if (upErr) throw upErr;
+
+            const { data: urlData } = supabaseClient.storage
+                .from('justificaciones-docs')
+                .getPublicUrl(path);
+
+            return { success: true, url: urlData.publicUrl, path: path, nombre: file.name };
+        } catch (error) {
+            return { success: false, message: error.message || 'Error al subir documento' };
+        }
+    },
+
+    async deleteJustificacion(justId, motivo, eliminadoPor) {
         try {
             const { error } = await supabaseClient
                 .from('justificaciones')
-                .delete()
-                .eq('id', justId);
+                .update({
+                    eliminado_en: new Date().toISOString(),
+                    eliminado_por: eliminadoPor || null,
+                    eliminado_motivo: motivo || null
+                })
+                .eq('id', justId)
+                .is('eliminado_en', null);
 
             if (error) throw error;
             return { success: true };
         } catch (error) {
-            return { success: false, message: 'Error al eliminar justificacion' };
+            return { success: false, message: error.message || 'Error al eliminar justificacion' };
+        }
+    },
+
+    async getJustificacionesTraslape(empleadoId, fechaInicio, fechaFin, excludeId = null) {
+        try {
+            let query = supabaseClient
+                .from('justificaciones')
+                .select('id, tipo, fecha_inicio, fecha_fin')
+                .eq('empleado_id', empleadoId)
+                .is('eliminado_en', null)
+                .lte('fecha_inicio', fechaFin)
+                .gte('fecha_fin', fechaInicio);
+
+            if (excludeId) {
+                query = query.neq('id', excludeId);
+            }
+
+            const { data, error } = await query;
+            if (error) throw error;
+            return { success: true, data: data || [] };
+        } catch (error) {
+            return { success: false, data: [], message: error.message };
         }
     },
 
@@ -1245,6 +1305,7 @@ const SupabaseAPI = {
                         id, nombre, apellido, sucursal
                     )
                 `)
+                .is('eliminado_en', null)
                 .lte('fecha_inicio', fechaFin)
                 .gte('fecha_fin', fechaInicio);
 

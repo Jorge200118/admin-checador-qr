@@ -802,6 +802,11 @@ tbody tr:hover {
     color: #2563eb;
 }
 
+.estatus-badge.justificado {
+    background: #ede9fe;
+    color: #7c3aed;
+}
+
 .tablet-info {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.75rem;
