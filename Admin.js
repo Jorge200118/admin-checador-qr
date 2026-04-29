@@ -7946,7 +7946,7 @@ async function guardarGeocerca() {
     const sucursalNombre = document.getElementById('geoSucursalNombre').value;
     const lat = parseFloat(document.getElementById('geoLat').value);
     const lng = parseFloat(document.getElementById('geoLng').value);
-    const radio = parseInt(document.getElementById('geoRadio').value, 10);
+    const radio = parseInt(document.getElementById('geoRadio').value, 10) || 150;
     const activa = document.getElementById('geoActiva').checked;
     const activaInicial = document.getElementById('geoActivaInicial').value === '1';
 
