@@ -588,6 +588,38 @@ async function loadEmpleadosForFilter() {
     }
 }
 
+// Atajos de período en sección Registros
+function regShortcut(tipo) {
+    const hoy = new Date();
+    const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+    let inicio, fin;
+    if (tipo === 'hoy') {
+        inicio = hoy; fin = hoy;
+    } else if (tipo === 'ayer') {
+        const ayer = new Date(hoy); ayer.setDate(hoy.getDate() - 1);
+        inicio = ayer; fin = ayer;
+    } else if (tipo === 'semana') {
+        // Lunes a domingo de la semana actual (lunes = inicio)
+        const diaSemana = hoy.getDay(); // 0=dom, 1=lun, ... 6=sab
+        const offsetLunes = (diaSemana === 0) ? -6 : (1 - diaSemana);
+        inicio = new Date(hoy); inicio.setDate(hoy.getDate() + offsetLunes);
+        fin = new Date(inicio); fin.setDate(inicio.getDate() + 6);
+    } else if (tipo === 'mes') {
+        inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+        fin    = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0); // último día del mes
+    } else {
+        return;
+    }
+
+    const fInicio = document.getElementById('fechaInicio');
+    const fFin    = document.getElementById('fechaFin');
+    if (fInicio) fInicio.value = fmt(inicio);
+    if (fFin)    fFin.value    = fmt(fin);
+
+    filtrarRegistros();
+}
+
 // Establecer fechas por defecto
 function setDefaultDates() {
     const hoy = new Date();
@@ -5785,6 +5817,7 @@ window.cerrarExpediente = cerrarExpediente;
 
 // Funciones específicas para registros avanzados
 window.filtrarRegistros = filtrarRegistros;
+window.regShortcut = regShortcut;
 window.reloadRegistros = reloadRegistros;
 window.verFotoCompleta = verFotoCompleta;
 window.editarRegistro = editarRegistro;
@@ -7513,9 +7546,43 @@ async function cargarAbsentismo() {
         _absDatos = { filas, fechaInicio, fechaFin, totalDiasRango };
         renderTablaAbsentismo();
         renderKPIsAbsentismo();
+        renderRankingsAbsentismo();
     } catch (err) {
         tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:24px;color:#ef4444">Error: ${err.message}</td></tr>`;
     }
+}
+
+function renderRankingsAbsentismo() {
+    if (!_absDatos) return;
+    const filas = _absDatos.filas;
+
+    const renderItem = (f, valor, etiqueta, color) => `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid #f8fafc;">
+            <div style="font-size:11px;color:#64748b;min-width:18px;text-align:right;">${etiqueta}</div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:13px;font-weight:600;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${f.nombre}</div>
+                <div style="font-size:11px;color:#94a3b8;">${f.codigo || ''} · ${f.sucursal || '—'}</div>
+            </div>
+            <div style="font-size:18px;font-weight:800;color:${color};min-width:32px;text-align:right;">${valor}</div>
+        </div>`;
+
+    const renderTop = (containerId, sortFn, valorFn, color, etiquetaCero) => {
+        const cont = document.getElementById(containerId);
+        if (!cont) return;
+        const top = [...filas]
+            .filter(f => valorFn(f) > 0)
+            .sort(sortFn)
+            .slice(0, 10);
+        if (top.length === 0) {
+            cont.innerHTML = `<div style="text-align:center;color:#94a3b8;padding:24px 12px;font-size:13px;">${etiquetaCero}</div>`;
+            return;
+        }
+        cont.innerHTML = top.map((f, i) => renderItem(f, valorFn(f), `#${i+1}`, color)).join('');
+    };
+
+    renderTop('absRankingFaltas',          (a,b) => b.faltas - a.faltas,                     f => f.faltas,                                  '#ef4444', 'Sin faltas en el período 🎉');
+    renderTop('absRankingIncapacidades',   (a,b) => b.incapacidad - a.incapacidad,           f => f.incapacidad,                             '#7c3aed', 'Sin incapacidades en el período');
+    renderTop('absRankingAusencias',       (a,b) => b.total_ausencias - a.total_ausencias,   f => f.total_ausencias,                         '#f59e0b', 'Sin ausencias en el período 🎉');
 }
 
 function renderKPIsAbsentismo() {

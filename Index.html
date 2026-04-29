@@ -346,6 +346,12 @@
                             <span class="date-separator">-</span>
                             <input type="date" id="fechaFin" class="form-input" placeholder="Fecha fin">
                         </div>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="regShortcut('hoy')">Hoy</button>
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="regShortcut('ayer')">Ayer</button>
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="regShortcut('semana')">Esta semana</button>
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="regShortcut('mes')">Este mes</button>
+                        </div>
                     </div>
                     
                     <!-- Filtro de empleado con autocompletar -->
@@ -1120,6 +1126,40 @@
                                 <tr><td colspan="8" style="text-align:center;color:#64748b;padding:24px">Selecciona un período y presiona Generar</td></tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rankings -->
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:20px;">
+                <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05);">
+                    <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-trophy" style="color:#ef4444;font-size:14px;"></i>
+                        <span style="font-size:13px;font-weight:600;color:#0f172a">Top 10 con más Faltas</span>
+                        <span style="font-size:11px;color:#94a3b8;margin-left:auto">sin justificar</span>
+                    </div>
+                    <div id="absRankingFaltas" style="padding:8px 0;">
+                        <div style="text-align:center;color:#94a3b8;padding:24px 12px;font-size:13px;">Genera el reporte</div>
+                    </div>
+                </div>
+                <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05);">
+                    <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-user-injured" style="color:#7c3aed;font-size:14px;"></i>
+                        <span style="font-size:13px;font-weight:600;color:#0f172a">Top 10 con más Incapacidades</span>
+                        <span style="font-size:11px;color:#94a3b8;margin-left:auto">días</span>
+                    </div>
+                    <div id="absRankingIncapacidades" style="padding:8px 0;">
+                        <div style="text-align:center;color:#94a3b8;padding:24px 12px;font-size:13px;">Genera el reporte</div>
+                    </div>
+                </div>
+                <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05);">
+                    <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-users-slash" style="color:#f59e0b;font-size:14px;"></i>
+                        <span style="font-size:13px;font-weight:600;color:#0f172a">Top 10 con más Ausencias Totales</span>
+                        <span style="font-size:11px;color:#94a3b8;margin-left:auto">faltas+just</span>
+                    </div>
+                    <div id="absRankingAusencias" style="padding:8px 0;">
+                        <div style="text-align:center;color:#94a3b8;padding:24px 12px;font-size:13px;">Genera el reporte</div>
                     </div>
                 </div>
             </div>
