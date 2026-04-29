@@ -1360,17 +1360,19 @@ const SupabaseAPI = {
             if (error) throw error;
             return { success: true, data: data || [] };
         } catch (error) {
+            console.error('getSucursalesGeocerca:', error);
             return { success: false, message: 'Error al obtener sucursales', data: [] };
         }
     },
 
     async updateSucursalGeocerca(sucursalId, datos) {
+        if (!sucursalId) return { success: false, message: 'ID de sucursal requerido' };
         try {
             const payload = {
                 latitud: datos.latitud,
                 longitud: datos.longitud,
                 radio_metros: datos.radio_metros,
-                geocerca_activa: datos.geocerca_activa,
+                geocerca_activa: !!datos.geocerca_activa,
                 actualizado_en: new Date().toISOString(),
                 actualizado_por: datos.actualizado_por || null
             };
