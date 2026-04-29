@@ -239,6 +239,7 @@ function navigateToSection(section) {
         creditos: 'Control de Créditos INFONAVIT / FONACOT',
         sucursales: 'Vista Global de Sucursales',
         dispositivos: 'Dispositivos PWA Vinculados',
+        geocercas: 'Geocercas por Sucursal',
         configuracion: 'Configuración del Sistema'
     };
     
@@ -461,6 +462,9 @@ async function loadSectionData(section) {
         case 'dispositivos':
             cargarDispositivos();
             setupDispositivosFilters();
+            break;
+        case 'geocercas':
+            loadGeocercas();
             break;
         case 'configuracion':
             break;
@@ -7689,4 +7693,76 @@ window.absShortcut = absShortcut;
 window.cargarAbsentismo = cargarAbsentismo;
 window.renderTablaAbsentismo = renderTablaAbsentismo;
 window.exportarAbsentismoExcel = exportarAbsentismoExcel;
+
+// ================================
+// GEOCERCAS POR SUCURSAL (solo superadmin)
+// ================================
+async function loadGeocercas() {
+    if (!window.isSuperAdmin) {
+        const tbody = document.getElementById('geocercasTbody');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:#64748b">No tienes permisos para ver esta sección.</td></tr>';
+        }
+        return;
+    }
+    const tbody = document.getElementById('geocercasTbody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#64748b">Cargando...</td></tr>';
+
+    const result = await SupabaseAPI.getSucursalesGeocerca();
+    if (!result.success || result.data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#64748b">Sin sucursales configurables</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = result.data.map(s => {
+        const tieneCoords = s.latitud != null && s.longitud != null;
+        const coordsTxt = tieneCoords
+            ? `${Number(s.latitud).toFixed(5)}, ${Number(s.longitud).toFixed(5)}`
+            : '—';
+        const radioTxt = tieneCoords ? `${s.radio_metros} m` : '—';
+        const badge = s.geocerca_activa
+            ? '<span class="geo-badge-activa">Activa</span>'
+            : '<span class="geo-badge-inactiva">Inactiva</span>';
+        const fecha = s.actualizado_en
+            ? new Date(s.actualizado_en).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })
+            : '—';
+        const por = s.actualizado_por ? ` por ${s.actualizado_por}` : '';
+        const toggleDisabled = !tieneCoords ? 'disabled' : '';
+        const toggleLabel = s.geocerca_activa ? 'Desactivar' : 'Activar';
+
+        return `
+            <tr>
+                <td><strong>${s.nombre}</strong></td>
+                <td>${badge}</td>
+                <td style="font-family:monospace;font-size:12px">${coordsTxt}</td>
+                <td>${radioTxt}</td>
+                <td style="font-size:12px;color:#64748b">${fecha}${por}</td>
+                <td style="white-space:nowrap">
+                    <button class="btn btn-sm btn-primary" onclick="openModalGeocerca(${s.id})">
+                        <i class="fas fa-edit"></i> Editar
+                    </button>
+                    <button class="btn btn-sm btn-secondary" ${toggleDisabled}
+                        onclick="toggleGeocercaActiva(${s.id}, ${!s.geocerca_activa})">
+                        ${toggleLabel}
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// Stubs — se implementan en tareas siguientes:
+async function openModalGeocerca(_id) {
+    showAlert('Info', 'Modal en desarrollo', 'info');
+}
+async function toggleGeocercaActiva(_id, _nuevoEstado) {
+    showAlert('Info', 'Toggle en desarrollo', 'info');
+}
+async function guardarGeocerca() {
+    showAlert('Info', 'Guardar en desarrollo', 'info');
+}
+async function centrarEnMiUbicacion() {
+    showAlert('Info', 'Mi ubicación en desarrollo', 'info');
+}
 
