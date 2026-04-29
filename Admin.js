@@ -6256,7 +6256,7 @@ function renderJustificaciones(data) {
     };
 
     const usuarioActual = window.currentUser?.nombreCompleto || '';
-    const esSuperAdmin  = !window.currentUserSucursal;
+    const esSuperAdmin  = !!window.isSuperAdmin;
 
     tbody.innerHTML = data.map(j => {
         const dias = calcularDiasJustificacion(j.fecha_inicio, j.fecha_fin);
@@ -6702,7 +6702,7 @@ async function eliminarJustificacion(justId) {
 
     // Validación de permisos
     const usuarioActual = window.currentUser?.nombreCompleto || '';
-    const esSuperAdmin  = !window.currentUserSucursal;
+    const esSuperAdmin  = !!window.isSuperAdmin;
     const esCreador     = just.created_by && just.created_by === usuarioActual;
 
     if (!esSuperAdmin && !esCreador) {
@@ -6722,8 +6722,8 @@ async function eliminarJustificacion(justId) {
     );
     if (motivo === null) return; // canceló
     const motivoLimpio = motivo.trim();
-    if (motivoLimpio.length < 3) {
-        showAlert('Motivo requerido', 'Escribe un motivo de al menos 3 caracteres', 'warning');
+    if (motivoLimpio.length === 0) {
+        showAlert('Motivo requerido', 'Escribe un motivo para eliminar', 'warning');
         return;
     }
 
@@ -6733,7 +6733,7 @@ async function eliminarJustificacion(justId) {
 
     if (result.success) {
         showAlert('Eliminado', 'Justificación marcada como eliminada', 'success');
-        loadJustificaciones();
+        await loadJustificaciones();
     } else {
         showAlert('Error', result.message || 'No se pudo eliminar', 'error');
     }
