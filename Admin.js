@@ -7757,17 +7757,193 @@ async function loadGeocercas() {
     }).join('');
 }
 
-// Stubs — se implementan en tareas siguientes:
-async function openModalGeocerca(_id) {
-    showAlert('Info', 'Modal en desarrollo', 'info');
+// Estado del mapa de geocerca (se reinicia cada vez que se abre el modal)
+let geocercaMapState = {
+    map: null,
+    marker: null,
+    circle: null
+};
+
+async function openModalGeocerca(sucursalId) {
+    if (!window.isSuperAdmin) {
+        showAlert('Sin permisos', 'Solo el superadmin puede editar geocercas', 'error');
+        return;
+    }
+    if (typeof L === 'undefined') {
+        showAlert('Error', 'Leaflet no cargó. Revisa tu conexión.', 'error');
+        return;
+    }
+
+    const result = await SupabaseAPI.getSucursalesGeocerca();
+    if (!result.success) {
+        showAlert('Error', result.message, 'error');
+        return;
+    }
+    const sucursal = result.data.find(s => s.id === sucursalId);
+    if (!sucursal) {
+        showAlert('Error', 'Sucursal no encontrada', 'error');
+        return;
+    }
+
+    // Llenar campos hidden e iniciales
+    document.getElementById('geoSucursalId').value = sucursal.id;
+    document.getElementById('geoSucursalNombre').value = sucursal.nombre;
+    document.getElementById('geoActivaInicial').value = sucursal.geocerca_activa ? '1' : '0';
+    document.getElementById('modalGeocercaTitle').textContent = `Geocerca: ${sucursal.nombre}`;
+    document.getElementById('geoRadio').value = sucursal.radio_metros || 150;
+    document.getElementById('geoRadioLabel').textContent = sucursal.radio_metros || 150;
+    document.getElementById('geoActiva').checked = !!sucursal.geocerca_activa;
+
+    const tieneCoords = sucursal.latitud != null && sucursal.longitud != null;
+    if (tieneCoords) {
+        document.getElementById('geoLat').value = sucursal.latitud;
+        document.getElementById('geoLng').value = sucursal.longitud;
+    } else {
+        document.getElementById('geoLat').value = '';
+        document.getElementById('geoLng').value = '';
+    }
+
+    actualizarHintActivar();
+
+    // Mostrar modal
+    openModal('modalGeocerca');
+
+    // Inicializar mapa después de que el modal esté visible (para que tenga dimensiones)
+    setTimeout(() => initLeafletGeocerca(sucursal), 100);
 }
+
+function actualizarHintActivar() {
+    const lat = document.getElementById('geoLat').value;
+    const lng = document.getElementById('geoLng').value;
+    const checkbox = document.getElementById('geoActiva');
+    const hint = document.getElementById('geoActivaHint');
+    const tieneCoords = lat !== '' && lng !== '';
+    checkbox.disabled = !tieneCoords;
+    hint.style.display = tieneCoords ? 'none' : 'block';
+    if (!tieneCoords) checkbox.checked = false;
+}
+
+function initLeafletGeocerca(sucursal) {
+    const tieneCoords = sucursal.latitud != null && sucursal.longitud != null;
+    // Centro inicial: coords guardadas, o Los Mochis para MATRIZ, o México genérico
+    let centro;
+    if (tieneCoords) {
+        centro = [Number(sucursal.latitud), Number(sucursal.longitud)];
+    } else if (sucursal.nombre === 'MATRIZ') {
+        centro = [25.7833, -108.9833]; // Los Mochis aprox
+    } else {
+        centro = [23.6345, -102.5528]; // México genérico
+    }
+
+    // Si ya había mapa de una apertura previa, destruirlo
+    if (geocercaMapState.map) {
+        geocercaMapState.map.remove();
+        geocercaMapState.map = null;
+        geocercaMapState.marker = null;
+        geocercaMapState.circle = null;
+    }
+
+    const map = L.map('mapaGeocerca').setView(centro, tieneCoords ? 17 : 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap',
+        maxZoom: 19
+    }).addTo(map);
+
+    geocercaMapState.map = map;
+
+    if (tieneCoords) {
+        ponerMarker(centro[0], centro[1]);
+    }
+
+    // Click en mapa → mover/colocar pin
+    map.on('click', (e) => {
+        ponerMarker(e.latlng.lat, e.latlng.lng);
+    });
+
+    // Cambios manuales en inputs lat/lng
+    document.getElementById('geoLat').oninput = sincronizarDesdeInputs;
+    document.getElementById('geoLng').oninput = sincronizarDesdeInputs;
+
+    // Slider de radio
+    const slider = document.getElementById('geoRadio');
+    slider.oninput = () => {
+        const r = Number(slider.value);
+        document.getElementById('geoRadioLabel').textContent = r;
+        if (geocercaMapState.circle) {
+            geocercaMapState.circle.setRadius(r);
+        }
+    };
+}
+
+function ponerMarker(lat, lng) {
+    const map = geocercaMapState.map;
+    if (!map) return;
+    const radio = Number(document.getElementById('geoRadio').value) || 150;
+
+    if (geocercaMapState.marker) {
+        geocercaMapState.marker.setLatLng([lat, lng]);
+    } else {
+        geocercaMapState.marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+        geocercaMapState.marker.on('dragend', (e) => {
+            const ll = e.target.getLatLng();
+            ponerMarker(ll.lat, ll.lng);
+        });
+    }
+
+    if (geocercaMapState.circle) {
+        geocercaMapState.circle.setLatLng([lat, lng]).setRadius(radio);
+    } else {
+        geocercaMapState.circle = L.circle([lat, lng], {
+            radius: radio,
+            color: '#2563eb',
+            fillColor: '#2563eb',
+            fillOpacity: 0.15
+        }).addTo(map);
+    }
+
+    document.getElementById('geoLat').value = Number(lat).toFixed(7);
+    document.getElementById('geoLng').value = Number(lng).toFixed(7);
+    actualizarHintActivar();
+}
+
+function sincronizarDesdeInputs() {
+    const lat = parseFloat(document.getElementById('geoLat').value);
+    const lng = parseFloat(document.getElementById('geoLng').value);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        ponerMarker(lat, lng);
+        const map = geocercaMapState.map;
+        if (map) map.setView([lat, lng], Math.max(map.getZoom(), 16));
+    }
+    actualizarHintActivar();
+}
+
+function centrarEnMiUbicacion() {
+    if (!geocercaMapState.map) return;
+    if (!navigator.geolocation) {
+        showAlert('Sin GPS', 'Tu navegador no soporta geolocalización', 'error');
+        return;
+    }
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            geocercaMapState.map.setView([lat, lng], 18);
+            // Si ya hay marker, no lo movemos automáticamente — solo centramos.
+            // Si no hay marker, lo ponemos en la ubicación del usuario.
+            if (!geocercaMapState.marker) {
+                ponerMarker(lat, lng);
+            }
+        },
+        () => showAlert('Sin permiso', 'No se pudo obtener tu ubicación', 'error'),
+        { enableHighAccuracy: true, timeout: 10000 }
+    );
+}
+
+// Stubs restantes (se implementan en Task 9):
 async function toggleGeocercaActiva(_id, _nuevoEstado) {
     showAlert('Info', 'Toggle en desarrollo', 'info');
 }
 async function guardarGeocerca() {
     showAlert('Info', 'Guardar en desarrollo', 'info');
-}
-async function centrarEnMiUbicacion() {
-    showAlert('Info', 'Mi ubicación en desarrollo', 'info');
 }
 
