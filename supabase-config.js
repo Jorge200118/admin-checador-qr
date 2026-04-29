@@ -1346,6 +1346,45 @@ const SupabaseAPI = {
         } catch (error) {
             return false;
         }
+    },
+
+    // ==========================================
+    // SUCURSALES (GEOCERCAS)
+    // ==========================================
+    async getSucursalesGeocerca() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('sucursales')
+                .select('*')
+                .order('nombre');
+            if (error) throw error;
+            return { success: true, data: data || [] };
+        } catch (error) {
+            return { success: false, message: 'Error al obtener sucursales', data: [] };
+        }
+    },
+
+    async updateSucursalGeocerca(sucursalId, datos) {
+        try {
+            const payload = {
+                latitud: datos.latitud,
+                longitud: datos.longitud,
+                radio_metros: datos.radio_metros,
+                geocerca_activa: datos.geocerca_activa,
+                actualizado_en: new Date().toISOString(),
+                actualizado_por: datos.actualizado_por || null
+            };
+            const { data, error } = await supabaseClient
+                .from('sucursales')
+                .update(payload)
+                .eq('id', sucursalId)
+                .select()
+                .single();
+            if (error) throw error;
+            return { success: true, data };
+        } catch (error) {
+            return { success: false, message: error.message || 'Error al guardar geocerca' };
+        }
     }
 };
 
