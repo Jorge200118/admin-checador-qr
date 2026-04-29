@@ -7710,7 +7710,12 @@ async function loadGeocercas() {
     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#64748b">Cargando...</td></tr>';
 
     const result = await SupabaseAPI.getSucursalesGeocerca();
-    if (!result.success || result.data.length === 0) {
+    if (!result.success) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#64748b">Error al cargar sucursales</td></tr>';
+        showAlert('Error', result.message || 'Error al obtener sucursales', 'error');
+        return;
+    }
+    if (result.data.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#64748b">Sin sucursales configurables</td></tr>';
         return;
     }
