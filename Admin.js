@@ -138,6 +138,13 @@ async function initializeAdmin() {
             window.isSuperAdmin = false;
         }
 
+        // Ocultar items de sidebar marcados como solo-superadmin
+        if (!window.isSuperAdmin) {
+            document.querySelectorAll('[data-superadmin-only="true"]').forEach(el => {
+                el.style.display = 'none';
+            });
+        }
+
         // Inicializar Supabase
         if (!initSupabase()) {
             showAlert('Error de configuración', 'No se pudo conectar con la base de datos', 'error');
