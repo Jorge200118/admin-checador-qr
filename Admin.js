@@ -133,9 +133,6 @@ async function initializeAdmin() {
         if (session.username === 'superadmin') {
             window.currentUserSucursal = null; // null = ver todas las sucursales
             window.isSuperAdmin = true;
-            // Mostrar nav item de Sucursales solo para superadmin
-            const navSucursales = document.getElementById('navSucursales');
-            if (navSucursales) navSucursales.style.display = '';
         } else {
             window.currentUserSucursal = session.sucursal;
             window.isSuperAdmin = false;
