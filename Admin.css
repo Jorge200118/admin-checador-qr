@@ -2636,3 +2636,40 @@ tbody tr:hover {
     font-weight: 600;
 }
 .btn-desvincular:hover { background: #b91c1c; }
+
+/* === Geocercas === */
+#modalGeocerca .modal-content {
+    width: 90%;
+    max-width: 720px;
+}
+
+#mapaGeocerca {
+    width: 100%;
+    cursor: crosshair;
+}
+
+#mapaGeocerca .leaflet-container {
+    border-radius: 8px;
+}
+
+#geoRadio {
+    accent-color: #2563eb;
+}
+
+.geo-badge-activa {
+    background: #d1fae5;
+    color: #065f46;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.geo-badge-inactiva {
+    background: #f1f5f9;
+    color: #64748b;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
