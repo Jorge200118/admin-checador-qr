@@ -6524,6 +6524,7 @@ function limpiarEmpleadoJustificacion() {
 }
 
 function quitarDocumentoJustificacion() {
+    if (!confirm('¿Quitar el comprobante actual?\n\nNecesitarás adjuntar uno nuevo antes de guardar.')) return;
     document.getElementById('justDocumento').value = '';
     document.getElementById('justDocumentoUrl').value = '';
     document.getElementById('justDocumentoNombre').value = '';
@@ -6636,11 +6637,17 @@ async function guardarJustificacion() {
         if (!ok) return;
     }
 
-    // Documento adjunto: si hay archivo nuevo, subir; si no, conservar el existente (URL en el hidden)
+    // Documento adjunto OBLIGATORIO. Al editar, basta con tener el existente.
     const fileInput = document.getElementById('justDocumento');
     const file = fileInput?.files?.[0];
     let documentoUrl    = document.getElementById('justDocumentoUrl')?.value    || null;
     let documentoNombre = document.getElementById('justDocumentoNombre')?.value || null;
+
+    if (!file && !documentoUrl) {
+        marcarErrorCampo('justDocumento', 'Adjunta el comprobante (PDF o imagen)');
+        showAlert('Comprobante requerido', 'Adjunta el comprobante para guardar la justificación', 'warning');
+        return;
+    }
 
     if (file) {
         if (file.size > 5 * 1024 * 1024) {
