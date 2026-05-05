@@ -1966,6 +1966,7 @@ async function loadEmployeeData(employeeId) {
             setFieldValue('empHorario', emp.horario_id);
             setFieldValue('empSucursal', emp.sucursal);
             setFieldValue('empPuesto', emp.puesto);
+            setFieldValue('empWhatsapp', emp.telefono_whatsapp);
 
             const checkbox = document.getElementById('empTrabajaDomingo');
             if (checkbox) checkbox.checked = emp.trabaja_domingo || false;
@@ -2428,9 +2429,15 @@ async function guardarEmpleado() {
         const horario_id = getFieldValue('empHorario');
         const sucursal = getFieldValue('empSucursal');
         const puesto = getFieldValue('empPuesto');
+        const telefono_whatsapp = getFieldValue('empWhatsapp');
 
         if (!codigo || !nombre || !apellido) {
             showAlert('Error', 'Código, nombre y apellido son obligatorios', 'error');
+            return;
+        }
+
+        if (!telefono_whatsapp) {
+            showAlert('Error', 'El número de WhatsApp es obligatorio', 'error');
             return;
         }
 
@@ -2453,6 +2460,7 @@ async function guardarEmpleado() {
             sucursal: sucursal || null,
             puesto: puesto || null,
             trabaja_domingo: trabajaDomingos,
+            telefono_whatsapp: telefono_whatsapp || null,
             activo: true
         };
 
