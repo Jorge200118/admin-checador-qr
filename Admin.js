@@ -21,6 +21,29 @@ const ADMIN_CONFIG = {
 const EMPLEADOS_EXENTOS_BAJA = []; // Agregar códigos aquí, ej: ['A01', 'PX005']
 
 // ================================
+// DÍAS NO LABORABLES (LFT art. 74) - 2026
+// Festivos oficiales que NO cuentan como falta ni como día laborable.
+// 2026 no es año de transmisión del poder ejecutivo (no aplica 1-oct).
+// ================================
+const FESTIVOS_LFT = new Set([
+    '2026-01-01', // Año Nuevo
+    '2026-02-02', // 1er lunes de febrero (conmemoración 5 de febrero)
+    '2026-03-16', // 3er lunes de marzo (conmemoración 21 de marzo)
+    '2026-05-01', // Día del Trabajo
+    '2026-09-16', // Independencia
+    '2026-11-16', // 3er lunes de noviembre (conmemoración 20 de noviembre)
+    '2026-12-25'  // Navidad
+]);
+
+function esDiaNoLaborable(fechaYYYYMMDD) {
+    // Domingo o festivo LFT
+    const [y, m, d] = fechaYYYYMMDD.split('-').map(Number);
+    const date = new Date(y, m - 1, d, 12, 0, 0);
+    if (date.getDay() === 0) return true;
+    return FESTIVOS_LFT.has(fechaYYYYMMDD);
+}
+
+// ================================
 // HELPERS DE ZONA HORARIA - MAZATLÁN (UTC-7)
 // ================================
 /**
@@ -1161,11 +1184,12 @@ function generarRangoFechas(fechaInicio, fechaFin) {
     // Crear nueva instancia en cada iteración para evitar mutación
     for (let d = new Date(inicio); d <= fin; d.setDate(d.getDate() + 1)) {
         if (d.getDay() === 0) continue; // Excluir domingos (0 = domingo)
-        // Usar toLocaleDateString con formato ISO
         const year = d.getFullYear();
         const month = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
-        fechas.push(`${year}-${month}-${day}`);
+        const fechaStr = `${year}-${month}-${day}`;
+        if (FESTIVOS_LFT.has(fechaStr)) continue; // Excluir festivos LFT
+        fechas.push(fechaStr);
     }
 
     return fechas;
@@ -1181,7 +1205,7 @@ function descargarExcelFaltasRango(empleados, fechaInicio, fechaFin) {
     csvContent += `Período: ${fechaInicio} al ${fechaFin}\n`;
     csvContent += `Total faltas encontradas: ${empleados.length}\n`;
     csvContent += `Generado: ${new Date().toLocaleString()}\n`;
-    csvContent += `Nota: Se excluyen días con justificaciones (vacaciones, incapacidad, permisos)\n\n`;
+    csvContent += `Nota: Se excluyen domingos, días festivos LFT y días con justificaciones (vacaciones, incapacidad, permisos)\n\n`;
     
     // HEADERS DE TABLA
     csvContent += 'Fecha,Código,Empleado,Sucursal,Puesto,Horario,Observación\n';
@@ -4171,6 +4195,7 @@ function generarDatosResumenGeneral(justificaciones = []) {
     const estadisticas = [];
 
     // Generar lista de fechas laborables como strings YYYY-MM-DD (sin depender de zona horaria)
+    // Excluye domingos y días festivos LFT (ver FESTIVOS_LFT)
     const fechasLaborables = [];
     {
         const partsInicio = fechaInicioStr.split('-').map(Number);
@@ -4183,7 +4208,10 @@ function generarDatosResumenGeneral(justificaciones = []) {
                 const yy = d.getFullYear();
                 const mm = String(d.getMonth() + 1).padStart(2, '0');
                 const dd = String(d.getDate()).padStart(2, '0');
-                fechasLaborables.push(`${yy}-${mm}-${dd}`);
+                const fechaStr = `${yy}-${mm}-${dd}`;
+                if (!FESTIVOS_LFT.has(fechaStr)) {
+                    fechasLaborables.push(fechaStr);
+                }
             }
             d.setDate(d.getDate() + 1);
         }
@@ -4686,7 +4714,7 @@ function mostrarDetalleEmpleadoResumen(empleadoId) {
     const fechaInicioStr = document.getElementById('fechaInicio').value;
     const fechaFinStr = document.getElementById('fechaFin').value;
 
-    // Construir lista completa de días laborables (lun-vie) sin depender de toISOString
+    // Construir lista completa de días laborables (excluye domingos y festivos LFT)
     const diasCompletos = [];
     {
         const pi = fechaInicioStr.split('-').map(Number);
@@ -4700,12 +4728,14 @@ function mostrarDetalleEmpleadoResumen(empleadoId) {
                 const mm = String(iterDate.getMonth() + 1).padStart(2, '0');
                 const dd = String(iterDate.getDate()).padStart(2, '0');
                 const fechaStr = `${yy}-${mm}-${dd}`;
-                const diaData = dias.find(d => d.fecha === fechaStr);
-                diasCompletos.push({
-                    fecha: fechaStr,
-                    diaSemana: iterDate.toLocaleDateString('es-MX', { weekday: 'short' }),
-                    data: diaData || null
-                });
+                if (!FESTIVOS_LFT.has(fechaStr)) {
+                    const diaData = dias.find(d => d.fecha === fechaStr);
+                    diasCompletos.push({
+                        fecha: fechaStr,
+                        diaSemana: iterDate.toLocaleDateString('es-MX', { weekday: 'short' }),
+                        data: diaData || null
+                    });
+                }
             }
             iterDate.setDate(iterDate.getDate() + 1);
         }
@@ -4834,7 +4864,7 @@ function imprimirDetalleEmpleado(empleadoId) {
     const fechaInicioStr = document.getElementById('fechaInicio').value;
     const fechaFinStr = document.getElementById('fechaFin').value;
 
-    // Construir días laborables
+    // Construir días laborables (excluye domingos y festivos LFT)
     const diasCompletos = [];
     const pi = fechaInicioStr.split('-').map(Number);
     const pf = fechaFinStr.split('-').map(Number);
@@ -4847,12 +4877,14 @@ function imprimirDetalleEmpleado(empleadoId) {
             const mm = String(iterDate.getMonth() + 1).padStart(2, '0');
             const dd = String(iterDate.getDate()).padStart(2, '0');
             const fechaStr = `${yy}-${mm}-${dd}`;
-            const diaData = dias.find(d => d.fecha === fechaStr);
-            diasCompletos.push({
-                fecha: fechaStr,
-                diaSemana: iterDate.toLocaleDateString('es-MX', { weekday: 'short' }),
-                data: diaData || null
-            });
+            if (!FESTIVOS_LFT.has(fechaStr)) {
+                const diaData = dias.find(d => d.fecha === fechaStr);
+                diasCompletos.push({
+                    fecha: fechaStr,
+                    diaSemana: iterDate.toLocaleDateString('es-MX', { weekday: 'short' }),
+                    data: diaData || null
+                });
+            }
         }
         iterDate.setDate(iterDate.getDate() + 1);
     }
