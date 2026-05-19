@@ -6877,8 +6877,8 @@ async function cargarEstadisticas() {
         Object.values(_estCharts).forEach(c => c.destroy());
         _estCharts = {};
 
-        _renderChartDona('chartSexo',            json.data.sexo,        'sexo');
-        _renderChartDona('chartEstadoCivil',      json.data.estadoCivil, 'estado_civil');
+        _renderChartBarrasRangos('chartEdad',        json.data.edad,        '#3b82f6');
+        _renderChartBarrasRangos('chartAntiguedad',  json.data.antiguedad,  '#8b5cf6');
         _renderChartBarrasV('chartIngresosMes',   json.data.ingresosMes);
         _renderChartBarrasH('chartDepartamentos', json.data.puestos,     'puesto',  '#8b5cf6');
         _renderChartBarrasH('chartAreas',         json.data.areas,       'area',    '#f59e0b');
@@ -7164,6 +7164,73 @@ function _renderChartBarrasH(canvasId, datos, campoLabel, colorBase = '#3b82f6')
     });
 }
 
+// Barras verticales para rangos ordenados (edad, antigüedad).
+// Datos esperados: [{ rango: '25-34', total: 42, orden: 2 }, ...]
+function _renderChartBarrasRangos(canvasId, datos, colorBase = '#3b82f6') {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx || !datos || !datos.length) return;
+
+    const ordenados = [...datos].sort((a, b) => (a.orden ?? 99) - (b.orden ?? 99));
+    const labels  = ordenados.map(d => d.rango || 'Sin dato');
+    const valores = ordenados.map(d => d.total);
+    const total   = valores.reduce((a, b) => a + b, 0);
+    const maxVal  = Math.max(...valores, 1);
+
+    const bgColors = ordenados.map((d, i) => {
+        if ((d.rango || '').toLowerCase() === 'sin dato') return '#cbd5e1';
+        const alpha = 0.35 + 0.65 * (valores[i] / maxVal);
+        return colorBase + Math.round(alpha * 255).toString(16).padStart(2, '0');
+    });
+
+    _estCharts[canvasId] = new Chart(ctx, {
+        type: 'bar',
+        plugins: [pluginValorBarraV],
+        data: {
+            labels,
+            datasets: [{
+                label: 'Empleados',
+                data: valores,
+                backgroundColor: bgColors,
+                borderRadius: { topLeft: 6, topRight: 6 },
+                borderSkipped: false,
+                maxBarThickness: 38,
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: { padding: { top: 20 } },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    ..._ttBase,
+                    callbacks: {
+                        title: items => items[0].label,
+                        label: c => {
+                            const pct = total > 0 ? ((c.parsed.y / total) * 100).toFixed(1) : 0;
+                            return `  ${c.parsed.y} empleados (${pct}%)`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: '#475569', font: { size: 11, weight: '500' } },
+                    grid:  { display: false },
+                    border: { color: '#e2e8f0' }
+                },
+                y: {
+                    ticks: { color: '#94a3b8', font: { size: 10 }, stepSize: 1, precision: 0 },
+                    grid:  { color: '#f1f5f9', drawTicks: false },
+                    border: { dash: [3, 3], color: 'transparent' },
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
 function _renderTablaRotacion(rotacion) {
     const tbody = document.getElementById('tbodyRotacion');
     if (!tbody) return;
@@ -7209,8 +7276,8 @@ function exportarEstadisticasExcel() {
         'Antigüedad prom': _estDatos.kpis.promedio_antiguedad
     }]), 'KPIs');
 
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(_estDatos.sexo),         'Por Sexo');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(_estDatos.estadoCivil),  'Estado Civil');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(_estDatos.edad),         'Por Edad');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(_estDatos.antiguedad),   'Antigüedad');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(_estDatos.puestos),      'Por Puesto');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(_estDatos.areas),        'Áreas');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(_estDatos.rotacion),     'Rotación');
