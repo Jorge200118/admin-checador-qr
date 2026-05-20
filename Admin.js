@@ -5746,6 +5746,25 @@ async function abrirExpediente(codigoEmpleado) {
 
         const statusColor = (d.StatusEmpleado || '').toLowerCase().includes('activ') ? '#22c55e' : '#ef4444';
 
+        // Cargar vacaciones (no bloquea el render del resto si falla)
+        let vacacionesHtml = '<div style="color:#94a3b8;font-size:12px;padding:9px 0;">Cargando vacaciones...</div>';
+        if (d.Empleado) {
+            try {
+                const vacRes = await SupabaseAPI.getVacacionesPorCodigo(d.Empleado);
+                if (vacRes.success) {
+                    const fechaIng = vacRes.data.fechaIngreso
+                        ? vacRes.data.fechaIngreso.substring(0, 10)
+                        : (d.FechaIngreso ? d.FechaIngreso.substring(0, 10) : null);
+                    const empMin = { fecha_ingreso: fechaIng };
+                    vacacionesHtml = renderBloqueVacacionesExpediente(empMin, vacRes.data.vacaciones);
+                } else {
+                    vacacionesHtml = `<div style="color:#ef4444;font-size:12px;padding:9px 0;">No se pudo cargar vacaciones</div>`;
+                }
+            } catch (e) {
+                vacacionesHtml = `<div style="color:#ef4444;font-size:12px;padding:9px 0;">No se pudo cargar vacaciones</div>`;
+            }
+        }
+
         const fila = (label, valor, opts = {}) => {
             if (!valor && !opts.mostrarVacio) return '';
             return `
@@ -5828,6 +5847,8 @@ async function abrirExpediente(codigoEmpleado) {
             ${fila('Tipo de régimen', d.TipoRegimenContratacion)}
             ${fila('Sindicalizado', d.Sindicalizado)}
         `)}
+
+        ${seccion('Vacaciones', 'fa-umbrella-beach', '#3b82f6', vacacionesHtml)}
         `;
     } catch (err) {
         cont.innerHTML = `

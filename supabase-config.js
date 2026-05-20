@@ -1295,6 +1295,29 @@ const SupabaseAPI = {
         }
     },
 
+    async getVacacionesPorCodigo(codigoEmpleado) {
+        try {
+            const { data: emp, error: empErr } = await supabaseClient
+                .from('empleados')
+                .select('id, fecha_ingreso')
+                .eq('codigo_empleado', String(codigoEmpleado))
+                .maybeSingle();
+            if (empErr) throw empErr;
+            if (!emp) return { success: true, data: { fechaIngreso: null, vacaciones: [] } };
+            const { data: vacs, error: vacErr } = await supabaseClient
+                .from('justificaciones')
+                .select('id, tipo, fecha_inicio, fecha_fin, motivo')
+                .eq('empleado_id', emp.id)
+                .eq('tipo', 'VACACION')
+                .is('eliminado_en', null)
+                .order('fecha_inicio', { ascending: true });
+            if (vacErr) throw vacErr;
+            return { success: true, data: { fechaIngreso: emp.fecha_ingreso, vacaciones: vacs || [] } };
+        } catch (error) {
+            return { success: false, data: { fechaIngreso: null, vacaciones: [] }, message: error.message };
+        }
+    },
+
     async getJustificacionesPorRango(fechaInicio, fechaFin, sucursal = null) {
         try {
             let query = supabaseClient
