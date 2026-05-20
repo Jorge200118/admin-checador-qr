@@ -284,7 +284,6 @@ function renderVacPorVencer() {
         </div>`;
     }).join('');
 }
-}
 
 window._vacCalState = { mes: null, año: null, sucursal: '' };
 
