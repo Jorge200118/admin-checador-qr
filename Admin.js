@@ -6511,6 +6511,9 @@ async function abrirModalJustificacion(justId = null) {
     document.getElementById('justEmpleadoBuscar').style.display = '';
     document.getElementById('justDiasResumen').style.display = 'none';
     document.getElementById('justEmpleadoResultados').classList.remove('active');
+    window._justVacEmpleadoActual = null;
+    const _vacBox = document.getElementById('justVacSaldoBox');
+    if (_vacBox) _vacBox.style.display = 'none';
 
     // Reset documento
     if (document.getElementById('justDocumento')) document.getElementById('justDocumento').value = '';
@@ -6551,6 +6554,15 @@ async function abrirModalJustificacion(justId = null) {
 
     // Setup event listeners
     setupJustificacionListeners();
+
+    // Listener para refrescar saldo cuando cambia el tipo
+    const selTipo = document.getElementById('justTipo');
+    if (selTipo && !selTipo._vacListenerAttached) {
+        selTipo.addEventListener('change', actualizarSaldoVacacionesEnModal);
+        selTipo._vacListenerAttached = true;
+    }
+    actualizarSaldoVacacionesEnModal();
+
     openModal('modalJustificacion');
 }
 
@@ -6625,6 +6637,10 @@ function seleccionarEmpleadoJustificacion(id, nombre, codigo) {
     document.getElementById('justEmpleadoBuscar').classList.remove('field-error');
     const errorMsg = document.getElementById('justEmpleadoBuscar').parentNode.querySelector('.field-error-msg');
     if (errorMsg) errorMsg.remove();
+
+    const idNum = parseInt(id);
+    const emp = justEmpleadosCache.find(e => e.id === idNum);
+    _cargarVacacionesEmpleadoModal(idNum, emp?.fecha_ingreso || null);
 }
 
 function limpiarEmpleadoJustificacion() {
@@ -6633,6 +6649,8 @@ function limpiarEmpleadoJustificacion() {
     document.getElementById('justEmpleadoBuscar').style.display = '';
     document.getElementById('justEmpleadoSeleccionado').style.display = 'none';
     document.getElementById('justEmpleadoBuscar').focus();
+    window._justVacEmpleadoActual = null;
+    actualizarSaldoVacacionesEnModal();
 }
 
 function quitarDocumentoJustificacion() {
@@ -6655,6 +6673,79 @@ function actualizarResumenDias() {
     } else {
         resumen.style.display = 'none';
     }
+    actualizarSaldoVacacionesEnModal();
+}
+
+// === Vacaciones: saldo en vivo dentro del modal de Justificación ===
+// Estado mientras el modal está abierto: empleado y sus vacaciones VACACION.
+window._justVacEmpleadoActual = null;
+
+async function _cargarVacacionesEmpleadoModal(empleadoIdNum, fechaIngresoStr) {
+    try {
+        const cacheItem = justEmpleadosCache.find(e => e.id === empleadoIdNum);
+        const codigo = cacheItem?.codigo_empleado;
+        let vacaciones = [];
+        if (codigo) {
+            const r = await SupabaseAPI.getVacacionesPorCodigo(codigo);
+            if (r.success) vacaciones = r.data.vacaciones || [];
+        }
+        const fecha = fechaIngresoStr ? fechaIngresoStr.substring(0, 10) : null;
+        window._justVacEmpleadoActual = { empleado: { fecha_ingreso: fecha }, vacaciones };
+    } catch (e) {
+        window._justVacEmpleadoActual = { empleado: { fecha_ingreso: null }, vacaciones: [] };
+    }
+    actualizarSaldoVacacionesEnModal();
+}
+
+function actualizarSaldoVacacionesEnModal() {
+    const box = document.getElementById('justVacSaldoBox');
+    if (!box) return;
+    const tipo = document.getElementById('justTipo')?.value;
+    const ini = document.getElementById('justFechaInicio')?.value;
+    const fin = document.getElementById('justFechaFin')?.value;
+
+    if (tipo !== 'VACACION' || !window._justVacEmpleadoActual) {
+        box.style.display = 'none';
+        return;
+    }
+    const { empleado, vacaciones } = window._justVacEmpleadoActual;
+    if (!empleado.fecha_ingreso) {
+        box.style.display = 'block';
+        box.style.background = '#1e293b';
+        box.style.color = '#94a3b8';
+        box.style.borderLeftColor = '#64748b';
+        box.innerHTML = 'Empleado sin fecha de ingreso registrada';
+        return;
+    }
+    const hoy = _vacHoyYYYYMMDD();
+    const s = calcularSaldo(empleado, vacaciones, hoy);
+    if (s.añoServicio < 1) {
+        box.style.display = 'block';
+        box.style.background = '#1e293b';
+        box.style.color = '#fbbf24';
+        box.style.borderLeftColor = '#f59e0b';
+        box.innerHTML = `<i class="fas fa-info-circle"></i> Aún sin derecho. Cumple 1 año el ${_vacFormatFechaCorta(s.proximoAniversario)}.`;
+        return;
+    }
+
+    let solicitud = 0;
+    if (ini && fin && ini <= fin) {
+        const iniP = ini < s.periodoInicio ? s.periodoInicio : ini;
+        const finP = fin > s.periodoFin ? s.periodoFin : fin;
+        if (iniP <= finP) solicitud = diasHabilesEntre(iniP, finP);
+    }
+    const resultante = s.restantes - solicitud;
+    const excede = resultante < 0;
+
+    box.style.display = 'block';
+    box.style.background = excede ? '#dc262622' : '#22c55e22';
+    box.style.color = excede ? '#fca5a5' : '#86efac';
+    box.style.borderLeftColor = excede ? '#dc2626' : '#22c55e';
+    box.innerHTML = `
+        <div><strong>Saldo del periodo:</strong> ${s.restantes} días</div>
+        ${solicitud > 0 ? `<div style="margin-top:2px;">Esta solicitud: ${solicitud} días → <strong>Quedan: ${resultante} días</strong></div>` : ''}
+        ${excede ? '<div style="margin-top:4px;"><i class="fas fa-exclamation-triangle"></i> Excede el saldo; pediremos confirmación al guardar.</div>' : ''}
+    `;
 }
 
 function limpiarErroresJustificacion() {
@@ -6734,6 +6825,27 @@ async function guardarJustificacion() {
             `\n\n¿Continuar de todas formas?`
         );
         if (!ok) return;
+    }
+
+    // Vacaciones: confirmación si excede saldo o cae en periodo prescrito
+    if (tipo === 'VACACION' && window._justVacEmpleadoActual?.empleado?.fecha_ingreso) {
+        const hoy = _vacHoyYYYYMMDD();
+        const s = calcularSaldo(window._justVacEmpleadoActual.empleado, window._justVacEmpleadoActual.vacaciones, hoy);
+        if (s.añoServicio >= 1) {
+            const iniP = fechaInicio < s.periodoInicio ? s.periodoInicio : fechaInicio;
+            const finP = fechaFin > s.periodoFin ? s.periodoFin : fechaFin;
+            let solicitud = 0;
+            if (iniP <= finP) solicitud = diasHabilesEntre(iniP, finP);
+            const resultante = s.restantes - solicitud;
+            if (resultante < 0) {
+                const ok = confirm(`⚠ Esta solicitud excede el saldo. Le dejará en ${resultante} días. ¿Continuar?`);
+                if (!ok) return;
+            }
+            if (fechaFin < s.periodoInicio) {
+                const ok = confirm(`⚠ Estas fechas caen en un periodo ya prescrito (anterior al ${_vacFormatFechaCorta(s.periodoInicio)}). ¿Continuar?`);
+                if (!ok) return;
+            }
+        }
     }
 
     // Confirmación cuando son varios días (≥5)
