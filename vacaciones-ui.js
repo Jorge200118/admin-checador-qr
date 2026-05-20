@@ -285,3 +285,103 @@ function renderVacPorVencer() {
     }).join('');
 }
 }
+
+window._vacCalState = { mes: null, año: null, sucursal: '' };
+
+function renderVacCalendario() {
+    if (!window._vacState?.cargado) return;
+    const cont = document.getElementById('vacCalendario');
+    if (!cont) return;
+    if (window._vacCalState.mes === null) {
+        const h = new Date();
+        window._vacCalState.mes = h.getMonth();
+        window._vacCalState.año = h.getFullYear();
+    }
+    const { mes, año, sucursal } = window._vacCalState;
+    const nombreMes = new Date(año, mes, 1).toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+
+    const { empleados, vacacionesPorEmp } = window._vacState;
+    const empById = new Map(empleados.map(e => [e.id, e]));
+    const diasMes = new Date(año, mes + 1, 0).getDate();
+    const porDia = {};
+    for (let d = 1; d <= diasMes; d++) porDia[d] = [];
+
+    for (const [empId, vacs] of vacacionesPorEmp.entries()) {
+        const emp = empById.get(empId);
+        if (!emp || !emp.activo) continue;
+        if (sucursal && emp.sucursal !== sucursal) continue;
+        const nombre = `${emp.nombre} ${emp.apellido || ''}`.trim();
+        for (const v of vacs) {
+            const [y1, m1, d1] = v.fecha_inicio.split('-').map(Number);
+            const [y2, m2, d2] = v.fecha_fin.split('-').map(Number);
+            const ini = new Date(y1, m1 - 1, d1);
+            const fin = new Date(y2, m2 - 1, d2);
+            const cur = new Date(año, mes, 1);
+            const finMes = new Date(año, mes, diasMes);
+            const desde = ini > cur ? ini : cur;
+            const hasta = fin < finMes ? fin : finMes;
+            if (desde > hasta) continue;
+            for (let dt = new Date(desde); dt <= hasta; dt.setDate(dt.getDate() + 1)) {
+                if (dt.getMonth() === mes && dt.getFullYear() === año) {
+                    porDia[dt.getDate()].push(nombre);
+                }
+            }
+        }
+    }
+
+    const primerDiaSemana = new Date(año, mes, 1).getDay();
+    const sucursales = ['MATRIZ','TAMARAL','CABOS','LA PAZ','SAN JOSE','CULIACAN','JUAN JOSE RIOS','EL FUERTE'];
+
+    cont.style.color = '';
+    cont.style.padding = '';
+    cont.style.textAlign = '';
+
+    let html = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <button class="btn btn-sm" type="button" onclick="cambiarMesVacCalendario(-1)"><i class="fas fa-chevron-left"></i></button>
+                <h3 style="margin:0;text-transform:capitalize;min-width:180px;text-align:center;">${nombreMes}</h3>
+                <button class="btn btn-sm" type="button" onclick="cambiarMesVacCalendario(1)"><i class="fas fa-chevron-right"></i></button>
+            </div>
+            <select class="form-select" onchange="cambiarSucursalVacCalendario(this.value)" style="max-width:240px;">
+                <option value="">Todas las sucursales</option>
+                ${sucursales.map(s => `<option value="${s}" ${s === sucursal ? 'selected' : ''}>${s}</option>`).join('')}
+            </select>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;background:#e2e8f0;border-radius:8px;padding:4px;">
+            ${['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'].map(d => `<div style="padding:6px;text-align:center;font-weight:600;color:#64748b;font-size:12px;">${d}</div>`).join('')}`;
+
+    for (let i = 0; i < primerDiaSemana; i++) {
+        html += `<div style="background:#f8fafc;border-radius:4px;min-height:80px;"></div>`;
+    }
+    for (let d = 1; d <= diasMes; d++) {
+        const lista = porDia[d];
+        const tieneGente = lista.length > 0;
+        const chips = lista.slice(0, 3).map(n =>
+            `<div style="background:#3b82f622;color:#1e40af;border-radius:3px;padding:1px 5px;font-size:10px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${n.replace(/"/g, '&quot;')}">${n}</div>`
+        ).join('');
+        const masN = lista.length > 3 ? `<div style="font-size:10px;color:#64748b;margin-top:2px;">+${lista.length - 3} más</div>` : '';
+        html += `
+            <div style="background:#fff;border-radius:4px;min-height:80px;padding:4px;border:${tieneGente ? '1px solid #3b82f6' : '1px solid #f1f5f9'};">
+                <div style="font-size:11px;color:#64748b;font-weight:600;">${d}</div>
+                ${chips}${masN}
+            </div>`;
+    }
+    html += `</div>`;
+    cont.innerHTML = html;
+}
+
+function cambiarMesVacCalendario(delta) {
+    let m = window._vacCalState.mes + delta;
+    let y = window._vacCalState.año;
+    if (m < 0) { m = 11; y -= 1; }
+    if (m > 11) { m = 0; y += 1; }
+    window._vacCalState.mes = m;
+    window._vacCalState.año = y;
+    renderVacCalendario();
+}
+
+function cambiarSucursalVacCalendario(v) {
+    window._vacCalState.sucursal = v;
+    renderVacCalendario();
+}
