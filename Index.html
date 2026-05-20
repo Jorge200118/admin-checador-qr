@@ -60,6 +60,12 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="#vacaciones" data-section="vacaciones">
+                        <i class="fas fa-umbrella-beach"></i>
+                        <span>Vacaciones</span>
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="#absentismo" data-section="absentismo">
                         <i class="fas fa-user-clock"></i>
                         <span>Absentismo</span>
@@ -645,6 +651,52 @@
                         </table>
                     </div>
                 </div>
+            </div>
+        </section>
+
+        <section id="vacaciones" class="content-section">
+            <div class="section-header">
+                <h2>Vacaciones</h2>
+            </div>
+
+            <div style="display:flex;gap:8px;margin-bottom:16px;">
+                <button class="btn btn-sm vac-tab vac-tab-active" data-vactab="saldos" type="button">Saldos</button>
+                <button class="btn btn-sm vac-tab" data-vactab="porvencer" type="button">Por vencer</button>
+                <button class="btn btn-sm vac-tab" data-vactab="calendario" type="button">Calendario</button>
+            </div>
+
+            <div id="vacTabSaldos" class="vac-tabpane">
+                <div class="filters" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
+                    <select id="vacFiltSucursal" class="form-select" onchange="renderVacSaldos()">
+                        <option value="">Todas las sucursales</option>
+                        <option value="MATRIZ">MATRIZ</option>
+                        <option value="TAMARAL">TAMARAL</option>
+                        <option value="CABOS">CABOS</option>
+                        <option value="LA PAZ">LA PAZ</option>
+                        <option value="SAN JOSE">SAN JOSE</option>
+                        <option value="CULIACAN">CULIACAN</option>
+                        <option value="JUAN JOSE RIOS">JUAN JOSE RIOS</option>
+                        <option value="EL FUERTE">EL FUERTE</option>
+                    </select>
+                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#475569;cursor:pointer;user-select:none;">
+                        <input type="checkbox" id="vacFiltConSaldo" onchange="renderVacSaldos()"> Solo con saldo > 0
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#475569;cursor:pointer;user-select:none;">
+                        <input type="checkbox" id="vacFiltPorVencer" onchange="renderVacSaldos()"> Solo por vencer (&lt; 60 días)
+                    </label>
+                    <button class="btn btn-sm btn-primary" type="button" onclick="exportarVacSaldosExcel()">
+                        <i class="fas fa-file-excel"></i> Excel
+                    </button>
+                </div>
+                <div id="vacSaldosTabla">Cargando...</div>
+            </div>
+
+            <div id="vacTabPorVencer" class="vac-tabpane" style="display:none;">
+                <div id="vacPorVencerLista" style="color:#94a3b8;padding:24px;text-align:center;">Disponible en próxima entrega</div>
+            </div>
+
+            <div id="vacTabCalendario" class="vac-tabpane" style="display:none;">
+                <div id="vacCalendario" style="color:#94a3b8;padding:24px;text-align:center;">Disponible en próxima entrega</div>
             </div>
         </section>
 

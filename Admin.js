@@ -467,6 +467,9 @@ async function loadSectionData(section) {
         case 'justificaciones':
             loadJustificaciones();
             break;
+        case 'vacaciones':
+            abrirSeccionVacaciones();
+            break;
         case 'absentismo':
             inicializarAbsentismo();
             break;

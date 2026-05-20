@@ -1318,6 +1318,22 @@ const SupabaseAPI = {
         }
     },
 
+    async getTodasVacacionesDesde(fechaInicio) {
+        try {
+            const { data, error } = await supabaseClient
+                .from('justificaciones')
+                .select('id, empleado_id, tipo, fecha_inicio, fecha_fin')
+                .eq('tipo', 'VACACION')
+                .is('eliminado_en', null)
+                .gte('fecha_fin', fechaInicio)
+                .order('fecha_inicio', { ascending: true });
+            if (error) throw error;
+            return { success: true, data: data || [] };
+        } catch (error) {
+            return { success: false, data: [], message: error.message };
+        }
+    },
+
     async getJustificacionesPorRango(fechaInicio, fechaFin, sucursal = null) {
         try {
             let query = supabaseClient

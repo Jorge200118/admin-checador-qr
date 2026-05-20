@@ -78,3 +78,153 @@ function renderBloqueVacacionesExpediente(empleado, vacaciones) {
             </table>
         </details>`;
 }
+
+// =====================================================
+// SECCIÓN VACACIONES (sidebar)
+// =====================================================
+window._vacState = { empleados: [], vacacionesPorEmp: new Map(), cargado: false };
+
+async function _cargarDatosVacaciones() {
+    if (typeof showLoading === 'function') showLoading('Cargando vacaciones...');
+    try {
+        const empRes = await SupabaseAPI.getEmpleados();
+        const empleados = empRes.success
+            ? empRes.data.filter(e => e.activo && e.fecha_ingreso)
+            : [];
+        const hace3años = (() => {
+            const d = new Date(); d.setFullYear(d.getFullYear() - 3);
+            return `${d.getFullYear()}-01-01`;
+        })();
+        const vacRes = await SupabaseAPI.getTodasVacacionesDesde(hace3años);
+        const porEmp = new Map();
+        if (vacRes.success) {
+            for (const v of vacRes.data) {
+                if (!porEmp.has(v.empleado_id)) porEmp.set(v.empleado_id, []);
+                porEmp.get(v.empleado_id).push(v);
+            }
+        }
+        window._vacState = { empleados, vacacionesPorEmp: porEmp, cargado: true };
+    } finally {
+        if (typeof hideLoading === 'function') hideLoading();
+    }
+}
+
+async function abrirSeccionVacaciones() {
+    if (!window._vacState.cargado) await _cargarDatosVacaciones();
+    cambiarTabVacaciones('saldos');
+}
+
+function cambiarTabVacaciones(tab) {
+    document.querySelectorAll('.vac-tab').forEach(b => b.classList.remove('vac-tab-active'));
+    document.querySelector(`.vac-tab[data-vactab="${tab}"]`)?.classList.add('vac-tab-active');
+    const map = { saldos: 'vacTabSaldos', porvencer: 'vacTabPorVencer', calendario: 'vacTabCalendario' };
+    for (const [t, id] of Object.entries(map)) {
+        const el = document.getElementById(id);
+        if (el) el.style.display = (t === tab) ? 'block' : 'none';
+    }
+    if (tab === 'saldos') renderVacSaldos();
+    if (tab === 'porvencer' && typeof renderVacPorVencer === 'function') renderVacPorVencer();
+    if (tab === 'calendario' && typeof renderVacCalendario === 'function') renderVacCalendario();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.vac-tab').forEach(b => {
+        b.addEventListener('click', () => cambiarTabVacaciones(b.dataset.vactab));
+    });
+});
+
+function _filasVacSaldos() {
+    const { empleados, vacacionesPorEmp } = window._vacState;
+    const filtSuc = document.getElementById('vacFiltSucursal')?.value || '';
+    const soloConSaldo = document.getElementById('vacFiltConSaldo')?.checked;
+    const soloPorVencer = document.getElementById('vacFiltPorVencer')?.checked;
+    const hoy = _vacHoyYYYYMMDD();
+    const rows = [];
+    for (const e of empleados) {
+        if (filtSuc && e.sucursal !== filtSuc) continue;
+        const vacs = vacacionesPorEmp.get(e.id) || [];
+        const s = calcularSaldo({ fecha_ingreso: e.fecha_ingreso?.substring(0,10) }, vacs, hoy);
+        if (s.añoServicio < 1) continue;
+        if (soloConSaldo && s.restantes <= 0) continue;
+        if (soloPorVencer && s.diasParaVencer > 60) continue;
+        rows.push({
+            id: e.id,
+            nombre: `${e.nombre} ${e.apellido || ''}`.trim(),
+            sucursal: e.sucursal || '—',
+            añoServicio: s.añoServicio,
+            derecho: s.derecho,
+            tomados: s.tomados,
+            restantes: s.restantes,
+            fechaLimite: s.fechaLimite,
+            diasParaVencer: s.diasParaVencer
+        });
+    }
+    rows.sort((a, b) => a.diasParaVencer - b.diasParaVencer);
+    return rows;
+}
+
+function renderVacSaldos() {
+    if (!window._vacState?.cargado) return;
+    const rows = _filasVacSaldos();
+    const cont = document.getElementById('vacSaldosTabla');
+    if (!cont) return;
+    if (rows.length === 0) {
+        cont.innerHTML = `<div style="padding:40px;text-align:center;color:#94a3b8;">Sin resultados</div>`;
+        return;
+    }
+    const filas = rows.map(r => {
+        const urgente = r.diasParaVencer <= 60 && r.restantes > 0;
+        const colorRest = r.restantes === 0 ? '#94a3b8' : (r.restantes <= 3 ? '#f59e0b' : '#22c55e');
+        return `
+        <tr>
+            <td style="padding:8px;">${r.nombre}</td>
+            <td style="padding:8px;">${r.sucursal}</td>
+            <td style="padding:8px;text-align:center;">Año ${r.añoServicio}</td>
+            <td style="padding:8px;text-align:right;">${r.derecho}</td>
+            <td style="padding:8px;text-align:right;color:#3b82f6;">${r.tomados}</td>
+            <td style="padding:8px;text-align:right;color:${colorRest};font-weight:600;">${r.restantes}</td>
+            <td style="padding:8px;text-align:center;color:${urgente ? '#f59e0b' : '#94a3b8'};">
+                ${_vacFormatFechaCorta(r.fechaLimite)}
+                ${urgente ? `<br><small>${r.diasParaVencer} días</small>` : ''}
+            </td>
+        </tr>`;
+    }).join('');
+    cont.innerHTML = `
+        <table style="width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);">
+            <thead style="background:#f1f5f9;">
+                <tr>
+                    <th style="padding:10px;text-align:left;color:#475569;font-size:12px;">Empleado</th>
+                    <th style="padding:10px;text-align:left;color:#475569;font-size:12px;">Sucursal</th>
+                    <th style="padding:10px;text-align:center;color:#475569;font-size:12px;">Servicio</th>
+                    <th style="padding:10px;text-align:right;color:#475569;font-size:12px;">Derecho</th>
+                    <th style="padding:10px;text-align:right;color:#475569;font-size:12px;">Tomados</th>
+                    <th style="padding:10px;text-align:right;color:#475569;font-size:12px;">Restantes</th>
+                    <th style="padding:10px;text-align:center;color:#475569;font-size:12px;">Vence</th>
+                </tr>
+            </thead>
+            <tbody>${filas}</tbody>
+        </table>
+        <div style="margin-top:8px;color:#94a3b8;font-size:12px;">${rows.length} empleados</div>`;
+}
+
+function exportarVacSaldosExcel() {
+    const rows = _filasVacSaldos();
+    if (rows.length === 0) {
+        alert('Sin datos para exportar');
+        return;
+    }
+    const data = rows.map(r => ({
+        Empleado: r.nombre,
+        Sucursal: r.sucursal,
+        'Año de servicio': r.añoServicio,
+        'Derecho LFT': r.derecho,
+        Tomados: r.tomados,
+        Restantes: r.restantes,
+        'Fecha límite': r.fechaLimite,
+        'Días para vencer': r.diasParaVencer
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Vacaciones');
+    XLSX.writeFile(wb, `vacaciones-saldos-${_vacHoyYYYYMMDD()}.xlsx`);
+}

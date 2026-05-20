@@ -2338,6 +2338,10 @@ tbody tr:hover {
     }
 }
 
+.vac-tab { background:#e2e8f0; color:#475569; border:none; cursor:pointer; padding:6px 14px; border-radius:6px; font-size:13px; font-weight:500; }
+.vac-tab:hover { background:#cbd5e1; }
+.vac-tab-active, .vac-tab-active:hover { background:#3b82f6; color:#fff; }
+
 /* Justificaciones */
 #justMotivo {
     resize: vertical;
