@@ -5,6 +5,7 @@
 <h1>Vacaciones — pruebas</h1>
 <div id="out"></div>
 <script src="../vacaciones-lft.js"></script>
+<script src="../vacaciones-saldo.js"></script>
 <script>
 const out = document.getElementById('out');
 let pass = 0, fail = 0;
@@ -66,6 +67,69 @@ window.addEventListener('load', () => {
   test('diasHabilesEntre lun-sab = 6', () => eq(diasHabilesEntre('2026-05-18', '2026-05-23'), 6));
   test('diasHabilesEntre lun-dom = 6 (sin contar dom)', () => eq(diasHabilesEntre('2026-05-18', '2026-05-24'), 6));
   test('diasHabilesEntre 1-ene incluido descuenta festivo', () => eq(diasHabilesEntre('2027-01-01', '2027-01-02'), 1));
+
+  // === calcularSaldo ===
+  const empA = { fecha_ingreso: '2022-03-15' };
+  test('saldo sin vacaciones tomadas', () => {
+    const r = calcularSaldo(empA, [], '2026-05-20');
+    eq(r.añoServicio, 4);
+    eq(r.derecho, 18);
+    eq(r.tomados, 0);
+    eq(r.restantes, 18);
+    eq(r.periodoInicio, '2026-03-15');
+    eq(r.fechaLimite, '2027-03-14');
+  });
+
+  test('saldo descuenta solo dias dentro del periodo', () => {
+    const vacs = [
+      { tipo: 'VACACION', fecha_inicio: '2026-04-13', fecha_fin: '2026-04-17' }
+    ];
+    const r = calcularSaldo(empA, vacs, '2026-05-20');
+    eq(r.tomados, 5);
+    eq(r.restantes, 13);
+  });
+
+  test('saldo descuenta solo parte que cae en periodo actual', () => {
+    const vacs = [
+      { tipo: 'VACACION', fecha_inicio: '2026-03-13', fecha_fin: '2026-03-18' }
+    ];
+    const r = calcularSaldo(empA, vacs, '2026-05-20');
+    // 16-mar es festivo (3er lunes), 17-mar martes, 18-mar mié → 2 hábiles
+    eq(r.tomados, 2);
+  });
+
+  test('saldo cero cuando aún no cumple 1 año', () => {
+    const r = calcularSaldo({ fecha_ingreso: '2026-01-15' }, [], '2026-05-20');
+    eq(r.añoServicio, 0);
+    eq(r.derecho, 0);
+    eq(r.restantes, 0);
+  });
+
+  // === historialPeriodos ===
+  test('historial últimos 3 periodos de empleado con 4 años', () => {
+    const vacs = [
+      { tipo: 'VACACION', fecha_inicio: '2024-04-08', fecha_fin: '2024-04-12' },
+      { tipo: 'VACACION', fecha_inicio: '2025-06-09', fecha_fin: '2025-06-13' }
+    ];
+    const h = historialPeriodos(empA, vacs, '2026-05-20', 3);
+    eq(h.length, 3);
+    eq(h[0].añoServicio, 2);
+    eq(h[0].derecho, 14);
+    eq(h[0].tomados, 5);
+    eq(h[0].perdidos, 9);
+    eq(h[1].añoServicio, 3);
+    eq(h[1].derecho, 16);
+    eq(h[1].tomados, 5);
+    eq(h[1].perdidos, 11);
+    eq(h[2].añoServicio, 4);
+    eq(h[2].esActual, true);
+    eq(h[2].perdidos, null);
+  });
+
+  test('diasParaVencer cuenta hasta proximo aniversario', () => {
+    const r = calcularSaldo(empA, [], '2026-05-20');
+    eq(r.diasParaVencer >= 290 && r.diasParaVencer <= 310, true, `got ${r.diasParaVencer}`);
+  });
 
   out.innerHTML += `<h2>${pass} pasaron, ${fail} fallaron</h2>`;
 });
