@@ -57,8 +57,8 @@ function historialPeriodos(empleado, vacacionesEmpleado, hoyYYYYMMDD, n = 5) {
     const primerAño = actual.añoServicio - cantidad + 1;
     for (let año = primerAño; año <= actual.añoServicio; año++) {
         const ingreso = empleado.fecha_ingreso;
-        const ini = _sumarAñosLocal(ingreso, año);
-        const fin = _restarUnDiaLocal(_sumarAñosLocal(ingreso, año + 1));
+        const ini = _sumarAños(ingreso, año);
+        const fin = _restarUnDia(_sumarAños(ingreso, año + 1));
         const derecho = diasLFT(año);
         let tomados = 0;
         for (const v of vacs) tomados += _diasJustEnPeriodo(v, ini, fin);
@@ -74,20 +74,4 @@ function historialPeriodos(empleado, vacacionesEmpleado, hoyYYYYMMDD, n = 5) {
         });
     }
     return items;
-}
-
-// Helpers locales (duplicados intencionalmente — vacaciones-lft.js no exporta)
-function _sumarAñosLocal(fechaYYYYMMDD, n) {
-    const [y, m, d] = fechaYYYYMMDD.split('-').map(Number);
-    const nuevoAño = y + n;
-    const esBisiesto = (nuevoAño % 4 === 0 && nuevoAño % 100 !== 0) || nuevoAño % 400 === 0;
-    let dia = d;
-    if (m === 2 && d === 29 && !esBisiesto) dia = 28;
-    return `${nuevoAño}-${String(m).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
-}
-function _restarUnDiaLocal(fechaYYYYMMDD) {
-    const [y, m, d] = fechaYYYYMMDD.split('-').map(Number);
-    const dt = new Date(y, m - 1, d, 12, 0, 0);
-    dt.setDate(dt.getDate() - 1);
-    return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
 }
