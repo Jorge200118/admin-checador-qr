@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Vacaciones tests</title>
+<style>body{font-family:monospace;padding:20px}.ok{color:#16a34a}.fail{color:#dc2626}</style>
+</head><body>
+<h1>Vacaciones — pruebas</h1>
+<div id="out"></div>
+<script src="../vacaciones-lft.js"></script>
+<script>
+const out = document.getElementById('out');
+let pass = 0, fail = 0;
+function test(name, fn) {
+  try { fn(); out.innerHTML += `<div class="ok">✓ ${name}</div>`; pass++; }
+  catch (e) { out.innerHTML += `<div class="fail">✗ ${name}: ${e.message}</div>`; fail++; }
+}
+function eq(a, b, msg='') {
+  const A = JSON.stringify(a), B = JSON.stringify(b);
+  if (A !== B) throw new Error(`${msg} expected ${B} got ${A}`);
+}
+window.addEventListener('load', () => {
+  // === diasLFT ===
+  test('diasLFT año 0 = 0', () => eq(diasLFT(0), 0));
+  test('diasLFT año 1 = 12', () => eq(diasLFT(1), 12));
+  test('diasLFT año 2 = 14', () => eq(diasLFT(2), 14));
+  test('diasLFT año 3 = 16', () => eq(diasLFT(3), 16));
+  test('diasLFT año 4 = 18', () => eq(diasLFT(4), 18));
+  test('diasLFT año 5 = 20', () => eq(diasLFT(5), 20));
+  test('diasLFT año 6 = 22', () => eq(diasLFT(6), 22));
+  test('diasLFT año 10 = 22', () => eq(diasLFT(10), 22));
+  test('diasLFT año 11 = 24', () => eq(diasLFT(11), 24));
+  test('diasLFT año 15 = 24', () => eq(diasLFT(15), 24));
+  test('diasLFT año 16 = 26', () => eq(diasLFT(16), 26));
+  test('diasLFT año 25 = 28', () => eq(diasLFT(25), 28));
+  test('diasLFT año 30 = 30', () => eq(diasLFT(30), 30));
+
+  // === periodoActual ===
+  test('periodoActual antes de cumplir 1 año', () => {
+    const r = periodoActual('2026-01-15', '2026-05-20');
+    eq(r.añoServicio, 0);
+    eq(r.proximoAniversario, '2027-01-15');
+  });
+  test('periodoActual recién cumplió aniversario', () => {
+    const r = periodoActual('2022-03-15', '2026-05-20');
+    eq(r.añoServicio, 4);
+    eq(r.inicio, '2026-03-15');
+    eq(r.fin, '2027-03-14');
+  });
+  test('periodoActual aniversario justo hoy', () => {
+    const r = periodoActual('2022-05-20', '2026-05-20');
+    eq(r.añoServicio, 4);
+    eq(r.inicio, '2026-05-20');
+  });
+  test('periodoActual 29-feb en año no bisiesto', () => {
+    const r = periodoActual('2020-02-29', '2026-05-20');
+    eq(r.inicio, '2026-02-28');
+    eq(r.añoServicio, 6);
+  });
+
+  // === esDomingoOFestivo ===
+  test('domingo es no laborable', () => eq(esDomingoOFestivo('2026-05-17'), true));
+  test('lunes es laborable', () => eq(esDomingoOFestivo('2026-05-18'), false));
+  test('sábado es laborable', () => eq(esDomingoOFestivo('2026-05-23'), false));
+  test('1-ene 2027 es festivo', () => eq(esDomingoOFestivo('2027-01-01'), true));
+
+  // === diasHabilesEntre ===
+  test('diasHabilesEntre lun-vie = 5', () => eq(diasHabilesEntre('2026-05-18', '2026-05-22'), 5));
+  test('diasHabilesEntre lun-sab = 6', () => eq(diasHabilesEntre('2026-05-18', '2026-05-23'), 6));
+  test('diasHabilesEntre lun-dom = 6 (sin contar dom)', () => eq(diasHabilesEntre('2026-05-18', '2026-05-24'), 6));
+  test('diasHabilesEntre 1-ene incluido descuenta festivo', () => eq(diasHabilesEntre('2027-01-01', '2027-01-02'), 1));
+
+  out.innerHTML += `<h2>${pass} pasaron, ${fail} fallaron</h2>`;
+});
+</script></body></html>
