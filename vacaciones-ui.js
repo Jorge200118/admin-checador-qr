@@ -42,16 +42,23 @@ function renderBloqueVacacionesExpediente(empleado, vacaciones) {
             <span style="color:${color || '#e2e8f0'};font-size:13px;">${val}</span>
         </div>`;
 
-    const histFilas = hist.map(p => `
+    const histFilas = hist.map(p => {
+        const saldoActual = p.derecho - p.tomados;
+        let colorSaldo;
+        if (p.esActual) colorSaldo = saldoActual < 0 ? '#ef4444' : '#22c55e';
+        else colorSaldo = p.perdidos > 0 ? '#ef4444' : '#94a3b8';
+        const textoSaldo = p.esActual
+            ? `${saldoActual} actual`
+            : (p.perdidos > 0 ? `−${p.perdidos}` : '0');
+        return `
         <tr>
             <td style="padding:6px 8px;color:#94a3b8;font-size:12px;">Año ${p.añoServicio}</td>
             <td style="padding:6px 8px;color:#94a3b8;font-size:12px;">${_vacFormatFechaCorta(p.inicio)} → ${_vacFormatFechaCorta(p.fin)}</td>
             <td style="padding:6px 8px;text-align:right;color:#e2e8f0;font-size:12px;">${p.derecho}</td>
             <td style="padding:6px 8px;text-align:right;color:#3b82f6;font-size:12px;">${p.tomados}</td>
-            <td style="padding:6px 8px;text-align:right;color:${p.esActual ? '#22c55e' : (p.perdidos > 0 ? '#ef4444' : '#94a3b8')};font-size:12px;">
-                ${p.esActual ? `${p.derecho - p.tomados} actual` : (p.perdidos > 0 ? `−${p.perdidos}` : '0')}
-            </td>
-        </tr>`).join('');
+            <td style="padding:6px 8px;text-align:right;color:${colorSaldo};font-size:12px;">${textoSaldo}</td>
+        </tr>`;
+    }).join('');
 
     return `
         ${filaBloque('Año de servicio', `Año ${s.añoServicio}`)}
@@ -88,29 +95,47 @@ async function _cargarDatosVacaciones() {
     if (typeof showLoading === 'function') showLoading('Cargando vacaciones...');
     try {
         const empRes = await SupabaseAPI.getEmpleados();
-        const empleados = empRes.success
-            ? empRes.data.filter(e => e.activo && e.fecha_ingreso)
-            : [];
+        if (!empRes.success) return { ok: false, error: empRes.message || 'No se pudo obtener empleados' };
+        const empleados = empRes.data.filter(e => e.activo && e.fecha_ingreso);
         const hace3años = (() => {
             const d = new Date(); d.setFullYear(d.getFullYear() - 3);
             return `${d.getFullYear()}-01-01`;
         })();
         const vacRes = await SupabaseAPI.getTodasVacacionesDesde(hace3años);
+        if (!vacRes.success) return { ok: false, error: vacRes.message || 'No se pudo obtener vacaciones' };
         const porEmp = new Map();
-        if (vacRes.success) {
-            for (const v of vacRes.data) {
-                if (!porEmp.has(v.empleado_id)) porEmp.set(v.empleado_id, []);
-                porEmp.get(v.empleado_id).push(v);
-            }
+        for (const v of vacRes.data) {
+            if (!porEmp.has(v.empleado_id)) porEmp.set(v.empleado_id, []);
+            porEmp.get(v.empleado_id).push(v);
         }
         window._vacState = { empleados, vacacionesPorEmp: porEmp, cargado: true };
+        return { ok: true };
+    } catch (e) {
+        return { ok: false, error: e.message || 'Error inesperado' };
     } finally {
         if (typeof hideLoading === 'function') hideLoading();
     }
 }
 
 async function abrirSeccionVacaciones() {
-    if (!window._vacState.cargado) await _cargarDatosVacaciones();
+    if (!window._vacState.cargado) {
+        const r = await _cargarDatosVacaciones();
+        if (!r.ok) {
+            const cont = document.getElementById('vacSaldosTabla');
+            if (cont) {
+                cont.innerHTML = `
+                    <div style="padding:40px;text-align:center;color:#ef4444;">
+                        <i class="fas fa-exclamation-triangle" style="font-size:32px;"></i>
+                        <p style="margin-top:12px;">No se pudo cargar la información de vacaciones.</p>
+                        <p style="color:#94a3b8;font-size:12px;">${r.error}</p>
+                        <button class="btn btn-sm btn-primary" style="margin-top:12px;" onclick="abrirSeccionVacaciones()">
+                            <i class="fas fa-redo"></i> Reintentar
+                        </button>
+                    </div>`;
+            }
+            return;
+        }
+    }
     cambiarTabVacaciones('saldos');
 }
 
@@ -329,6 +354,7 @@ function renderVacCalendario() {
     }
 
     const primerDiaSemana = new Date(año, mes, 1).getDay();
+    // Mantener sincronizada con la lista en Index.html (#vacFiltSucursal y filterJustSucursal)
     const sucursales = ['MATRIZ','TAMARAL','CABOS','LA PAZ','SAN JOSE','CULIACAN','JUAN JOSE RIOS','EL FUERTE'];
 
     cont.style.color = '';

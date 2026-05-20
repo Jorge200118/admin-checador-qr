@@ -6684,6 +6684,8 @@ function actualizarResumenDias() {
 window._justVacEmpleadoActual = null;
 
 async function _cargarVacacionesEmpleadoModal(empleadoIdNum, fechaIngresoStr) {
+    // Evita que una respuesta tardía de un empleado previo sobrescriba la actual
+    const req = (window._justVacReq = (window._justVacReq || 0) + 1);
     try {
         const cacheItem = justEmpleadosCache.find(e => e.id === empleadoIdNum);
         const codigo = cacheItem?.codigo_empleado;
@@ -6692,9 +6694,11 @@ async function _cargarVacacionesEmpleadoModal(empleadoIdNum, fechaIngresoStr) {
             const r = await SupabaseAPI.getVacacionesPorCodigo(codigo);
             if (r.success) vacaciones = r.data.vacaciones || [];
         }
+        if (req !== window._justVacReq) return;
         const fecha = fechaIngresoStr ? fechaIngresoStr.substring(0, 10) : null;
         window._justVacEmpleadoActual = { empleado: { fecha_ingreso: fecha }, vacaciones };
     } catch (e) {
+        if (req !== window._justVacReq) return;
         window._justVacEmpleadoActual = { empleado: { fecha_ingreso: null }, vacaciones: [] };
     }
     actualizarSaldoVacacionesEnModal();
@@ -6739,15 +6743,25 @@ function actualizarSaldoVacacionesEnModal() {
     }
     const resultante = s.restantes - solicitud;
     const excede = resultante < 0;
+    const futuro = ini && fin && ini > s.periodoFin;
+    const prescrito = ini && fin && fin < s.periodoInicio;
 
     box.style.display = 'block';
-    box.style.background = excede ? '#dc262622' : '#22c55e22';
-    box.style.color = excede ? '#fca5a5' : '#86efac';
-    box.style.borderLeftColor = excede ? '#dc2626' : '#22c55e';
+    if (futuro || prescrito) {
+        box.style.background = '#f59e0b22';
+        box.style.color = '#fbbf24';
+        box.style.borderLeftColor = '#f59e0b';
+    } else {
+        box.style.background = excede ? '#dc262622' : '#22c55e22';
+        box.style.color = excede ? '#fca5a5' : '#86efac';
+        box.style.borderLeftColor = excede ? '#dc2626' : '#22c55e';
+    }
     box.innerHTML = `
         <div><strong>Saldo del periodo:</strong> ${s.restantes} días</div>
         ${solicitud > 0 ? `<div style="margin-top:2px;">Esta solicitud: ${solicitud} días → <strong>Quedan: ${resultante} días</strong></div>` : ''}
-        ${excede ? '<div style="margin-top:4px;"><i class="fas fa-exclamation-triangle"></i> Excede el saldo; pediremos confirmación al guardar.</div>' : ''}
+        ${futuro ? '<div style="margin-top:4px;"><i class="fas fa-info-circle"></i> Estas fechas son del próximo periodo (aún no vigente); no descuentan saldo actual.</div>' : ''}
+        ${prescrito ? '<div style="margin-top:4px;"><i class="fas fa-info-circle"></i> Estas fechas caen en un periodo ya prescrito.</div>' : ''}
+        ${excede && !futuro && !prescrito ? '<div style="margin-top:4px;"><i class="fas fa-exclamation-triangle"></i> Excede el saldo; pediremos confirmación al guardar.</div>' : ''}
     `;
 }
 
@@ -6846,6 +6860,10 @@ async function guardarJustificacion() {
             }
             if (fechaFin < s.periodoInicio) {
                 const ok = confirm(`⚠ Estas fechas caen en un periodo ya prescrito (anterior al ${_vacFormatFechaCorta(s.periodoInicio)}). ¿Continuar?`);
+                if (!ok) return;
+            }
+            if (fechaInicio > s.periodoFin) {
+                const ok = confirm(`ℹ Estas fechas son del próximo periodo (a partir del ${_vacFormatFechaCorta(s.proximoAniversario)}); no descuentan saldo actual. ¿Continuar?`);
                 if (!ok) return;
             }
         }

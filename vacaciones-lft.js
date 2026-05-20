@@ -2,14 +2,17 @@
 // Módulo puro: tabla LFT, periodo por aniversario, festivos, días hábiles.
 // Sin DOM, sin Supabase. Funciones globales (igual patrón que Admin.js).
 
-// Festivos LFT por año. Renovable cada enero.
+// Festivos LFT. Renovable cada enero — agregar el año siguiente al actual+1.
 const FESTIVOS_VAC = new Set([
     // 2026
     '2026-01-01','2026-02-02','2026-03-16','2026-05-01',
     '2026-09-16','2026-11-16','2026-12-25',
     // 2027
     '2027-01-01','2027-02-01','2027-03-15','2027-05-01',
-    '2027-09-16','2027-11-15','2027-12-25'
+    '2027-09-16','2027-11-15','2027-12-25',
+    // 2028
+    '2028-01-01','2028-02-07','2028-03-20','2028-05-01',
+    '2028-09-16','2028-11-20','2028-12-25'
 ]);
 
 function esDomingoOFestivo(fechaYYYYMMDD) {
