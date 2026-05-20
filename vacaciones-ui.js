@@ -228,3 +228,60 @@ function exportarVacSaldosExcel() {
     XLSX.utils.book_append_sheet(wb, ws, 'Vacaciones');
     XLSX.writeFile(wb, `vacaciones-saldos-${_vacHoyYYYYMMDD()}.xlsx`);
 }
+
+function renderVacPorVencer() {
+    if (!window._vacState?.cargado) return;
+    const cont = document.getElementById('vacPorVencerLista');
+    if (!cont) return;
+    const { empleados, vacacionesPorEmp } = window._vacState;
+    const hoy = _vacHoyYYYYMMDD();
+    const rows = [];
+    for (const e of empleados) {
+        const s = calcularSaldo(
+            { fecha_ingreso: e.fecha_ingreso?.substring(0,10) },
+            vacacionesPorEmp.get(e.id) || [],
+            hoy
+        );
+        if (s.añoServicio < 1) continue;
+        if (s.restantes <= 0) continue;
+        if (s.diasParaVencer > 60) continue;
+        rows.push({
+            nombre: `${e.nombre} ${e.apellido || ''}`.trim(),
+            sucursal: e.sucursal || '—',
+            restantes: s.restantes,
+            fechaLimite: s.fechaLimite,
+            diasParaVencer: s.diasParaVencer
+        });
+    }
+    rows.sort((a, b) => a.diasParaVencer - b.diasParaVencer);
+
+    if (rows.length === 0) {
+        cont.innerHTML = `
+            <div style="padding:40px;text-align:center;color:#22c55e;">
+                <i class="fas fa-check-circle" style="font-size:48px;"></i>
+                <p style="margin-top:12px;font-size:14px;">Nadie con vacaciones por vencer en los próximos 60 días.</p>
+            </div>`;
+        return;
+    }
+
+    cont.style.color = '';
+    cont.style.padding = '';
+    cont.style.textAlign = '';
+    cont.innerHTML = rows.map(r => {
+        const color = r.diasParaVencer <= 15 ? '#dc2626' : (r.diasParaVencer <= 30 ? '#f59e0b' : '#3b82f6');
+        return `
+        <div style="background:#fff;border-left:4px solid ${color};border-radius:8px;padding:16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 1px 3px rgba(0,0,0,.06);">
+            <div>
+                <div style="font-weight:600;font-size:15px;color:#1e293b;">${r.nombre}</div>
+                <div style="color:#64748b;font-size:13px;margin-top:2px;">${r.sucursal}</div>
+            </div>
+            <div style="text-align:right;">
+                <div style="font-size:14px;color:#1e293b;"><strong>${r.restantes}</strong> días pendientes</div>
+                <div style="font-size:12px;color:${color};margin-top:2px;">
+                    Vence ${_vacFormatFechaCorta(r.fechaLimite)} (${r.diasParaVencer} días)
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+}
