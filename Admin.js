@@ -6690,12 +6690,22 @@ async function _cargarVacacionesEmpleadoModal(empleadoIdNum, fechaIngresoStr) {
         const cacheItem = justEmpleadosCache.find(e => e.id === empleadoIdNum);
         const codigo = cacheItem?.codigo_empleado;
         let vacaciones = [];
+        let fecha = fechaIngresoStr ? fechaIngresoStr.substring(0, 10) : null;
         if (codigo) {
             const r = await SupabaseAPI.getVacacionesPorCodigo(codigo);
             if (r.success) vacaciones = r.data.vacaciones || [];
+            // fecha_ingreso real viene de la API externa (BMS), no de Supabase
+            if (!fecha) {
+                try {
+                    const apiR = await fetch(`${ADMIN_CONFIG.apiUrl}/empleados/expediente/${encodeURIComponent(codigo)}`);
+                    if (apiR.ok) {
+                        const j = await apiR.json();
+                        if (j.success && j.data?.FechaIngreso) fecha = j.data.FechaIngreso.substring(0, 10);
+                    }
+                } catch (_) { /* deja fecha null */ }
+            }
         }
         if (req !== window._justVacReq) return;
-        const fecha = fechaIngresoStr ? fechaIngresoStr.substring(0, 10) : null;
         window._justVacEmpleadoActual = { empleado: { fecha_ingreso: fecha }, vacaciones };
     } catch (e) {
         if (req !== window._justVacReq) return;
