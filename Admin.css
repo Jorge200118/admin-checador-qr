@@ -3143,3 +3143,10 @@ html[data-theme="dark"] .warning-box strong {
 html[data-theme="dark"] .detalle-tabla tbody tr.detalle-falta:hover {
     background: var(--bg-danger-soft);
 }
+
+/* Modal Resumen General: barras de controles y stats con fondo claro inline */
+html[data-theme="dark"] .resumen-controls,
+html[data-theme="dark"] #statsResumenGeneral {
+    background: var(--bg-elevated) !important;
+    color: var(--text-primary);
+}
