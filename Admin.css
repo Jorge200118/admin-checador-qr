@@ -78,7 +78,7 @@ html[data-theme="dark"] {
     /* Texto */
     --text-primary: #e8eef5;
     --text-secondary: #94a8c4;
-    --text-muted: #6b829e;
+    --text-muted: #7e94b0;
     --text-inverse: #0d1b2a;
 
     /* Bordes */
@@ -2837,7 +2837,7 @@ tbody tr:hover {
 /* ========================================
    N.1 OVERRIDES MODO NOCHE - INPUTS Y FORMS
    ======================================== */
-html[data-theme="dark"] input,
+html[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
 html[data-theme="dark"] select,
 html[data-theme="dark"] textarea {
     background: var(--bg-input);
@@ -2885,7 +2885,7 @@ html[data-theme="dark"] .just-autocomplete-item.active {
 html[data-theme="dark"] table tr:nth-child(even),
 html[data-theme="dark"] .table tr:nth-child(even),
 html[data-theme="dark"] tbody tr:nth-child(even) {
-    background: rgba(255, 255, 255, 0.02);
+    background: rgba(255, 255, 255, 0.04);
 }
 
 html[data-theme="dark"] table tbody tr:hover,
@@ -2979,7 +2979,7 @@ html[data-theme="dark"] ::-webkit-scrollbar-track {
 /* ========================================
    N.5 OVERRIDES MODO NOCHE - BADGES Y ESTADOS
    ======================================== */
-html[data-theme="dark"] .estatus-badge.activo,
+html[data-theme="dark"] .estatus-badge.completo,
 html[data-theme="dark"] .status-presente,
 html[data-theme="dark"] .badge-success,
 html[data-theme="dark"] .disp-badge.activo {
@@ -2987,7 +2987,6 @@ html[data-theme="dark"] .disp-badge.activo {
     color: var(--accent-success);
 }
 
-html[data-theme="dark"] .estatus-badge.inactivo,
 html[data-theme="dark"] .status-falta,
 html[data-theme="dark"] .badge-danger,
 html[data-theme="dark"] .disp-badge.inactivo {
@@ -2995,18 +2994,28 @@ html[data-theme="dark"] .disp-badge.inactivo {
     color: var(--accent-danger);
 }
 
-html[data-theme="dark"] .estatus-badge.pendiente,
+html[data-theme="dark"] .estatus-badge.incompleto,
 html[data-theme="dark"] .status-retardo,
 html[data-theme="dark"] .badge-warning {
     background: var(--bg-warning-soft);
     color: var(--accent-warning);
 }
 
-html[data-theme="dark"] .estatus-badge.aprobado,
+html[data-theme="dark"] .estatus-badge.registrado,
 html[data-theme="dark"] .badge-info,
 html[data-theme="dark"] .badge-primary {
     background: var(--bg-info-soft);
     color: var(--accent-primary);
+}
+
+html[data-theme="dark"] .estatus-badge.sin-registro {
+    background: var(--bg-elevated);
+    color: var(--text-muted);
+}
+
+html[data-theme="dark"] .estatus-badge.justificado {
+    background: rgba(167, 139, 250, 0.15);
+    color: #c4b5fd;
 }
 
 html[data-theme="dark"] .empty-state,
