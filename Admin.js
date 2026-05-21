@@ -7204,12 +7204,13 @@ const pluginCentroTotal = {
         const { ctx, chartArea: { top, bottom, left, right } } = chart;
         const total = chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
         const cx = (left + right) / 2, cy = (top + bottom) / 2;
+        const _cc = getChartThemeColors();
         ctx.save();
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#0f172a';
+        ctx.fillStyle = _cc.textStrong;
         ctx.font = 'bold 28px Inter, sans-serif';
         ctx.fillText(total, cx, cy - 10);
-        ctx.fillStyle = '#94a3b8';
+        ctx.fillStyle = _cc.muted;
         ctx.font = '500 11px Inter, sans-serif';
         ctx.fillText('total', cx, cy + 12);
         ctx.restore();
@@ -7222,11 +7223,12 @@ const pluginValorBarra = {
     afterDatasetsDraw(chart) {
         if (chart.options.indexAxis !== 'y') return;
         const { ctx } = chart;
+        const _cc = getChartThemeColors();
         chart.getDatasetMeta(0).data.forEach((bar, i) => {
             const val = chart.data.datasets[0].data[i];
             if (!val) return;
             ctx.save();
-            ctx.fillStyle = '#64748b';
+            ctx.fillStyle = _cc.text;
             ctx.font = '600 11px Inter, sans-serif';
             ctx.textAlign = 'left';
             ctx.textBaseline = 'middle';
@@ -7242,11 +7244,12 @@ const pluginValorBarraV = {
     afterDatasetsDraw(chart) {
         if (chart.options.indexAxis === 'y') return;
         const { ctx } = chart;
+        const _cc = getChartThemeColors();
         chart.getDatasetMeta(0).data.forEach((bar, i) => {
             const val = chart.data.datasets[0].data[i];
             if (!val) return;
             ctx.save();
-            ctx.fillStyle = '#475569';
+            ctx.fillStyle = _cc.textStrong;
             ctx.font = '600 11px Inter, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'bottom';
