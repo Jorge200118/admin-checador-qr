@@ -191,10 +191,16 @@ function _filasVacSaldos() {
     const filtSuc = document.getElementById('vacFiltSucursal')?.value || '';
     const soloConSaldo = document.getElementById('vacFiltConSaldo')?.checked;
     const soloPorVencer = document.getElementById('vacFiltPorVencer')?.checked;
+    const buscar = (document.getElementById('vacFiltBuscar')?.value || '').trim().toLowerCase();
     const hoy = _vacHoyYYYYMMDD();
     const rows = [];
     for (const e of empleados) {
         if (filtSuc && e.sucursal !== filtSuc) continue;
+        const nombre = `${e.nombre} ${e.apellido || ''}`.trim();
+        if (buscar) {
+            const codigo = String(e.codigo_empleado || '').toLowerCase();
+            if (!nombre.toLowerCase().includes(buscar) && !codigo.includes(buscar)) continue;
+        }
         const vacs = vacacionesPorEmp.get(e.id) || [];
         const s = calcularSaldo({ fecha_ingreso: e.fecha_ingreso?.substring(0,10) }, vacs, hoy);
         if (s.añoServicio < 1) continue;
@@ -202,7 +208,7 @@ function _filasVacSaldos() {
         if (soloPorVencer && s.diasParaVencer > 60) continue;
         rows.push({
             id: e.id,
-            nombre: `${e.nombre} ${e.apellido || ''}`.trim(),
+            nombre,
             sucursal: e.sucursal || '—',
             añoServicio: s.añoServicio,
             derecho: s.derecho,
