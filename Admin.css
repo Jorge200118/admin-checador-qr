@@ -456,7 +456,7 @@ td {
     padding: 10px 14px;
     border-bottom: 1px solid var(--bg-app);
     font-size: 0.84rem;
-    color: #334155;
+    color: var(--text-primary);
 }
 
 tbody tr {
@@ -600,7 +600,7 @@ tbody tr:hover {
 .form-input,
 .form-select {
     padding: 8px 12px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border-strong);
     border-radius: 6px;
     font-size: 0.84rem;
     background: var(--bg-input);
@@ -633,7 +633,7 @@ tbody tr:hover {
 
 .form-input-small {
     padding: 6px 10px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border-strong);
     border-radius: 6px;
     font-size: 0.84rem;
     height: 36px;
@@ -727,7 +727,7 @@ tbody tr:hover {
 
 .btn-icon:hover {
     background: var(--bg-app);
-    color: #334155;
+    color: var(--text-primary);
     border-color: var(--border-strong);
 }
 
@@ -1050,7 +1050,7 @@ tbody tr:hover {
 
 .close:hover {
     background: var(--bg-app);
-    color: #334155;
+    color: var(--text-primary);
 }
 
 .modal-body {
@@ -1080,7 +1080,7 @@ tbody tr:hover {
     display: block;
     margin-bottom: 4px;
     font-weight: 600;
-    color: #374151;
+    color: var(--text-secondary);
     font-size: 0.82rem;
 }
 
@@ -1090,7 +1090,7 @@ tbody tr:hover {
 
 .form-group input {
     padding: 8px 12px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border-strong);
     border-radius: 6px;
     font-size: 0.84rem;
 }
@@ -1336,7 +1336,7 @@ tbody tr:hover {
     display: block;
     margin-bottom: 6px;
     font-weight: 600;
-    color: #374151;
+    color: var(--text-secondary);
     font-size: 0.82rem;
 }
 
@@ -2318,7 +2318,7 @@ tbody tr:hover {
 .detalle-tabla tbody td {
     padding: 9px 12px;
     border-bottom: 1px solid var(--bg-app);
-    color: #334155;
+    color: var(--text-primary);
 }
 
 .detalle-tabla tbody tr:hover {
@@ -2424,7 +2424,7 @@ tbody tr:hover {
     left: 0;
     right: 0;
     background: var(--bg-surface);
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border-strong);
     border-top: none;
     border-radius: 0 0 8px 8px;
     max-height: 200px;
