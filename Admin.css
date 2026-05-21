@@ -437,12 +437,12 @@ table {
 }
 
 th {
-    background: #f8fafc;
+    background: var(--bg-elevated);
     padding: 10px 14px;
     text-align: left;
     font-weight: 600;
-    color: #475569;
-    border-bottom: 1px solid #e2e8f0;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border);
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -451,7 +451,7 @@ th {
 
 td {
     padding: 10px 14px;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--bg-app);
     font-size: 0.84rem;
     color: #334155;
 }
@@ -461,7 +461,7 @@ tbody tr {
 }
 
 tbody tr:hover {
-    background: #f8fafc;
+    background: var(--bg-elevated);
 }
 
 /* ========================================
@@ -473,15 +473,15 @@ tbody tr:hover {
     align-items: flex-start;
     margin-bottom: 20px;
     padding: 20px 24px;
-    background: white;
+    background: var(--bg-surface);
     border-radius: 10px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border);
 }
 
 .periodo-info h2 {
     font-size: 1.35rem;
     font-weight: 700;
-    color: #0f172a;
+    color: var(--text-primary);
     margin-bottom: 4px;
     letter-spacing: -0.02em;
 }
@@ -494,12 +494,12 @@ tbody tr:hover {
 }
 
 .periodo-label {
-    color: #94a3b8;
+    color: var(--text-muted);
 }
 
 .periodo-fechas {
     font-weight: 600;
-    color: #475569;
+    color: var(--text-secondary);
 }
 
 .stats-quick {
@@ -514,7 +514,7 @@ tbody tr:hover {
 .stat-label {
     display: block;
     font-size: 0.72rem;
-    color: #94a3b8;
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     font-weight: 600;
@@ -525,21 +525,21 @@ tbody tr:hover {
     display: block;
     font-size: 1.5rem;
     font-weight: 700;
-    color: #0f172a;
+    color: var(--text-primary);
 }
 
-.stat-item:first-child .stat-number { color: #ef4444; }
-.stat-item:last-child .stat-number { color: #3b82f6; }
+.stat-item:first-child .stat-number { color: var(--accent-danger); }
+.stat-item:last-child .stat-number { color: var(--accent-primary); }
 
 /* ========================================
    10. REGISTROS - FILTROS
    ======================================== */
 .filters-advanced {
-    background: white;
+    background: var(--bg-surface);
     padding: 18px 20px;
     border-radius: 10px;
     margin-bottom: 16px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border);
 }
 
 .filters-row {
@@ -558,7 +558,7 @@ tbody tr:hover {
 .filter-group label {
     font-weight: 600;
     margin-bottom: 4px;
-    color: #64748b;
+    color: var(--text-secondary);
     font-size: 0.7rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -576,7 +576,7 @@ tbody tr:hover {
 }
 
 .date-separator {
-    color: #94a3b8;
+    color: var(--text-muted);
     font-weight: 600;
     font-size: 0.85rem;
 }
@@ -600,8 +600,8 @@ tbody tr:hover {
     border: 1px solid #d1d5db;
     border-radius: 6px;
     font-size: 0.84rem;
-    background: white;
-    color: #1e293b;
+    background: var(--bg-input);
+    color: var(--text-primary);
     transition: border-color 0.15s, box-shadow 0.15s;
     height: 38px;
 }
@@ -609,7 +609,7 @@ tbody tr:hover {
 .form-input:focus,
 .form-select:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: var(--accent-primary);
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -638,7 +638,7 @@ tbody tr:hover {
 
 .form-input-small:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: var(--accent-primary);
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -646,12 +646,12 @@ tbody tr:hover {
    12. REGISTROS - FALTAS DOWNLOAD
    ======================================== */
 .faltas-download-section {
-    background: white;
-    border: 1px solid #e2e8f0;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
     border-radius: 10px;
     padding: 16px 20px;
     margin-bottom: 16px;
-    border-left: 3px solid #10b981;
+    border-left: 3px solid var(--accent-success);
 }
 
 .section-title {
@@ -659,12 +659,12 @@ tbody tr:hover {
     align-items: center;
     gap: 8px;
     margin-bottom: 10px;
-    color: #10b981;
+    color: var(--accent-success);
     font-size: 0.85rem;
 }
 
 .section-title strong {
-    color: #0f172a;
+    color: var(--text-primary);
 }
 
 .download-controls {
@@ -682,13 +682,13 @@ tbody tr:hover {
 
 .date-range-group label {
     font-size: 0.8rem;
-    color: #64748b;
+    color: var(--text-secondary);
     font-weight: 500;
 }
 
 .download-hint {
     font-size: 0.75rem;
-    color: #94a3b8;
+    color: var(--text-muted);
     margin-top: 8px;
 }
 
@@ -710,22 +710,22 @@ tbody tr:hover {
 .btn-icon {
     width: 34px;
     height: 34px;
-    border: 1px solid #e2e8f0;
-    background: white;
+    border: 1px solid var(--border);
+    background: var(--bg-surface);
     border-radius: 6px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #64748b;
+    color: var(--text-secondary);
     font-size: 0.8rem;
     transition: all 0.15s;
 }
 
 .btn-icon:hover {
-    background: #f1f5f9;
+    background: var(--bg-app);
     color: #334155;
-    border-color: #cbd5e1;
+    border-color: var(--border-strong);
 }
 
 /* ========================================
@@ -770,7 +770,7 @@ tbody tr:hover {
 
 .empleado-nombre {
     font-weight: 600;
-    color: #0f172a;
+    color: var(--text-primary);
     font-size: 0.84rem;
     white-space: nowrap;
     overflow: hidden;
@@ -779,14 +779,14 @@ tbody tr:hover {
 
 .empleado-codigo {
     font-size: 0.72rem;
-    color: #94a3b8;
+    color: var(--text-muted);
     font-weight: 500;
 }
 
 /* Badges */
 .fecha-badge {
     background: #eff6ff;
-    color: #2563eb;
+    color: var(--accent-primary-hover);
     padding: 4px 10px;
     border-radius: 6px;
     font-size: 0.78rem;
@@ -796,8 +796,8 @@ tbody tr:hover {
 }
 
 .hora-badge {
-    background: #10b981;
-    color: white;
+    background: var(--accent-success);
+    color: var(--text-inverse);
     padding: 4px 10px;
     border-radius: 6px;
     font-size: 0.78rem;
@@ -807,17 +807,17 @@ tbody tr:hover {
 }
 
 .hora-badge.tardanza {
-    background: #ef4444;
+    background: var(--accent-danger);
 }
 
 .hora-badge.sin-registro {
-    background: #e2e8f0;
-    color: #94a3b8;
+    background: var(--border);
+    color: var(--text-muted);
 }
 
 .horas-trabajadas {
     font-weight: 700;
-    color: #0f172a;
+    color: var(--text-primary);
     font-size: 0.95rem;
 }
 
@@ -825,7 +825,7 @@ tbody tr:hover {
     display: flex;
     align-items: center;
     gap: 4px;
-    color: #94a3b8;
+    color: var(--text-muted);
     font-size: 0.82rem;
 }
 
@@ -888,8 +888,8 @@ tbody tr:hover {
 .tablet-info {
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.75rem;
-    color: #94a3b8;
-    background: #f8fafc;
+    color: var(--text-muted);
+    background: var(--bg-elevated);
     padding: 2px 6px;
     border-radius: 4px;
 }
@@ -900,7 +900,7 @@ tbody tr:hover {
     border-radius: 6px;
     object-fit: cover;
     cursor: pointer;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border);
     transition: transform 0.15s;
 }
 
@@ -933,24 +933,24 @@ tbody tr:hover {
 }
 
 .btn-accion.editar {
-    background: #10b981;
-    color: white;
+    background: var(--accent-success);
+    color: var(--text-inverse);
 }
 
 .btn-accion.eliminar {
-    background: #ef4444;
-    color: white;
+    background: var(--accent-danger);
+    color: var(--text-inverse);
 }
 
 /* ========================================
    15. FILTERS (EMPLEADOS)
    ======================================== */
 .filters {
-    background: white;
+    background: var(--bg-surface);
     border-radius: 10px;
     padding: 14px 20px;
     margin-bottom: 16px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border);
 }
 
 .filters .filter-group {
@@ -1094,7 +1094,7 @@ tbody tr:hover {
 
 .form-group input:focus {
     outline: none;
-    border-color: #3b82f6;
+    border-color: var(--accent-primary);
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -1107,14 +1107,14 @@ tbody tr:hover {
 .form-section {
     margin-bottom: 20px;
     padding: 18px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border);
     border-radius: 8px;
-    background: #f8fafc;
+    background: var(--bg-elevated);
 }
 
 .form-section h3 {
     margin: 0 0 14px 0;
-    color: #0f172a;
+    color: var(--text-primary);
     font-size: 1rem;
 }
 
@@ -1128,7 +1128,7 @@ tbody tr:hover {
     max-width: 120px;
     max-height: 120px;
     border-radius: 8px;
-    border: 2px solid #e2e8f0;
+    border: 2px solid var(--border);
 }
 
 /* Employee photo */
@@ -1137,7 +1137,7 @@ tbody tr:hover {
     height: 36px;
     border-radius: 8px;
     object-fit: cover;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border);
 }
 
 /* ========================================
