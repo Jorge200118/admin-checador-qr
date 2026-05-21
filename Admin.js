@@ -7533,23 +7533,29 @@ function _renderTablaRotacion(rotacion) {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:24px">Sin datos de rotación</td></tr>';
         return;
     }
+    const _esOscuro = (typeof getCurrentTheme === 'function') && getCurrentTheme() === 'dark';
+    const _colTexto    = _esOscuro ? '#e8eef5' : '#0f172a';
+    const _colTextoSec = _esOscuro ? '#94a8c4' : '#64748b';
+    const _bgTrack     = _esOscuro ? 'rgba(255,255,255,0.08)' : '#f1f5f9';
     const maxTasa = Math.max(...rotacion.map(r => parseFloat(r.tasa) || 0), 0.1);
     tbody.innerHTML = rotacion.map((r, idx) => {
         const tasa  = parseFloat(r.tasa);
         const color = tasa > 5 ? '#ef4444' : tasa > 2 ? '#f59e0b' : '#10b981';
         const bgBadge = tasa > 5 ? 'rgba(239,68,68,.12)' : tasa > 2 ? 'rgba(245,158,11,.12)' : 'rgba(16,185,129,.12)';
         const barW  = Math.min(100, (tasa / Math.max(maxTasa, 5)) * 100).toFixed(1);
-        const rowBg = idx % 2 === 0 ? '#ffffff' : '#fafafa';
+        const rowBg = _esOscuro
+            ? (idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.04)')
+            : (idx % 2 === 0 ? '#ffffff' : '#fafafa');
         return `
         <tr style="background:${rowBg}">
-            <td style="padding:12px 20px;font-size:13px;font-weight:600;color:#0f172a">${MESES_ES[r.mes - 1]} ${r.anio}</td>
-            <td style="padding:12px 20px;text-align:right;font-size:13px;color:#64748b">${r.plantilla_inicial}</td>
+            <td style="padding:12px 20px;font-size:13px;font-weight:600;color:${_colTexto}">${MESES_ES[r.mes - 1]} ${r.anio}</td>
+            <td style="padding:12px 20px;text-align:right;font-size:13px;color:${_colTextoSec}">${r.plantilla_inicial}</td>
             <td style="padding:12px 20px;text-align:right;font-size:13px;font-weight:600;color:#10b981">+${r.altas}</td>
             <td style="padding:12px 20px;text-align:right;font-size:13px;font-weight:600;color:#ef4444">−${r.bajas}</td>
-            <td style="padding:12px 20px;text-align:right;font-size:13px;color:#64748b">${r.plantilla_final}</td>
+            <td style="padding:12px 20px;text-align:right;font-size:13px;color:${_colTextoSec}">${r.plantilla_final}</td>
             <td style="padding:12px 20px">
                 <div style="display:flex;align-items:center;gap:10px;justify-content:flex-end">
-                    <div style="flex:1;max-width:80px;height:5px;background:#f1f5f9;border-radius:3px;overflow:hidden">
+                    <div style="flex:1;max-width:80px;height:5px;background:${_bgTrack};border-radius:3px;overflow:hidden">
                         <div style="width:${barW}%;height:100%;background:${color};border-radius:3px"></div>
                     </div>
                     <span style="background:${bgBadge};color:${color};padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;min-width:52px;text-align:center;white-space:nowrap">${r.tasa}%</span>
