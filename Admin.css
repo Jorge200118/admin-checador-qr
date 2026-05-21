@@ -35,13 +35,16 @@
     /* Acentos */
     --accent-primary: #3b82f6;
     --accent-primary-hover: #2563eb;
-    --accent-success: #22c55e;
-    --accent-success-hover: #16a34a;
+    --accent-success: #10b981;
+    --accent-success-hover: #059669;
     --accent-warning: #f59e0b;
     --accent-warning-hover: #d97706;
     --accent-danger: #ef4444;
     --accent-danger-hover: #dc2626;
     --accent-info: #06b6d4;
+
+    /* Branding (azul del logo del sidebar) */
+    --logo-color: #60a5fa;
 
     /* Estados (background suaves) */
     --bg-success-soft: rgba(34, 197, 94, 0.1);
@@ -103,7 +106,7 @@ body {
 
 .logo i {
     font-size: 1.6rem;
-    color: var(--accent-primary);
+    color: var(--logo-color);
 }
 
 .logo h2 {
