@@ -3079,3 +3079,45 @@ html[data-theme="dark"] .geo-badge-inactiva {
     background: var(--bg-elevated);
     color: var(--text-secondary);
 }
+
+/* ========================================
+   N.6 OVERRIDES MODO NOCHE - ESTADISTICAS Y ABSENTISMO (inline styles)
+   ======================================== */
+/* Tarjetas con fondo blanco inline */
+html[data-theme="dark"] #estadisticas div[style*="background:#fff"],
+html[data-theme="dark"] #estadisticas div[style*="background: #fff"],
+html[data-theme="dark"] #absentismo div[style*="background:#fff"],
+html[data-theme="dark"] #absentismo div[style*="background: #fff"] {
+    background: var(--bg-surface) !important;
+    border-color: var(--border) !important;
+}
+
+/* Numeros KPI (color oscuro inline #0f172a) */
+html[data-theme="dark"] #estadisticas [style*="color:#0f172a"],
+html[data-theme="dark"] #estadisticas [style*="color: #0f172a"],
+html[data-theme="dark"] #absentismo [style*="color:#0f172a"],
+html[data-theme="dark"] #absentismo [style*="color: #0f172a"] {
+    color: var(--text-primary) !important;
+}
+
+/* Labels (#64748b) y sublabels (#94a3b8) */
+html[data-theme="dark"] #estadisticas [style*="color:#64748b"],
+html[data-theme="dark"] #estadisticas [style*="color:#94a3b8"],
+html[data-theme="dark"] #absentismo [style*="color:#64748b"],
+html[data-theme="dark"] #absentismo [style*="color:#94a3b8"] {
+    color: var(--text-secondary) !important;
+}
+
+/* Cabecera de tabla de rotacion (background:#f8fafc inline) */
+html[data-theme="dark"] #estadisticas tr[style*="background:#f8fafc"],
+html[data-theme="dark"] #estadisticas tr[style*="background: #f8fafc"] {
+    background: var(--bg-elevated) !important;
+}
+
+/* Bordes claros inline de headers de card (#f1f5f9) y cards (#e2e8f0) */
+html[data-theme="dark"] #estadisticas [style*="#f1f5f9"],
+html[data-theme="dark"] #estadisticas [style*="#e2e8f0"],
+html[data-theme="dark"] #absentismo [style*="#f1f5f9"],
+html[data-theme="dark"] #absentismo [style*="#e2e8f0"] {
+    border-color: var(--border) !important;
+}
