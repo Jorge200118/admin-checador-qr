@@ -2878,3 +2878,35 @@ html[data-theme="dark"] .just-autocomplete-item:hover,
 html[data-theme="dark"] .just-autocomplete-item.active {
     background: var(--bg-elevated) !important;
 }
+
+/* ========================================
+   N.2 OVERRIDES MODO NOCHE - TABLAS
+   ======================================== */
+html[data-theme="dark"] table tr:nth-child(even),
+html[data-theme="dark"] .table tr:nth-child(even),
+html[data-theme="dark"] tbody tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+html[data-theme="dark"] table tbody tr:hover,
+html[data-theme="dark"] .table tbody tr:hover,
+html[data-theme="dark"] tbody tr:hover {
+    background: var(--bg-elevated);
+}
+
+html[data-theme="dark"] table thead th,
+html[data-theme="dark"] .table thead th,
+html[data-theme="dark"] thead th {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    border-bottom-color: var(--border-strong);
+}
+
+html[data-theme="dark"] table,
+html[data-theme="dark"] .table {
+    color: var(--text-primary);
+}
+
+html[data-theme="dark"] td {
+    border-color: var(--border);
+}
