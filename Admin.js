@@ -130,12 +130,10 @@ function _updateChartsForTheme(theme) {
     const _cc = getChartThemeColors();
     Chart.defaults.color = _cc.text;
     Chart.defaults.borderColor = _cc.grid;
-    // Si la seccion de estadisticas esta activa y tiene charts, recargar para re-render con colores del tema
-    if (typeof _estCharts !== 'undefined' && Object.keys(_estCharts).length > 0) {
-        const seccionEst = document.getElementById('estadisticas');
-        if (seccionEst && seccionEst.classList.contains('active') && typeof cargarEstadisticas === 'function') {
-            cargarEstadisticas();
-        }
+    // Si hay charts vivos, redibujar desde el cache (sin fetch) con los colores del tema
+    if (typeof _estCharts !== 'undefined' && Object.keys(_estCharts).length > 0
+        && typeof _redibujarEstadisticas === 'function') {
+        _redibujarEstadisticas();
     }
 }
 
@@ -7148,27 +7146,35 @@ async function cargarEstadisticas() {
         const el = document.getElementById('estActualizadoEn');
         if (el) el.textContent = `Actualizado: ${new Date(json.actualizadoEn).toLocaleString('es-MX')}`;
 
-        // Aplicar colores del tema actual a Chart.js
-        if (typeof Chart !== 'undefined') {
-            const _cc = getChartThemeColors();
-            Chart.defaults.color = _cc.text;
-            Chart.defaults.borderColor = _cc.grid;
-        }
-
-        // Destruir charts anteriores
-        Object.values(_estCharts).forEach(c => c.destroy());
-        _estCharts = {};
-
-        _renderChartBarrasRangos('chartEdad',        json.data.edad,        '#3b82f6');
-        _renderChartBarrasRangos('chartAntiguedad',  json.data.antiguedad,  '#8b5cf6');
-        _renderChartBarrasV('chartIngresosMes',   json.data.ingresosMes);
-        _renderChartBarrasH('chartDepartamentos', json.data.puestos,     'puesto',  '#8b5cf6');
-        _renderChartBarrasH('chartAreas',         json.data.areas,       'area',    '#f59e0b');
-        _renderTablaRotacion(json.data.rotacion);
+        _redibujarEstadisticas();
 
     } catch (err) {
         console.error('cargarEstadisticas:', err);
     }
+}
+
+// Re-renderiza los charts desde el cache (_estDatos), sin fetch.
+// Usado al togglear el tema para evitar fetches concurrentes.
+function _redibujarEstadisticas() {
+    if (!_estDatos) return;
+
+    // Aplicar colores del tema actual a Chart.js
+    if (typeof Chart !== 'undefined') {
+        const _cc = getChartThemeColors();
+        Chart.defaults.color = _cc.text;
+        Chart.defaults.borderColor = _cc.grid;
+    }
+
+    // Destruir charts anteriores
+    Object.values(_estCharts).forEach(c => c.destroy());
+    _estCharts = {};
+
+    _renderChartBarrasRangos('chartEdad',        _estDatos.edad,        '#3b82f6');
+    _renderChartBarrasRangos('chartAntiguedad',  _estDatos.antiguedad,  '#8b5cf6');
+    _renderChartBarrasV('chartIngresosMes',   _estDatos.ingresosMes);
+    _renderChartBarrasH('chartDepartamentos', _estDatos.puestos,     'puesto',  '#8b5cf6');
+    _renderChartBarrasH('chartAreas',         _estDatos.areas,       'area',    '#f59e0b');
+    _renderTablaRotacion(_estDatos.rotacion);
 }
 
 const COLORES_DONA = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#06b6d4','#f97316','#ec4899'];
