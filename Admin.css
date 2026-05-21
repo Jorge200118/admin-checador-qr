@@ -637,6 +637,8 @@ tbody tr:hover {
     border-radius: 6px;
     font-size: 0.84rem;
     height: 36px;
+    background: var(--bg-input);
+    color: var(--text-primary);
 }
 
 .form-input-small:focus {
@@ -1093,6 +1095,8 @@ tbody tr:hover {
     border: 1px solid var(--border-strong);
     border-radius: 6px;
     font-size: 0.84rem;
+    background: var(--bg-input);
+    color: var(--text-primary);
 }
 
 .form-group input:focus {
