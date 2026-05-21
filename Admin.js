@@ -44,6 +44,66 @@ function esDiaNoLaborable(fechaYYYYMMDD) {
 }
 
 // ================================
+// SISTEMA DE TEMA (CLARO / NOCHE)
+// ================================
+const THEME_STORAGE_KEY = 'admin-theme';
+
+function getCurrentTheme() {
+    return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+}
+
+function applyTheme(theme) {
+    if (theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+    }
+    _updateThemeToggleIcon(theme);
+    _updateMapTilesForTheme(theme);
+    _updateChartsForTheme(theme);
+}
+
+function _updateThemeToggleIcon(theme) {
+    const icon = document.getElementById('themeToggleIcon');
+    if (!icon) return;
+    icon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+}
+
+function toggleTheme() {
+    const next = getCurrentTheme() === 'dark' ? 'light' : 'dark';
+    try {
+        localStorage.setItem(THEME_STORAGE_KEY, next);
+    } catch (e) { /* localStorage no disponible */ }
+    applyTheme(next);
+}
+
+function initTheme() {
+    // El atributo data-theme ya fue aplicado por el script anti-flash en <head>.
+    // Aqui solo sincronizamos el icono.
+    const current = getCurrentTheme();
+    _updateThemeToggleIcon(current);
+}
+
+// Stubs que se implementan en Fase 4 (mapas y charts)
+function _updateMapTilesForTheme(theme) { /* implementado en Fase 4 */ }
+function _updateChartsForTheme(theme) { /* implementado en Fase 4 */ }
+
+// Atajo de teclado Ctrl+Shift+D
+document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
+        e.preventDefault();
+        toggleTheme();
+    }
+});
+
+// Inicializar al cargar DOM
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTheme);
+} else {
+    initTheme();
+}
+
+// ================================
 // HELPERS DE ZONA HORARIA - MAZATLÁN (UTC-7)
 // ================================
 /**
