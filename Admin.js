@@ -90,7 +90,7 @@ function _updateChartsForTheme(theme) { /* implementado en Fase 4 */ }
 
 // Atajo de teclado Ctrl+Shift+D
 document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
+    if (e.ctrlKey && e.shiftKey && e.code === 'KeyD') {
         e.preventDefault();
         toggleTheme();
     }
