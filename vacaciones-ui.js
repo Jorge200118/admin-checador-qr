@@ -2,6 +2,31 @@
 // Render del bloque de vacaciones en el expediente y de la sección sidebar.
 // Depende de vacaciones-lft.js y vacaciones-saldo.js.
 
+// Paleta según el tema actual. Como los estilos son inline (ganan sobre var(--xxx)),
+// leemos el tema con getCurrentTheme() al renderizar y elegimos colores aquí.
+function _vacTema() {
+    const dark = (typeof getCurrentTheme === 'function') && getCurrentTheme() === 'dark';
+    return dark ? {
+        surface: '#13263d',
+        elevated: '#1e3a5f',
+        appBg: '#0d1b2a',
+        text: '#e8eef5',
+        textSec: '#94a8c4',
+        muted: '#7e94b0',
+        border: '#2a4a73',
+        borderSoft: '#1e3a5f'
+    } : {
+        surface: '#ffffff',
+        elevated: '#f1f5f9',
+        appBg: '#f8fafc',
+        text: '#1e293b',
+        textSec: '#475569',
+        muted: '#94a3b8',
+        border: '#e2e8f0',
+        borderSoft: '#f1f5f9'
+    };
+}
+
 function _vacFormatFechaCorta(yyyymmdd) {
     if (!yyyymmdd) return '—';
     const [y, m, d] = yyyymmdd.split('-');
@@ -14,8 +39,9 @@ function _vacHoyYYYYMMDD() {
 }
 
 function renderBloqueVacacionesExpediente(empleado, vacaciones) {
+    const _t = _vacTema();
     if (!empleado || !empleado.fecha_ingreso) {
-        return `<div style="color:#94a3b8;font-size:12px;padding:9px 0;">Sin fecha de ingreso registrada</div>`;
+        return `<div style="color:${_t.muted};font-size:12px;padding:9px 0;">Sin fecha de ingreso registrada</div>`;
     }
     const hoy = _vacHoyYYYYMMDD();
     const s = calcularSaldo(empleado, vacaciones, hoy);
@@ -23,8 +49,8 @@ function renderBloqueVacacionesExpediente(empleado, vacaciones) {
 
     if (s.añoServicio < 1) {
         return `
-        <div style="padding:9px 0;color:#94a3b8;font-size:13px;">
-            Aún sin derecho. Cumple 1 año el <strong style="color:#e2e8f0;">${_vacFormatFechaCorta(s.proximoAniversario)}</strong>.
+        <div style="padding:9px 0;color:${_t.muted};font-size:13px;">
+            Aún sin derecho. Cumple 1 año el <strong style="color:${_t.text};">${_vacFormatFechaCorta(s.proximoAniversario)}</strong>.
         </div>`;
     }
 
@@ -37,24 +63,24 @@ function renderBloqueVacacionesExpediente(empleado, vacaciones) {
         : '';
 
     const filaBloque = (lbl, val, color) => `
-        <div style="display:flex;padding:9px 0;border-bottom:1px solid #1e293b22;gap:12px;">
-            <span style="color:#64748b;font-size:12px;min-width:160px;">${lbl}</span>
-            <span style="color:${color || '#e2e8f0'};font-size:13px;">${val}</span>
+        <div style="display:flex;padding:9px 0;border-bottom:1px solid ${_t.borderSoft};gap:12px;">
+            <span style="color:${_t.textSec};font-size:12px;min-width:160px;">${lbl}</span>
+            <span style="color:${color || _t.text};font-size:13px;">${val}</span>
         </div>`;
 
     const histFilas = hist.map(p => {
         const saldoActual = p.derecho - p.tomados;
         let colorSaldo;
         if (p.esActual) colorSaldo = saldoActual < 0 ? '#ef4444' : '#22c55e';
-        else colorSaldo = p.perdidos > 0 ? '#ef4444' : '#94a3b8';
+        else colorSaldo = p.perdidos > 0 ? '#ef4444' : _t.muted;
         const textoSaldo = p.esActual
             ? `${saldoActual} actual`
             : (p.perdidos > 0 ? `−${p.perdidos}` : '0');
         return `
         <tr>
-            <td style="padding:6px 8px;color:#94a3b8;font-size:12px;">Año ${p.añoServicio}</td>
-            <td style="padding:6px 8px;color:#94a3b8;font-size:12px;">${_vacFormatFechaCorta(p.inicio)} → ${_vacFormatFechaCorta(p.fin)}</td>
-            <td style="padding:6px 8px;text-align:right;color:#e2e8f0;font-size:12px;">${p.derecho}</td>
+            <td style="padding:6px 8px;color:${_t.textSec};font-size:12px;">Año ${p.añoServicio}</td>
+            <td style="padding:6px 8px;color:${_t.textSec};font-size:12px;">${_vacFormatFechaCorta(p.inicio)} → ${_vacFormatFechaCorta(p.fin)}</td>
+            <td style="padding:6px 8px;text-align:right;color:${_t.text};font-size:12px;">${p.derecho}</td>
             <td style="padding:6px 8px;text-align:right;color:#3b82f6;font-size:12px;">${p.tomados}</td>
             <td style="padding:6px 8px;text-align:right;color:${colorSaldo};font-size:12px;">${textoSaldo}</td>
         </tr>`;
@@ -68,17 +94,17 @@ function renderBloqueVacacionesExpediente(empleado, vacaciones) {
         ${filaBloque('Restantes', `<strong>${s.restantes} días</strong>`, colorRestantes)}
         ${avisoVence}
         <details style="margin-top:12px;">
-            <summary style="cursor:pointer;color:#64748b;font-size:12px;padding:6px 0;">
+            <summary style="cursor:pointer;color:${_t.textSec};font-size:12px;padding:6px 0;">
                 <i class="fas fa-history"></i> Ver historial (${hist.length} ${hist.length === 1 ? 'periodo' : 'periodos'})
             </summary>
             <table style="width:100%;margin-top:8px;border-collapse:collapse;">
                 <thead>
-                    <tr style="border-bottom:1px solid #1e293b;">
-                        <th style="padding:6px 8px;text-align:left;color:#64748b;font-size:11px;font-weight:600;">Periodo</th>
-                        <th style="padding:6px 8px;text-align:left;color:#64748b;font-size:11px;font-weight:600;">Fechas</th>
-                        <th style="padding:6px 8px;text-align:right;color:#64748b;font-size:11px;font-weight:600;">Derecho</th>
-                        <th style="padding:6px 8px;text-align:right;color:#64748b;font-size:11px;font-weight:600;">Tomados</th>
-                        <th style="padding:6px 8px;text-align:right;color:#64748b;font-size:11px;font-weight:600;">Saldo</th>
+                    <tr style="border-bottom:1px solid ${_t.border};">
+                        <th style="padding:6px 8px;text-align:left;color:${_t.textSec};font-size:11px;font-weight:600;">Periodo</th>
+                        <th style="padding:6px 8px;text-align:left;color:${_t.textSec};font-size:11px;font-weight:600;">Fechas</th>
+                        <th style="padding:6px 8px;text-align:right;color:${_t.textSec};font-size:11px;font-weight:600;">Derecho</th>
+                        <th style="padding:6px 8px;text-align:right;color:${_t.textSec};font-size:11px;font-weight:600;">Tomados</th>
+                        <th style="padding:6px 8px;text-align:right;color:${_t.textSec};font-size:11px;font-weight:600;">Saldo</th>
                     </tr>
                 </thead>
                 <tbody>${histFilas}</tbody>
@@ -241,43 +267,46 @@ function ordenarVacSaldos(key) {
 }
 
 function _vacSortIcon(key) {
+    const _t = _vacTema();
     const { key: k, dir } = window._vacSaldosSort;
-    if (k !== key) return '<span style="color:#cbd5e1;font-size:10px;margin-left:4px;">▲▼</span>';
+    if (k !== key) return `<span style="color:${_t.muted};font-size:10px;margin-left:4px;">▲▼</span>`;
     return `<span style="color:#3b82f6;font-size:10px;margin-left:4px;">${dir === 'asc' ? '▲' : '▼'}</span>`;
 }
 
 function _vacTh(label, key, align) {
-    return `<th onclick="ordenarVacSaldos('${key}')" style="padding:10px;text-align:${align};color:#475569;font-size:12px;cursor:pointer;user-select:none;">${label}${_vacSortIcon(key)}</th>`;
+    const _t = _vacTema();
+    return `<th onclick="ordenarVacSaldos('${key}')" style="padding:10px;text-align:${align};color:${_t.textSec};font-size:12px;cursor:pointer;user-select:none;">${label}${_vacSortIcon(key)}</th>`;
 }
 
 function renderVacSaldos() {
     if (!window._vacState?.cargado) return;
+    const _t = _vacTema();
     const rows = _filasVacSaldos();
     const cont = document.getElementById('vacSaldosTabla');
     if (!cont) return;
     if (rows.length === 0) {
-        cont.innerHTML = `<div style="padding:40px;text-align:center;color:#94a3b8;">Sin resultados</div>`;
+        cont.innerHTML = `<div style="padding:40px;text-align:center;color:${_t.muted};">Sin resultados</div>`;
         return;
     }
     const filas = rows.map(r => {
         const urgente = r.diasParaVencer <= 60 && r.restantes > 0;
-        const colorRest = r.restantes === 0 ? '#94a3b8' : (r.restantes <= 3 ? '#f59e0b' : '#22c55e');
-        const colorDias = r.diasParaVencer <= 15 ? '#dc2626' : (urgente ? '#f59e0b' : '#94a3b8');
+        const colorRest = r.restantes === 0 ? _t.muted : (r.restantes <= 3 ? '#f59e0b' : '#22c55e');
+        const colorDias = r.diasParaVencer <= 15 ? '#dc2626' : (urgente ? '#f59e0b' : _t.muted);
         return `
         <tr>
-            <td style="padding:8px;">${r.nombre}</td>
-            <td style="padding:8px;">${r.sucursal}</td>
-            <td style="padding:8px;text-align:center;">Año ${r.añoServicio}</td>
-            <td style="padding:8px;text-align:right;">${r.derecho}</td>
+            <td style="padding:8px;color:${_t.text};">${r.nombre}</td>
+            <td style="padding:8px;color:${_t.text};">${r.sucursal}</td>
+            <td style="padding:8px;text-align:center;color:${_t.text};">Año ${r.añoServicio}</td>
+            <td style="padding:8px;text-align:right;color:${_t.text};">${r.derecho}</td>
             <td style="padding:8px;text-align:right;color:#3b82f6;">${r.tomados}</td>
             <td style="padding:8px;text-align:right;color:${colorRest};font-weight:600;">${r.restantes}</td>
-            <td style="padding:8px;text-align:center;color:${urgente ? '#f59e0b' : '#475569'};">${_vacFormatFechaCorta(r.fechaLimite)}</td>
+            <td style="padding:8px;text-align:center;color:${urgente ? '#f59e0b' : _t.textSec};">${_vacFormatFechaCorta(r.fechaLimite)}</td>
             <td style="padding:8px;text-align:right;color:${colorDias};">${r.diasParaVencer}</td>
         </tr>`;
     }).join('');
     cont.innerHTML = `
-        <table style="width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);">
-            <thead style="background:#f1f5f9;">
+        <table style="width:100%;border-collapse:collapse;background:${_t.surface};border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);">
+            <thead style="background:${_t.elevated};">
                 <tr>
                     ${_vacTh('Empleado', 'nombre', 'left')}
                     ${_vacTh('Sucursal', 'sucursal', 'left')}
@@ -291,7 +320,7 @@ function renderVacSaldos() {
             </thead>
             <tbody>${filas}</tbody>
         </table>
-        <div style="margin-top:8px;color:#94a3b8;font-size:12px;">${rows.length} empleados</div>`;
+        <div style="margin-top:8px;color:${_t.muted};font-size:12px;">${rows.length} empleados</div>`;
 }
 
 function exportarVacSaldosExcel() {
@@ -318,6 +347,7 @@ function exportarVacSaldosExcel() {
 
 function renderVacPorVencer() {
     if (!window._vacState?.cargado) return;
+    const _t = _vacTema();
     const cont = document.getElementById('vacPorVencerLista');
     if (!cont) return;
     const { empleados, vacacionesPorEmp } = window._vacState;
@@ -357,13 +387,13 @@ function renderVacPorVencer() {
     cont.innerHTML = rows.map(r => {
         const color = r.diasParaVencer <= 15 ? '#dc2626' : (r.diasParaVencer <= 30 ? '#f59e0b' : '#3b82f6');
         return `
-        <div style="background:#fff;border-left:4px solid ${color};border-radius:8px;padding:16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 1px 3px rgba(0,0,0,.06);">
+        <div style="background:${_t.surface};border-left:4px solid ${color};border-radius:8px;padding:16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 1px 3px rgba(0,0,0,.06);">
             <div>
-                <div style="font-weight:600;font-size:15px;color:#1e293b;">${r.nombre}</div>
-                <div style="color:#64748b;font-size:13px;margin-top:2px;">${r.sucursal}</div>
+                <div style="font-weight:600;font-size:15px;color:${_t.text};">${r.nombre}</div>
+                <div style="color:${_t.textSec};font-size:13px;margin-top:2px;">${r.sucursal}</div>
             </div>
             <div style="text-align:right;">
-                <div style="font-size:14px;color:#1e293b;"><strong>${r.restantes}</strong> días pendientes</div>
+                <div style="font-size:14px;color:${_t.text};"><strong>${r.restantes}</strong> días pendientes</div>
                 <div style="font-size:12px;color:${color};margin-top:2px;">
                     Vence ${_vacFormatFechaCorta(r.fechaLimite)} (${r.diasParaVencer} días)
                 </div>
@@ -376,6 +406,7 @@ window._vacCalState = { mes: null, año: null, sucursal: '' };
 
 function renderVacCalendario() {
     if (!window._vacState?.cargado) return;
+    const _t = _vacTema();
     const cont = document.getElementById('vacCalendario');
     if (!cont) return;
     if (window._vacCalState.mes === null) {
@@ -435,22 +466,22 @@ function renderVacCalendario() {
                 ${sucursales.map(s => `<option value="${s}" ${s === sucursal ? 'selected' : ''}>${s}</option>`).join('')}
             </select>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;background:#e2e8f0;border-radius:8px;padding:4px;">
-            ${['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'].map(d => `<div style="padding:6px;text-align:center;font-weight:600;color:#64748b;font-size:12px;">${d}</div>`).join('')}`;
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;background:${_t.border};border-radius:8px;padding:4px;">
+            ${['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'].map(d => `<div style="padding:6px;text-align:center;font-weight:600;color:${_t.textSec};font-size:12px;">${d}</div>`).join('')}`;
 
     for (let i = 0; i < primerDiaSemana; i++) {
-        html += `<div style="background:#f8fafc;border-radius:4px;min-height:80px;"></div>`;
+        html += `<div style="background:${_t.elevated};border-radius:4px;min-height:80px;"></div>`;
     }
     for (let d = 1; d <= diasMes; d++) {
         const lista = porDia[d];
         const tieneGente = lista.length > 0;
         const chips = lista.slice(0, 3).map(n =>
-            `<div style="background:#3b82f622;color:#1e40af;border-radius:3px;padding:1px 5px;font-size:10px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${n.replace(/"/g, '&quot;')}">${n}</div>`
+            `<div style="background:${_t.elevated};color:${_t.text};border-radius:3px;padding:1px 5px;font-size:10px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${n.replace(/"/g, '&quot;')}">${n}</div>`
         ).join('');
-        const masN = lista.length > 3 ? `<div style="font-size:10px;color:#64748b;margin-top:2px;">+${lista.length - 3} más</div>` : '';
+        const masN = lista.length > 3 ? `<div style="font-size:10px;color:${_t.textSec};margin-top:2px;">+${lista.length - 3} más</div>` : '';
         html += `
-            <div style="background:#fff;border-radius:4px;min-height:80px;padding:4px;border:${tieneGente ? '1px solid #3b82f6' : '1px solid #f1f5f9'};">
-                <div style="font-size:11px;color:#64748b;font-weight:600;">${d}</div>
+            <div style="background:${_t.surface};border-radius:4px;min-height:80px;padding:4px;border:${tieneGente ? '1px solid #3b82f6' : '1px solid ' + _t.borderSoft};">
+                <div style="font-size:11px;color:${_t.textSec};font-weight:600;">${d}</div>
                 ${chips}${masN}
             </div>`;
     }
