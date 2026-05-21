@@ -2833,3 +2833,48 @@ tbody tr:hover {
 .btn-theme-toggle:active {
     transform: scale(0.95);
 }
+
+/* ========================================
+   N.1 OVERRIDES MODO NOCHE - INPUTS Y FORMS
+   ======================================== */
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+    background: var(--bg-input);
+    color: var(--text-primary);
+    border-color: var(--border-strong);
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+    color: var(--text-muted);
+    opacity: 1;
+}
+
+html[data-theme="dark"] input:focus,
+html[data-theme="dark"] select:focus,
+html[data-theme="dark"] textarea:focus {
+    border-color: var(--accent-primary);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+}
+
+html[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator,
+html[data-theme="dark"] input[type="time"]::-webkit-calendar-picker-indicator,
+html[data-theme="dark"] input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+html[data-theme="dark"] input[type="month"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.85);
+}
+
+html[data-theme="dark"] input:-webkit-autofill,
+html[data-theme="dark"] input:-webkit-autofill:hover,
+html[data-theme="dark"] input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--text-primary);
+    -webkit-box-shadow: 0 0 0px 1000px var(--bg-input) inset;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+html[data-theme="dark"] .just-autocomplete-item:hover,
+html[data-theme="dark"] .just-autocomplete-item.active {
+    background: var(--bg-elevated) !important;
+}
