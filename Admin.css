@@ -2968,3 +2968,24 @@ html[data-theme="dark"] .warning-box h4,
 html[data-theme="dark"] .success-box h4 {
     color: var(--text-primary);
 }
+
+/* ========================================
+   N.4 CUSTOM SCROLLBAR (Webkit)
+   ======================================== */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+}
