@@ -1395,6 +1395,15 @@ function mostrarModalFotosReales(fotos, empleado, fecha) {
         modalAnterior.remove();
     }
 
+    // Colores segun tema (este modal usa estilos inline)
+    const _dark = (typeof getCurrentTheme === 'function') && getCurrentTheme() === 'dark';
+    const _cBody    = _dark ? '#13263d' : 'white';
+    const _cCardBd  = _dark ? '#2a4a73' : '#dee2e6';
+    const _cInfoBg  = _dark ? '#1e3a5f' : '#f8f9fa';
+    const _cFotoBg  = _dark ? '#0d1b2a' : 'white';
+    const _cTxt     = _dark ? '#e8eef5' : '#495057';
+    const _cTxtSec  = _dark ? '#94a8c4' : '#6c757d';
+
     // Crear modal
     const modal = document.createElement('div');
     modal.id = 'modal-fotos-reales';
@@ -1414,7 +1423,7 @@ function mostrarModalFotosReales(fotos, empleado, fecha) {
 
     modal.innerHTML = `
         <div style="
-            background: white;
+            background: ${_cBody};
             border-radius: 10px;
             max-width: 90%;
             max-height: 90%;
@@ -1443,23 +1452,23 @@ function mostrarModalFotosReales(fotos, empleado, fecha) {
                     ${fotos.map((foto, index) => {
                         const rutaFoto = getSupabaseFotoUrl(foto.foto_url || foto.foto_registro, 'registros-fotos') || '';
                         return `
-                        <div style="border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <div style="border: 1px solid ${_cCardBd}; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                             <!-- Info del registro -->
-                            <div style="background: #f8f9fa; padding: 12px; border-bottom: 1px solid #dee2e6;">
+                            <div style="background: ${_cInfoBg}; padding: 12px; border-bottom: 1px solid ${_cCardBd};">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                                    <span style="font-weight: bold; color: #495057; font-size: 14px;">Registro #${index + 1}</span>
+                                    <span style="font-weight: bold; color: ${_cTxt}; font-size: 14px;">Registro #${index + 1}</span>
                                     <span style="background: ${foto.tipo_registro === 'ENTRADA' ? '#28a745' : '#dc3545'}; color: white; padding: 2px 6px; border-radius: 10px; font-size: 11px; font-weight: bold;">
                                         ${foto.tipo_registro}
                                     </span>
                                 </div>
-                                <div style="font-size: 12px; color: #6c757d;">
+                                <div style="font-size: 12px; color: ${_cTxtSec};">
                                    🕐 ${getMazatlanTime(foto.fecha_hora).toLocaleTimeString('en-US', { timeZone: 'America/Mazatlan' })}<br>
                                     🖥️ Tablet: ${foto.tablet_id || 'N/A'}
                                 </div>
                             </div>
-                            
+
                             <!-- FOTO REAL -->
-                            <div style="text-align: center; padding: 15px; background: white;">
+                            <div style="text-align: center; padding: 15px; background: ${_cFotoBg};">
                                 <img src="${rutaFoto}" 
                                      alt="Foto ${foto.tipo_registro}"
                                      style="max-width: 100%; height: 200px; object-fit: cover; border-radius: 5px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"
@@ -1487,7 +1496,7 @@ function mostrarModalFotosReales(fotos, empleado, fecha) {
             </div>
 
             <!-- FOOTER -->
-            <div style="background: #f8f9fa; padding: 15px; text-align: center; border-top: 1px solid #dee2e6; border-radius: 0 0 10px 10px;">
+            <div style="background: ${_cInfoBg}; padding: 15px; text-align: center; border-top: 1px solid ${_cCardBd}; border-radius: 0 0 10px 10px;">
                 <button class="btn-cerrar-modal-footer" 
                         style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
                     🔙 Cerrar
@@ -5277,14 +5286,14 @@ function addRequiredStyles() {
         
         .horas-trabajadas {
             font-weight: 500;
-            color: #1f2937;
+            color: var(--text-primary);
         }
-        
+
         .horas-objetivo {
             display: flex;
             align-items: center;
             gap: 5px;
-            color: #6b7280;
+            color: var(--text-secondary);
         }
         
         .estatus-badge {
@@ -5314,7 +5323,7 @@ function addRequiredStyles() {
         .tablet-info {
             font-family: monospace;
             font-size: 12px;
-            color: #6b7280;
+            color: var(--text-muted);
         }
         
         .foto-thumbnail {
@@ -5354,16 +5363,16 @@ function addRequiredStyles() {
         }
         
         .stats-card {
-            background: white;
+            background: var(--bg-surface);
             border-radius: 8px;
             padding: 20px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: var(--shadow-md);
         }
-        
+
         .stats-card h4 {
             margin: 0 0 15px 0;
-            color: #333;
+            color: var(--text-primary);
             font-size: 16px;
         }
         
@@ -5376,27 +5385,27 @@ function addRequiredStyles() {
         .stat-item {
             text-align: center;
             padding: 10px;
-            background: #f8f9fa;
+            background: var(--bg-elevated);
             border-radius: 6px;
         }
-        
+
         .stat-number {
             font-size: 24px;
             font-weight: bold;
-            color: #007bff;
+            color: var(--accent-primary);
             margin-bottom: 5px;
         }
-        
+
         .stat-label {
             font-size: 12px;
-            color: #666;
+            color: var(--text-secondary);
         }
-        
+
         .employee-rank {
             display: flex;
             align-items: center;
             padding: 8px 0;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid var(--border);
         }
         
         .employee-rank:last-child {
