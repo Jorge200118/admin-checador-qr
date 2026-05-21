@@ -106,6 +106,12 @@ function initTheme() {
     // Aqui solo sincronizamos el icono.
     const current = getCurrentTheme();
     _updateThemeToggleIcon(current);
+    // Setear defaults de Chart.js desde el arranque (charts se crean despues)
+    if (typeof Chart !== 'undefined') {
+        const _cc = getChartThemeColors();
+        Chart.defaults.color = _cc.text;
+        Chart.defaults.borderColor = _cc.grid;
+    }
 }
 
 function _updateMapTilesForTheme(theme) {
