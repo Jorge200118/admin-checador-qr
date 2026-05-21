@@ -97,23 +97,30 @@ async function _cargarDatosVacaciones() {
         const empRes = await SupabaseAPI.getEmpleados();
         if (!empRes.success) return { ok: false, error: empRes.message || 'No se pudo obtener empleados (Supabase)' };
 
-        // Traer FechaIngreso desde la API externa (BMS) y cruzar por codigo_empleado
-        const apiRes = await fetch(`${ADMIN_CONFIG.apiUrl}/empleados?limit=2000`);
+        // Traer FechaIngreso + Sucursal desde la API externa (BMS) y cruzar por codigo
+        const apiRes = await fetch(`${ADMIN_CONFIG.apiUrl}/empleados/lista-vacaciones`);
         if (!apiRes.ok) return { ok: false, error: 'No se pudo obtener empleados (API BMS)' };
         const apiJson = await apiRes.json();
-        const fechaPorCodigo = new Map();
+        const datosPorCodigo = new Map();
         for (const e of (apiJson.data || [])) {
             const cod = String(e.Empleado || '').trim();
-            if (cod && e.FechaIngreso) fechaPorCodigo.set(cod, e.FechaIngreso.substring(0, 10));
+            if (cod && e.FechaIngreso) {
+                datosPorCodigo.set(cod, {
+                    fecha_ingreso: e.FechaIngreso.substring(0, 10),
+                    sucursal: e.Sucursal || null
+                });
+            }
         }
 
         const empleados = empRes.data
             .filter(e => e.activo)
             .map(e => {
                 const cod = String(e.codigo_empleado || '').trim();
-                return { ...e, fecha_ingreso: fechaPorCodigo.get(cod) || null };
+                const datos = datosPorCodigo.get(cod);
+                if (!datos) return null;
+                return { ...e, fecha_ingreso: datos.fecha_ingreso, sucursal: datos.sucursal || e.sucursal };
             })
-            .filter(e => e.fecha_ingreso);
+            .filter(Boolean);
 
         const hace3años = (() => {
             const d = new Date(); d.setFullYear(d.getFullYear() - 3);
