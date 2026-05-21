@@ -5238,13 +5238,13 @@ function addRequiredStyles() {
         
         .empleado-nombre {
             font-weight: 500;
-            color: #1f2937;
+            color: var(--text-primary);
             font-size: 14px;
         }
-        
+
         .empleado-codigo {
             font-size: 12px;
-            color: #6b7280;
+            color: var(--text-muted);
         }
         
         .fecha-badge {
