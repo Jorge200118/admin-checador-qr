@@ -52,6 +52,18 @@ function getCurrentTheme() {
     return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
 }
 
+function getMapTileUrl(theme) {
+    return theme === 'dark'
+        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
+        : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+}
+
+function getMapTileAttribution(theme) {
+    return theme === 'dark'
+        ? '&copy; OpenStreetMap &copy; CARTO'
+        : '&copy; OpenStreetMap';
+}
+
 function applyTheme(theme) {
     if (theme === 'dark') {
         document.documentElement.setAttribute('data-theme', 'dark');
@@ -84,8 +96,17 @@ function initTheme() {
     _updateThemeToggleIcon(current);
 }
 
-// Stubs que se implementan en Fase 4 (mapas y charts)
-function _updateMapTilesForTheme(theme) { /* implementado en Fase 4 */ }
+function _updateMapTilesForTheme(theme) {
+    if (typeof geocercaMapState === 'undefined' || !geocercaMapState.map) return;
+    if (geocercaMapState.tileLayer) {
+        geocercaMapState.map.removeLayer(geocercaMapState.tileLayer);
+    }
+    const newLayer = L.tileLayer(getMapTileUrl(theme), {
+        attribution: getMapTileAttribution(theme),
+        maxZoom: 19
+    }).addTo(geocercaMapState.map);
+    geocercaMapState.tileLayer = newLayer;
+}
 function _updateChartsForTheme(theme) { /* implementado en Fase 4 */ }
 
 // Atajo de teclado Ctrl+Shift+D
@@ -8092,7 +8113,8 @@ async function loadGeocercas() {
 let geocercaMapState = {
     map: null,
     marker: null,
-    circle: null
+    circle: null,
+    tileLayer: null
 };
 
 async function openModalGeocerca(sucursalId) {
@@ -8172,15 +8194,18 @@ function initLeafletGeocerca(sucursal) {
         geocercaMapState.map = null;
         geocercaMapState.marker = null;
         geocercaMapState.circle = null;
+        geocercaMapState.tileLayer = null;
     }
 
     const map = L.map('mapaGeocerca').setView(centro, tieneCoords ? 17 : 6);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap',
+    const _theme = getCurrentTheme();
+    const tileLayer = L.tileLayer(getMapTileUrl(_theme), {
+        attribution: getMapTileAttribution(_theme),
         maxZoom: 19
     }).addTo(map);
 
     geocercaMapState.map = map;
+    geocercaMapState.tileLayer = tileLayer;
 
     if (tieneCoords) {
         ponerMarker(centro[0], centro[1]);
