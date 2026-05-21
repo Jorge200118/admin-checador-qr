@@ -64,6 +64,18 @@ function getMapTileAttribution(theme) {
         : '&copy; OpenStreetMap';
 }
 
+function getChartThemeColors() {
+    const s = getComputedStyle(document.documentElement);
+    return {
+        text: s.getPropertyValue('--text-secondary').trim() || '#64748b',
+        textStrong: s.getPropertyValue('--text-primary').trim() || '#1e293b',
+        muted: s.getPropertyValue('--text-muted').trim() || '#94a3b8',
+        grid: s.getPropertyValue('--border').trim() || '#f1f5f9',
+        border: s.getPropertyValue('--border-strong').trim() || '#e2e8f0',
+        surface: s.getPropertyValue('--bg-surface').trim() || '#ffffff'
+    };
+}
+
 function applyTheme(theme) {
     if (theme === 'dark') {
         document.documentElement.setAttribute('data-theme', 'dark');
@@ -107,7 +119,19 @@ function _updateMapTilesForTheme(theme) {
     }).addTo(geocercaMapState.map);
     geocercaMapState.tileLayer = newLayer;
 }
-function _updateChartsForTheme(theme) { /* implementado en Fase 4 */ }
+function _updateChartsForTheme(theme) {
+    if (typeof Chart === 'undefined') return;
+    const _cc = getChartThemeColors();
+    Chart.defaults.color = _cc.text;
+    Chart.defaults.borderColor = _cc.grid;
+    // Si la seccion de estadisticas esta activa y tiene charts, recargar para re-render con colores del tema
+    if (typeof _estCharts !== 'undefined' && Object.keys(_estCharts).length > 0) {
+        const seccionEst = document.getElementById('estadisticas');
+        if (seccionEst && seccionEst.classList.contains('active') && typeof cargarEstadisticas === 'function') {
+            cargarEstadisticas();
+        }
+    }
+}
 
 // Atajo de teclado Ctrl+Shift+D
 document.addEventListener('keydown', (e) => {
@@ -7118,6 +7142,13 @@ async function cargarEstadisticas() {
         const el = document.getElementById('estActualizadoEn');
         if (el) el.textContent = `Actualizado: ${new Date(json.actualizadoEn).toLocaleString('es-MX')}`;
 
+        // Aplicar colores del tema actual a Chart.js
+        if (typeof Chart !== 'undefined') {
+            const _cc = getChartThemeColors();
+            Chart.defaults.color = _cc.text;
+            Chart.defaults.borderColor = _cc.grid;
+        }
+
         // Destruir charts anteriores
         Object.values(_estCharts).forEach(c => c.destroy());
         _estCharts = {};
@@ -7223,6 +7254,7 @@ function _renderChartDona(canvasId, datos, campoLabel) {
     const ctx = document.getElementById(canvasId);
     if (!ctx || !datos || !datos.length) return;
 
+    const _cc = getChartThemeColors();
     const mapaLabel = campoLabel === 'sexo' ? LABEL_SEXO : campoLabel === 'estado_civil' ? LABEL_EC : null;
     const labels  = datos.map(d => mapaLabel ? _labelLegible(d[campoLabel], mapaLabel) : (d[campoLabel] || 'Sin dato'));
     const valores = datos.map(d => d.total);
@@ -7238,7 +7270,7 @@ function _renderChartDona(canvasId, datos, campoLabel) {
                 data: valores,
                 backgroundColor: colores,
                 borderWidth: 2,
-                borderColor: '#ffffff',
+                borderColor: _cc.surface,
                 hoverOffset: 6,
                 hoverBorderWidth: 0
             }]
@@ -7251,7 +7283,7 @@ function _renderChartDona(canvasId, datos, campoLabel) {
                 legend: {
                     position: 'right',
                     labels: {
-                        color: '#374151',
+                        color: _cc.textStrong,
                         font: { size: 11, family: 'Inter, sans-serif' },
                         boxWidth: 10, boxHeight: 10,
                         borderRadius: 3,
@@ -7288,6 +7320,7 @@ function _renderChartBarrasV(canvasId, datos) {
     const ctx = document.getElementById(canvasId);
     if (!ctx || !datos || !datos.length) return;
 
+    const _cc = getChartThemeColors();
     const valores = Array(12).fill(0);
     datos.forEach(d => { valores[d.mes - 1] = d.total; });
     const mesActual = new Date().getMonth(); // 0-based
@@ -7326,13 +7359,13 @@ function _renderChartBarrasV(canvasId, datos) {
             },
             scales: {
                 x: {
-                    ticks: { color: '#64748b', font: { size: 11 } },
+                    ticks: { color: _cc.text, font: { size: 11 } },
                     grid:  { display: false },
-                    border: { color: '#e2e8f0' }
+                    border: { color: _cc.border }
                 },
                 y: {
-                    ticks: { color: '#94a3b8', font: { size: 10 }, stepSize: 1, precision: 0 },
-                    grid:  { color: '#f1f5f9', drawTicks: false },
+                    ticks: { color: _cc.muted, font: { size: 10 }, stepSize: 1, precision: 0 },
+                    grid:  { color: _cc.grid, drawTicks: false },
                     border: { dash: [3,3], color: 'transparent' },
                     beginAtZero: true
                 }
@@ -7345,6 +7378,7 @@ function _renderChartBarrasH(canvasId, datos, campoLabel, colorBase = '#3b82f6')
     const ctx = document.getElementById(canvasId);
     if (!ctx || !datos || !datos.length) return;
 
+    const _cc = getChartThemeColors();
     // Tomar top 10 para que no se amontone
     const top10 = datos.slice(0, 10);
     const labels = top10.map(d => d[campoLabel] || 'Sin dato');
@@ -7394,7 +7428,7 @@ function _renderChartBarrasH(canvasId, datos, campoLabel, colorBase = '#3b82f6')
                 },
                 y: {
                     ticks: {
-                        color: '#374151',
+                        color: _cc.textStrong,
                         font: { size: 11, weight: '500' },
                         callback(val) {
                             const lbl = this.getLabelForValue(val);
@@ -7415,6 +7449,7 @@ function _renderChartBarrasRangos(canvasId, datos, colorBase = '#3b82f6') {
     const ctx = document.getElementById(canvasId);
     if (!ctx || !datos || !datos.length) return;
 
+    const _cc = getChartThemeColors();
     const ordenados = [...datos].sort((a, b) => (a.orden ?? 99) - (b.orden ?? 99));
     const labels  = ordenados.map(d => d.rango || 'Sin dato');
     const valores = ordenados.map(d => d.total);
@@ -7461,13 +7496,13 @@ function _renderChartBarrasRangos(canvasId, datos, colorBase = '#3b82f6') {
             },
             scales: {
                 x: {
-                    ticks: { color: '#475569', font: { size: 11, weight: '500' } },
+                    ticks: { color: _cc.text, font: { size: 11, weight: '500' } },
                     grid:  { display: false },
-                    border: { color: '#e2e8f0' }
+                    border: { color: _cc.border }
                 },
                 y: {
-                    ticks: { color: '#94a3b8', font: { size: 10 }, stepSize: 1, precision: 0 },
-                    grid:  { color: '#f1f5f9', drawTicks: false },
+                    ticks: { color: _cc.muted, font: { size: 10 }, stepSize: 1, precision: 0 },
+                    grid:  { color: _cc.grid, drawTicks: false },
                     border: { dash: [3, 3], color: 'transparent' },
                     beginAtZero: true
                 }
