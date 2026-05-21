@@ -865,9 +865,9 @@ tbody tr:hover {
 }
 
 .chip-shortcut {
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
-    color: #475569;
+    background: var(--bg-app);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
     padding: 5px 12px;
     border-radius: 999px;
     font-size: 12px;
@@ -877,9 +877,9 @@ tbody tr:hover {
     line-height: 1;
 }
 .chip-shortcut:hover {
-    background: #3b82f6;
-    border-color: #3b82f6;
-    color: #fff;
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: var(--text-inverse);
 }
 .chip-shortcut:active {
     transform: scale(.97);
@@ -1003,7 +1003,7 @@ tbody tr:hover {
 }
 
 .modal-content {
-    background: white;
+    background: var(--bg-surface);
     border-radius: 12px;
     max-width: 500px;
     width: 92%;
@@ -1021,13 +1021,13 @@ tbody tr:hover {
     justify-content: space-between;
     align-items: center;
     padding: 18px 24px;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--border);
 }
 
 .modal-header h3 {
     font-size: 1.1rem;
     font-weight: 700;
-    color: #0f172a;
+    color: var(--text-primary);
 }
 
 .close {
@@ -1035,7 +1035,7 @@ tbody tr:hover {
     border: none;
     font-size: 1.5rem;
     cursor: pointer;
-    color: #94a3b8;
+    color: var(--text-muted);
     width: 32px;
     height: 32px;
     display: flex;
@@ -1046,7 +1046,7 @@ tbody tr:hover {
 }
 
 .close:hover {
-    background: #f1f5f9;
+    background: var(--bg-app);
     color: #334155;
 }
 
@@ -1058,7 +1058,7 @@ tbody tr:hover {
 
 .modal-footer {
     padding: 16px 24px;
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid var(--border);
     display: flex;
     justify-content: flex-end;
     gap: 8px;
@@ -1152,8 +1152,8 @@ tbody tr:hover {
     top: 100%;
     left: 0;
     right: 0;
-    background: white;
-    border: 1px solid #e2e8f0;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
     border-radius: 8px;
     max-height: 220px;
     overflow-y: auto;
@@ -1166,7 +1166,7 @@ tbody tr:hover {
 .suggestion-item {
     padding: 10px 14px;
     cursor: pointer;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--bg-app);
     transition: background 0.1s;
 }
 
@@ -1176,11 +1176,11 @@ tbody tr:hover {
 
 .suggestion-item:hover,
 .suggestion-item.selected {
-    background: #f1f5f9;
+    background: var(--bg-app);
 }
 
 .suggestion-item.no-results {
-    color: #94a3b8;
+    color: var(--text-muted);
     cursor: default;
     font-style: italic;
 }
@@ -1228,7 +1228,7 @@ tbody tr:hover {
     height: 36px;
     border-radius: 8px;
     object-fit: cover;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border);
     background: linear-gradient(135deg, #3b82f6, #6366f1);
 }
 
@@ -1238,7 +1238,7 @@ tbody tr:hover {
 }
 
 .employee-info small {
-    color: #94a3b8;
+    color: var(--text-muted);
     font-size: 0.72rem;
 }
 
@@ -1251,8 +1251,8 @@ tbody tr:hover {
 }
 
 .bloque-item {
-    background: white;
-    border: 1px solid #e2e8f0;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
     border-radius: 8px;
     padding: 16px;
     margin-bottom: 12px;
@@ -1264,18 +1264,18 @@ tbody tr:hover {
     align-items: center;
     margin-bottom: 12px;
     padding-bottom: 8px;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--bg-app);
 }
 
 .bloque-number {
     font-weight: 700;
-    color: #0f172a;
+    color: var(--text-primary);
     font-size: 0.9rem;
 }
 
 .btn-remove-bloque {
     background: #fee2e2;
-    color: #dc2626;
+    color: var(--accent-danger-hover);
     border: none;
     padding: 4px 10px;
     border-radius: 6px;
@@ -1286,8 +1286,8 @@ tbody tr:hover {
 }
 
 .btn-remove-bloque:hover {
-    background: #ef4444;
-    color: white;
+    background: var(--accent-danger);
+    color: var(--text-inverse);
 }
 
 /* ========================================
@@ -1319,7 +1319,7 @@ tbody tr:hover {
 }
 
 .date-range span {
-    color: #94a3b8;
+    color: var(--text-muted);
     font-size: 0.82rem;
 }
 
@@ -1346,11 +1346,11 @@ tbody tr:hover {
     align-items: center;
     margin-top: 16px;
     padding-top: 16px;
-    border-top: 1px solid #f1f5f9;
+    border-top: 1px solid var(--bg-app);
 }
 
 .pagination-info {
-    color: #94a3b8;
+    color: var(--text-muted);
     font-size: 0.8rem;
 }
 
@@ -1362,11 +1362,11 @@ tbody tr:hover {
 
 .btn-pagination {
     padding: 6px 12px;
-    border: 1px solid #e2e8f0;
-    background: white;
+    border: 1px solid var(--border);
+    background: var(--bg-surface);
     border-radius: 6px;
     cursor: pointer;
-    color: #475569;
+    color: var(--text-secondary);
     font-size: 0.8rem;
     display: flex;
     align-items: center;
@@ -1375,8 +1375,8 @@ tbody tr:hover {
 }
 
 .btn-pagination:hover {
-    background: #f1f5f9;
-    border-color: #cbd5e1;
+    background: var(--bg-app);
+    border-color: var(--border-strong);
 }
 
 .btn-pagination:disabled {
@@ -1393,27 +1393,27 @@ tbody tr:hover {
 .btn-page {
     width: 32px;
     height: 32px;
-    border: 1px solid #e2e8f0;
-    background: white;
+    border: 1px solid var(--border);
+    background: var(--bg-surface);
     border-radius: 6px;
     cursor: pointer;
-    color: #475569;
+    color: var(--text-secondary);
     font-size: 0.8rem;
     transition: all 0.15s;
 }
 
 .btn-page.active {
-    background: #3b82f6;
-    color: white;
-    border-color: #3b82f6;
+    background: var(--accent-primary);
+    color: var(--text-inverse);
+    border-color: var(--accent-primary);
 }
 
 .btn-page:hover:not(.active) {
-    background: #f1f5f9;
+    background: var(--bg-app);
 }
 
 .pagination-dots {
-    color: #94a3b8;
+    color: var(--text-muted);
     padding: 0 4px;
 }
 
@@ -1435,23 +1435,23 @@ tbody tr:hover {
 }
 
 .loading-content {
-    background: white;
+    background: var(--bg-surface);
     padding: 28px 36px;
     border-radius: 12px;
     text-align: center;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border);
 }
 
 .loading-content i {
     font-size: 1.8rem;
-    color: #3b82f6;
+    color: var(--accent-primary);
     margin-bottom: 12px;
 }
 
 .loading-content p {
     margin: 0;
-    color: #475569;
+    color: var(--text-secondary);
     font-weight: 500;
     font-size: 0.9rem;
 }
@@ -1491,12 +1491,12 @@ tbody tr:hover {
 }
 
 .loading-text {
-    color: #94a3b8;
+    color: var(--text-muted);
     font-style: italic;
 }
 
 .error-text {
-    color: #ef4444;
+    color: var(--accent-danger);
     font-weight: 500;
 }
 
@@ -1505,17 +1505,17 @@ tbody tr:hover {
    ======================================== */
 .qr-container {
     padding: 20px;
-    background: #f8fafc;
+    background: var(--bg-elevated);
     border-radius: 8px;
     margin: 12px 0;
     text-align: center;
 }
 
 .qr-container img {
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border);
     border-radius: 8px;
     padding: 8px;
-    background: white;
+    background: var(--bg-surface);
 }
 
 /* ========================================
@@ -1537,7 +1537,7 @@ tbody tr:hover {
     margin-top: 20px;
     text-align: center;
     padding: 16px;
-    background: #f8fafc;
+    background: var(--bg-elevated);
     border-radius: 8px;
 }
 
@@ -1595,12 +1595,12 @@ tbody tr:hover {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+    background: var(--scrollbar-thumb);
     border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+    background: var(--scrollbar-thumb-hover);
 }
 
 /* ========================================
@@ -1617,8 +1617,8 @@ tbody tr:hover {
     bottom: 100%;
     left: 50%;
     transform: translateX(-50%);
-    background: #0f172a;
-    color: white;
+    background: var(--text-primary);
+    color: var(--text-inverse);
     padding: 6px 10px;
     border-radius: 6px;
     font-size: 0.72rem;
@@ -1650,7 +1650,7 @@ tbody tr:hover {
     justify-content: space-between;
     margin-bottom: 28px;
     padding: 18px;
-    background: #f8fafc;
+    background: var(--bg-elevated);
     border-radius: 8px;
 }
 
@@ -1667,8 +1667,8 @@ tbody tr:hover {
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: #e2e8f0;
-    color: #94a3b8;
+    background: var(--border);
+    color: var(--text-muted);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1678,14 +1678,14 @@ tbody tr:hover {
 }
 
 .step-indicator.active .step-number {
-    background: #3b82f6;
-    color: white;
+    background: var(--accent-primary);
+    color: var(--text-inverse);
     box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
 }
 
 .step-indicator.completed .step-number {
-    background: #10b981;
-    color: white;
+    background: var(--accent-success);
+    color: var(--text-inverse);
 }
 
 .step-indicator.completed .step-number::after {
@@ -1694,7 +1694,7 @@ tbody tr:hover {
 
 .step-label {
     font-size: 0.68rem;
-    color: #94a3b8;
+    color: var(--text-muted);
     text-align: center;
     font-weight: 600;
     text-transform: uppercase;
@@ -1702,18 +1702,18 @@ tbody tr:hover {
 }
 
 .step-indicator.active .step-label {
-    color: #3b82f6;
+    color: var(--accent-primary);
 }
 
 .step-connector {
     height: 2px;
-    background: #e2e8f0;
+    background: var(--border);
     flex: 1;
     margin: 0 -10px 20px;
 }
 
 .step-indicator.completed + .step-connector {
-    background: #10b981;
+    background: var(--accent-success);
 }
 
 .tutorial-content {
@@ -1731,7 +1731,7 @@ tbody tr:hover {
 }
 
 .tutorial-step h3 {
-    color: #0f172a;
+    color: var(--text-primary);
     margin-bottom: 18px;
     font-size: 1.3rem;
     display: flex;
@@ -1740,13 +1740,13 @@ tbody tr:hover {
 }
 
 .tutorial-step h3 i {
-    color: #3b82f6;
+    color: var(--accent-primary);
 }
 
 .step-icon {
     text-align: center;
     margin: 18px 0;
-    color: #3b82f6;
+    color: var(--accent-primary);
 }
 
 /* Info boxes */
@@ -1758,7 +1758,7 @@ tbody tr:hover {
 
 .info-box {
     background: #eff6ff;
-    border-left: 3px solid #3b82f6;
+    border-left: 3px solid var(--accent-primary);
 }
 
 .info-box h4 {
@@ -1772,19 +1772,19 @@ tbody tr:hover {
 
 .info-box ul { list-style: none; margin-top: 8px; }
 .info-box li { padding: 3px 0; color: #1e40af; font-size: 0.84rem; }
-.info-box li i { color: #10b981; margin-right: 8px; }
+.info-box li i { color: var(--accent-success); margin-right: 8px; }
 
 .warning-box {
     background: #fffbeb;
-    border-left: 3px solid #f59e0b;
+    border-left: 3px solid var(--accent-warning);
 }
 
-.warning-box i { color: #f59e0b; margin-right: 8px; }
+.warning-box i { color: var(--accent-warning); margin-right: 8px; }
 .warning-box strong { color: #92400e; }
 
 .success-box {
     background: #f0fdf4;
-    border-left: 3px solid #10b981;
+    border-left: 3px solid var(--accent-success);
 }
 
 .success-box h4 {
@@ -1795,27 +1795,27 @@ tbody tr:hover {
     gap: 8px;
 }
 
-.success-box i { color: #10b981; }
+.success-box i { color: var(--accent-success); }
 
 .time-estimate {
     text-align: center;
     padding: 14px;
-    background: #f8fafc;
+    background: var(--bg-elevated);
     border-radius: 6px;
     margin: 16px 0;
-    color: #475569;
+    color: var(--text-secondary);
     font-size: 0.84rem;
 }
 
-.time-estimate i { color: #3b82f6; margin-right: 6px; }
+.time-estimate i { color: var(--accent-primary); margin-right: 6px; }
 
 /* Tutorial fields */
 .tutorial-field {
     margin-bottom: 24px;
     padding: 18px;
-    background: #f8fafc;
+    background: var(--bg-elevated);
     border-radius: 8px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border);
 }
 
 .field-demo {
@@ -1834,10 +1834,10 @@ tbody tr:hover {
 .demo-input {
     width: 100%;
     padding: 10px;
-    border: 2px solid #e2e8f0;
+    border: 2px solid var(--border);
     border-radius: 6px;
     font-size: 0.84rem;
-    background: white;
+    background: var(--bg-surface);
 }
 
 .required-badge, .optional-badge {
@@ -1861,46 +1861,46 @@ tbody tr:hover {
 }
 
 .file-upload-demo {
-    border: 2px dashed #cbd5e1;
+    border: 2px dashed var(--border-strong);
     border-radius: 8px;
     padding: 36px;
     text-align: center;
-    color: #94a3b8;
-    background: white;
+    color: var(--text-muted);
+    background: var(--bg-surface);
 }
 
 .file-upload-demo i {
-    color: #cbd5e1;
+    color: var(--border-strong);
     margin-bottom: 8px;
 }
 
 .field-explanation {
     padding-left: 14px;
-    border-left: 3px solid #e2e8f0;
+    border-left: 3px solid var(--border);
 }
 
 .field-explanation h4 {
-    color: #0f172a;
+    color: var(--text-primary);
     margin-bottom: 6px;
     font-size: 0.92rem;
 }
 
 .field-explanation p {
-    color: #475569;
+    color: var(--text-secondary);
     line-height: 1.6;
     margin-bottom: 8px;
     font-size: 0.84rem;
 }
 
 .tips {
-    background: white;
+    background: var(--bg-surface);
     padding: 14px;
     border-radius: 6px;
     margin-top: 8px;
 }
 
 .tips strong {
-    color: #0f172a;
+    color: var(--text-primary);
     display: block;
     margin-bottom: 6px;
     font-size: 0.84rem;
@@ -1910,7 +1910,7 @@ tbody tr:hover {
 
 .tips li {
     padding: 3px 0;
-    color: #475569;
+    color: var(--text-secondary);
     position: relative;
     padding-left: 18px;
     font-size: 0.82rem;
@@ -1920,19 +1920,19 @@ tbody tr:hover {
     content: "\2192";
     position: absolute;
     left: 0;
-    color: #3b82f6;
+    color: var(--accent-primary);
     font-weight: bold;
 }
 
 .next-steps {
-    background: #f8fafc;
+    background: var(--bg-elevated);
     padding: 18px;
     border-radius: 8px;
     margin-top: 16px;
 }
 
 .next-steps h4 {
-    color: #0f172a;
+    color: var(--text-primary);
     margin-bottom: 12px;
     display: flex;
     align-items: center;
@@ -1940,8 +1940,8 @@ tbody tr:hover {
     font-size: 0.92rem;
 }
 
-.next-steps i { color: #3b82f6; }
-.next-steps ol { color: #475569; padding-left: 20px; font-size: 0.84rem; }
+.next-steps i { color: var(--accent-primary); }
+.next-steps ol { color: var(--text-secondary); padding-left: 20px; font-size: 0.84rem; }
 .next-steps li { padding: 4px 0; line-height: 1.6; }
 
 .tutorial-footer {
@@ -1949,20 +1949,20 @@ tbody tr:hover {
     justify-content: space-between;
     align-items: center;
     padding: 18px 24px;
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid var(--border);
 }
 
 .tutorial-step-counter {
     padding: 6px 14px;
-    background: #f1f5f9;
+    background: var(--bg-app);
     border-radius: 20px;
     font-weight: 600;
-    color: #475569;
+    color: var(--text-secondary);
     font-size: 0.82rem;
 }
 
 .tutorial-step-counter span {
-    color: #3b82f6;
+    color: var(--accent-primary);
     font-size: 1rem;
 }
 
@@ -1973,7 +1973,7 @@ tbody tr:hover {
     display: flex;
     align-items: center;
     gap: 8px;
-    color: #94a3b8;
+    color: var(--text-muted);
     font-size: 0.82rem;
 }
 
@@ -2107,7 +2107,7 @@ tbody tr:hover {
     align-items: center;
     margin-bottom: 16px;
     padding: 12px;
-    background: #f8fafc;
+    background: var(--bg-elevated);
     border-radius: 8px;
     flex-wrap: wrap;
     gap: 12px;
@@ -2120,7 +2120,7 @@ tbody tr:hover {
 #modalResumenGeneral .table-container {
     max-height: 60vh;
     overflow-y: auto;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border);
     border-radius: 8px;
 }
 
@@ -2131,35 +2131,35 @@ tbody tr:hover {
 #tablaResumenGeneral th {
     position: sticky;
     top: 0;
-    background: #f8fafc;
+    background: var(--bg-elevated);
     z-index: 10;
     cursor: pointer;
     user-select: none;
 }
 
 #tablaResumenGeneral th:hover {
-    background: #f1f5f9;
+    background: var(--bg-app);
 }
 
 #tablaResumenGeneral th i {
     margin-left: 4px;
     font-size: 0.7rem;
-    color: #94a3b8;
+    color: var(--text-muted);
 }
 
 #tablaResumenGeneral tbody tr:hover {
-    background: #f8fafc;
+    background: var(--bg-elevated);
 }
 
 #statsResumenGeneral {
     margin-top: 16px;
     padding: 14px;
-    background: #f8fafc;
+    background: var(--bg-elevated);
     border-radius: 8px;
     display: flex;
     justify-content: space-around;
     font-size: 0.85rem;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border);
 }
 
 #statsResumenGeneral > div {
@@ -2215,7 +2215,7 @@ tbody tr:hover {
     bottom: 0;
     width: 100%;
     height: 100%;
-    background: #fff;
+    background: var(--bg-surface);
     z-index: 20;
     display: none;
     flex-direction: column;
@@ -2235,8 +2235,8 @@ tbody tr:hover {
 
 .detalle-header {
     padding: 16px 20px;
-    border-bottom: 1px solid #e2e8f0;
-    background: #f8fafc;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-elevated);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -2245,20 +2245,20 @@ tbody tr:hover {
 }
 
 .btn-back {
-    background: #fff;
-    border: 1px solid #e2e8f0;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
     border-radius: 8px;
     padding: 8px 12px;
     cursor: pointer;
-    color: #475569;
+    color: var(--text-secondary);
     font-size: 0.9rem;
     transition: all 0.15s;
 }
 
 .btn-back:hover {
-    background: #f1f5f9;
-    color: #0f172a;
-    border-color: #cbd5e1;
+    background: var(--bg-app);
+    color: var(--text-primary);
+    border-color: var(--border-strong);
 }
 
 .detalle-stats-mini {
@@ -2276,7 +2276,7 @@ tbody tr:hover {
 .detalle-stats-mini .stat-label {
     font-size: 0.65rem;
     text-transform: uppercase;
-    color: #94a3b8;
+    color: var(--text-muted);
     letter-spacing: 0.5px;
 }
 
@@ -2300,12 +2300,12 @@ tbody tr:hover {
 .detalle-tabla thead th {
     position: sticky;
     top: 0;
-    background: #f1f5f9;
+    background: var(--bg-app);
     padding: 10px 12px;
     text-align: left;
     font-weight: 600;
-    color: #475569;
-    border-bottom: 2px solid #e2e8f0;
+    color: var(--text-secondary);
+    border-bottom: 2px solid var(--border);
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.3px;
@@ -2314,12 +2314,12 @@ tbody tr:hover {
 
 .detalle-tabla tbody td {
     padding: 9px 12px;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--bg-app);
     color: #334155;
 }
 
 .detalle-tabla tbody tr:hover {
-    background: #f8fafc;
+    background: var(--bg-elevated);
 }
 
 .detalle-tabla tbody tr.detalle-falta {
@@ -2332,7 +2332,7 @@ tbody tr:hover {
 
 .dia-semana {
     font-size: 0.7rem;
-    color: #94a3b8;
+    color: var(--text-muted);
     text-transform: uppercase;
     margin-left: 4px;
 }
@@ -2395,9 +2395,9 @@ tbody tr:hover {
     }
 }
 
-.vac-tab { background:#e2e8f0; color:#475569; border:none; cursor:pointer; padding:6px 14px; border-radius:6px; font-size:13px; font-weight:500; }
-.vac-tab:hover { background:#cbd5e1; }
-.vac-tab-active, .vac-tab-active:hover { background:#3b82f6; color:#fff; }
+.vac-tab { background:var(--border); color:var(--text-secondary); border:none; cursor:pointer; padding:6px 14px; border-radius:6px; font-size:13px; font-weight:500; }
+.vac-tab:hover { background:var(--border-strong); }
+.vac-tab-active, .vac-tab-active:hover { background:var(--accent-primary); color:var(--text-inverse); }
 
 /* Justificaciones */
 #justMotivo {
@@ -2406,7 +2406,7 @@ tbody tr:hover {
 }
 
 .required-asterisk {
-    color: #ef4444;
+    color: var(--accent-danger);
     font-weight: bold;
 }
 
@@ -2420,7 +2420,7 @@ tbody tr:hover {
     top: 100%;
     left: 0;
     right: 0;
-    background: white;
+    background: var(--bg-surface);
     border: 1px solid #d1d5db;
     border-top: none;
     border-radius: 0 0 8px 8px;
@@ -2503,7 +2503,7 @@ tbody tr:hover {
 
 .just-badge-remove:hover {
     opacity: 1;
-    color: #ef4444;
+    color: var(--accent-danger);
 }
 
 .just-dias-resumen {
@@ -2519,12 +2519,12 @@ tbody tr:hover {
 
 .form-input.field-error,
 .form-select.field-error {
-    border-color: #ef4444 !important;
+    border-color: var(--accent-danger) !important;
     box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
 }
 
 .field-error-msg {
-    color: #ef4444;
+    color: var(--accent-danger);
     font-size: 12px;
     margin-top: 4px;
 }
@@ -2541,16 +2541,16 @@ tbody tr:hover {
     width: 40px;
     height: 40px;
     background: transparent;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--border);
     border-radius: 8px;
     cursor: pointer;
-    color: #475569;
+    color: var(--text-secondary);
     font-size: 1.1rem;
     flex-shrink: 0;
     transition: background 0.15s;
 }
 .btn-hamburger:hover {
-    background: #f1f5f9;
+    background: var(--bg-app);
 }
 
 /* Overlay oscuro cuando sidebar está abierto en móvil */
@@ -2672,7 +2672,7 @@ tbody tr:hover {
     align-items: center;
     gap: 6px;
     font-size: 14px;
-    color: #475569;
+    color: var(--text-secondary);
     cursor: pointer;
 }
 
@@ -2687,8 +2687,8 @@ tbody tr:hover {
 .disp-badge.inactivo { background: #fee2e2; color: #991b1b; }
 
 .btn-desvincular {
-    background: #dc2626;
-    color: white;
+    background: var(--accent-danger-hover);
+    color: var(--text-inverse);
     border: none;
     padding: 8px 14px;
     border-radius: 8px;
@@ -2714,7 +2714,7 @@ tbody tr:hover {
 }
 
 #geoRadio {
-    accent-color: #2563eb;
+    accent-color: var(--accent-primary-hover);
 }
 
 .geo-badge-activa {
