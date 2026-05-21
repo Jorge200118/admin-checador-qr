@@ -3121,3 +3121,25 @@ html[data-theme="dark"] #absentismo [style*="#f1f5f9"],
 html[data-theme="dark"] #absentismo [style*="#e2e8f0"] {
     border-color: var(--border) !important;
 }
+
+/* ========================================
+   N.7 OVERRIDES MODO NOCHE - NITS (badges justif, textos boxes)
+   ======================================== */
+html[data-theme="dark"] .just-empleado-badge {
+    background: var(--bg-info-soft);
+    color: var(--accent-primary);
+}
+
+html[data-theme="dark"] .just-dias-resumen {
+    background: var(--bg-success-soft);
+    color: var(--text-primary);
+}
+
+html[data-theme="dark"] .info-box li,
+html[data-theme="dark"] .warning-box strong {
+    color: var(--text-primary);
+}
+
+html[data-theme="dark"] .detalle-tabla tbody tr.detalle-falta:hover {
+    background: var(--bg-danger-soft);
+}
