@@ -183,6 +183,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+// key: nombre de columna a ordenar; dir: 'asc' | 'desc' | null (default por urgencia)
+window._vacSaldosSort = { key: null, dir: null };
+
 function _filasVacSaldos() {
     const { empleados, vacacionesPorEmp } = window._vacState;
     const filtSuc = document.getElementById('vacFiltSucursal')?.value || '';
@@ -209,8 +212,36 @@ function _filasVacSaldos() {
             diasParaVencer: s.diasParaVencer
         });
     }
-    rows.sort((a, b) => a.diasParaVencer - b.diasParaVencer);
+    const { key, dir } = window._vacSaldosSort;
+    if (!key || !dir) {
+        rows.sort((a, b) => a.diasParaVencer - b.diasParaVencer);
+    } else {
+        const mult = dir === 'asc' ? 1 : -1;
+        rows.sort((a, b) => {
+            const va = a[key], vb = b[key];
+            if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * mult;
+            return String(va).localeCompare(String(vb), 'es') * mult;
+        });
+    }
     return rows;
+}
+
+function ordenarVacSaldos(key) {
+    const cur = window._vacSaldosSort;
+    if (cur.key !== key) { cur.key = key; cur.dir = 'asc'; }
+    else if (cur.dir === 'asc') cur.dir = 'desc';
+    else { cur.key = null; cur.dir = null; }
+    renderVacSaldos();
+}
+
+function _vacSortIcon(key) {
+    const { key: k, dir } = window._vacSaldosSort;
+    if (k !== key) return '<span style="color:#cbd5e1;font-size:10px;margin-left:4px;">▲▼</span>';
+    return `<span style="color:#3b82f6;font-size:10px;margin-left:4px;">${dir === 'asc' ? '▲' : '▼'}</span>`;
+}
+
+function _vacTh(label, key, align) {
+    return `<th onclick="ordenarVacSaldos('${key}')" style="padding:10px;text-align:${align};color:#475569;font-size:12px;cursor:pointer;user-select:none;">${label}${_vacSortIcon(key)}</th>`;
 }
 
 function renderVacSaldos() {
@@ -225,6 +256,7 @@ function renderVacSaldos() {
     const filas = rows.map(r => {
         const urgente = r.diasParaVencer <= 60 && r.restantes > 0;
         const colorRest = r.restantes === 0 ? '#94a3b8' : (r.restantes <= 3 ? '#f59e0b' : '#22c55e');
+        const colorDias = r.diasParaVencer <= 15 ? '#dc2626' : (urgente ? '#f59e0b' : '#94a3b8');
         return `
         <tr>
             <td style="padding:8px;">${r.nombre}</td>
@@ -233,23 +265,22 @@ function renderVacSaldos() {
             <td style="padding:8px;text-align:right;">${r.derecho}</td>
             <td style="padding:8px;text-align:right;color:#3b82f6;">${r.tomados}</td>
             <td style="padding:8px;text-align:right;color:${colorRest};font-weight:600;">${r.restantes}</td>
-            <td style="padding:8px;text-align:center;color:${urgente ? '#f59e0b' : '#94a3b8'};">
-                ${_vacFormatFechaCorta(r.fechaLimite)}
-                ${urgente ? `<br><small>${r.diasParaVencer} días</small>` : ''}
-            </td>
+            <td style="padding:8px;text-align:center;color:${urgente ? '#f59e0b' : '#475569'};">${_vacFormatFechaCorta(r.fechaLimite)}</td>
+            <td style="padding:8px;text-align:right;color:${colorDias};">${r.diasParaVencer}</td>
         </tr>`;
     }).join('');
     cont.innerHTML = `
         <table style="width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06);">
             <thead style="background:#f1f5f9;">
                 <tr>
-                    <th style="padding:10px;text-align:left;color:#475569;font-size:12px;">Empleado</th>
-                    <th style="padding:10px;text-align:left;color:#475569;font-size:12px;">Sucursal</th>
-                    <th style="padding:10px;text-align:center;color:#475569;font-size:12px;">Servicio</th>
-                    <th style="padding:10px;text-align:right;color:#475569;font-size:12px;">Derecho</th>
-                    <th style="padding:10px;text-align:right;color:#475569;font-size:12px;">Tomados</th>
-                    <th style="padding:10px;text-align:right;color:#475569;font-size:12px;">Restantes</th>
-                    <th style="padding:10px;text-align:center;color:#475569;font-size:12px;">Vence</th>
+                    ${_vacTh('Empleado', 'nombre', 'left')}
+                    ${_vacTh('Sucursal', 'sucursal', 'left')}
+                    ${_vacTh('Servicio', 'añoServicio', 'center')}
+                    ${_vacTh('Derecho', 'derecho', 'right')}
+                    ${_vacTh('Tomados', 'tomados', 'right')}
+                    ${_vacTh('Restantes', 'restantes', 'right')}
+                    ${_vacTh('Fecha límite', 'fechaLimite', 'center')}
+                    ${_vacTh('Días para vencer', 'diasParaVencer', 'right')}
                 </tr>
             </thead>
             <tbody>${filas}</tbody>
