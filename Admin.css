@@ -2910,3 +2910,61 @@ html[data-theme="dark"] .table {
 html[data-theme="dark"] td {
     border-color: var(--border);
 }
+
+/* ========================================
+   N.3 OVERRIDES MODO NOCHE - MODALES
+   ======================================== */
+html[data-theme="dark"] .modal {
+    background: var(--bg-overlay);
+}
+
+html[data-theme="dark"] .modal-content {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-lg);
+}
+
+html[data-theme="dark"] .modal-header {
+    background: var(--bg-elevated);
+    border-bottom-color: var(--border);
+}
+
+html[data-theme="dark"] .modal-header h3 {
+    color: var(--text-primary);
+}
+
+html[data-theme="dark"] .modal-body {
+    color: var(--text-primary);
+}
+
+html[data-theme="dark"] .close {
+    color: var(--text-secondary);
+}
+
+html[data-theme="dark"] .close:hover {
+    color: var(--text-primary);
+}
+
+html[data-theme="dark"] .info-box {
+    background: var(--bg-info-soft);
+    border-left-color: var(--accent-primary);
+    color: var(--text-primary);
+}
+
+html[data-theme="dark"] .warning-box {
+    background: var(--bg-warning-soft);
+    border-left-color: var(--accent-warning);
+    color: var(--text-primary);
+}
+
+html[data-theme="dark"] .success-box {
+    background: var(--bg-success-soft);
+    border-left-color: var(--accent-success);
+    color: var(--text-primary);
+}
+
+html[data-theme="dark"] .info-box h4,
+html[data-theme="dark"] .warning-box h4,
+html[data-theme="dark"] .success-box h4 {
+    color: var(--text-primary);
+}
