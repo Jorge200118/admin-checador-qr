@@ -2989,3 +2989,98 @@ html[data-theme="dark"] .success-box h4 {
 ::-webkit-scrollbar-thumb:hover {
     background: var(--scrollbar-thumb-hover);
 }
+
+/* ========================================
+   N.5 OVERRIDES MODO NOCHE - BADGES Y ESTADOS
+   ======================================== */
+html[data-theme="dark"] .estatus-badge.activo,
+html[data-theme="dark"] .status-presente,
+html[data-theme="dark"] .badge-success,
+html[data-theme="dark"] .disp-badge.activo {
+    background: var(--bg-success-soft);
+    color: var(--accent-success);
+}
+
+html[data-theme="dark"] .estatus-badge.inactivo,
+html[data-theme="dark"] .status-falta,
+html[data-theme="dark"] .badge-danger,
+html[data-theme="dark"] .disp-badge.inactivo {
+    background: var(--bg-danger-soft);
+    color: var(--accent-danger);
+}
+
+html[data-theme="dark"] .estatus-badge.pendiente,
+html[data-theme="dark"] .status-retardo,
+html[data-theme="dark"] .badge-warning {
+    background: var(--bg-warning-soft);
+    color: var(--accent-warning);
+}
+
+html[data-theme="dark"] .estatus-badge.aprobado,
+html[data-theme="dark"] .badge-info,
+html[data-theme="dark"] .badge-primary {
+    background: var(--bg-info-soft);
+    color: var(--accent-primary);
+}
+
+html[data-theme="dark"] .empty-state,
+html[data-theme="dark"] .falta-row,
+html[data-theme="dark"] .detalle-falta {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    border-color: var(--border);
+}
+
+html[data-theme="dark"] .tooltip,
+html[data-theme="dark"] [data-tooltip]::after {
+    background: var(--bg-elevated) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-strong);
+}
+
+html[data-theme="dark"] .btn-theme-toggle {
+    background: var(--bg-elevated);
+    color: var(--accent-warning);
+    border-color: var(--border-strong);
+}
+
+html[data-theme="dark"] .btn-theme-toggle:hover {
+    background: var(--bg-input);
+    color: var(--accent-warning-hover);
+}
+
+/* Badges/estados especificos del proyecto con bg pastel hardcodeado */
+html[data-theme="dark"] .status-ausente,
+html[data-theme="dark"] .alert-danger {
+    background: var(--bg-danger-soft);
+    color: var(--accent-danger);
+    border-color: var(--border);
+}
+
+html[data-theme="dark"] .status-tarde,
+html[data-theme="dark"] .alert-warning {
+    background: var(--bg-warning-soft);
+    color: var(--accent-warning);
+    border-color: var(--border);
+}
+
+html[data-theme="dark"] .status-activo,
+html[data-theme="dark"] .badge-sucursal {
+    background: var(--bg-info-soft);
+    color: var(--accent-primary);
+}
+
+html[data-theme="dark"] .alert-success,
+html[data-theme="dark"] .badge-puesto,
+html[data-theme="dark"] .geo-badge-activa {
+    background: var(--bg-success-soft);
+    color: var(--accent-success);
+    border-color: var(--border);
+}
+
+html[data-theme="dark"] .status-inactivo,
+html[data-theme="dark"] .badge-secondary,
+html[data-theme="dark"] .geo-badge-inactiva {
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+}
