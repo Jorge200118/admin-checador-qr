@@ -7867,7 +7867,20 @@ function inicializarAbsentismo() {
 function absShortcut(tipo) {
     const hoy = new Date();
     let inicio, fin;
-    if (tipo === 'mes_actual') {
+    if (tipo === 'hoy') {
+        inicio = hoy;
+        fin = hoy;
+    } else if (tipo === 'ayer') {
+        const ayer = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - 1);
+        inicio = ayer;
+        fin = ayer;
+    } else if (tipo === 'semana') {
+        // Lunes como inicio de semana (ISO)
+        const diaSemana = hoy.getDay(); // 0=Dom, 1=Lun, ..., 6=Sab
+        const offsetLunes = diaSemana === 0 ? 6 : diaSemana - 1;
+        inicio = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - offsetLunes);
+        fin = hoy;
+    } else if (tipo === 'mes_actual') {
         inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
         fin = hoy;
     } else if (tipo === 'mes_pasado') {

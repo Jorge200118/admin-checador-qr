@@ -34,22 +34,11 @@
         
         <nav class="nav-menu">
             <ul>
+                <li class="nav-group-label"><span>Hoy</span></li>
                 <li class="nav-item active">
                     <a href="#dashboard" data-section="dashboard">
                         <i class="fas fa-dashboard"></i>
                         <span>Dashboard</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#empleados" data-section="empleados">
-                        <i class="fas fa-users"></i>
-                        <span>Empleados</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#horarios" data-section="horarios">
-                        <i class="fas fa-clock"></i>
-                        <span>Horarios</span>
                     </a>
                 </li>
                 <li class="nav-item">
@@ -58,12 +47,14 @@
                         <span>Registros</span>
                     </a>
                 </li>
-           <!-- <li class="nav-item">
-                    <a href="#reportes" data-section="reportes">
-                        <i class="fas fa-chart-line"></i>
-                        <span>Reportes</span>
+                <li class="nav-item">
+                    <a href="#absentismo" data-section="absentismo">
+                        <i class="fas fa-user-clock"></i>
+                        <span>Absentismo</span>
                     </a>
-                </li> -->
+                </li>
+
+                <li class="nav-group-label"><span>Gestionar</span></li>
                 <li class="nav-item">
                     <a href="#justificaciones" data-section="justificaciones">
                         <i class="fas fa-file-medical"></i>
@@ -77,23 +68,21 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="#absentismo" data-section="absentismo">
-                        <i class="fas fa-user-clock"></i>
-                        <span>Absentismo</span>
+                    <a href="#horarios" data-section="horarios">
+                        <i class="fas fa-clock"></i>
+                        <span>Horarios</span>
                     </a>
                 </li>
+
+                <li class="nav-group-label"><span>Personas</span></li>
                 <li class="nav-item">
-                    <a href="#estadisticas" data-section="estadisticas">
-                        <i class="fas fa-chart-pie"></i>
-                        <span>Estadísticas</span>
+                    <a href="#empleados" data-section="empleados">
+                        <i class="fas fa-users"></i>
+                        <span>Empleados</span>
                     </a>
                 </li>
-                <li class="nav-item" style="display:none">
-                    <a href="#creditos" data-section="creditos">
-                        <i class="fas fa-credit-card"></i>
-                        <span>Créditos</span>
-                    </a>
-                </li>
+
+                <li class="nav-group-label"><span>Infraestructura</span></li>
                 <li class="nav-item">
                     <a href="#dispositivos" data-section="dispositivos">
                         <i class="fas fa-mobile-alt"></i>
@@ -106,12 +95,33 @@
                         <span>Geocercas</span>
                     </a>
                 </li>
+
+                <li class="nav-group-label"><span>Análisis</span></li>
                 <li class="nav-item">
+                    <a href="#estadisticas" data-section="estadisticas">
+                        <i class="fas fa-chart-pie"></i>
+                        <span>Estadísticas</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-superadmin-only="true">
                     <a href="#configuracion" data-section="configuracion">
                         <i class="fas fa-cog"></i>
                         <span>Configuración</span>
                     </a>
                 </li>
+
+                <li class="nav-item" style="display:none">
+                    <a href="#creditos" data-section="creditos">
+                        <i class="fas fa-credit-card"></i>
+                        <span>Créditos</span>
+                    </a>
+                </li>
+           <!-- <li class="nav-item">
+                    <a href="#reportes" data-section="reportes">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Reportes</span>
+                    </a>
+                </li> -->
             </ul>
         </nav>
     </aside>
@@ -1115,6 +1125,9 @@
                     <div class="filter-group">
                         <label>Atajos:</label>
                         <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                            <button class="btn btn-sm btn-secondary" onclick="absShortcut('hoy')">Hoy</button>
+                            <button class="btn btn-sm btn-secondary" onclick="absShortcut('ayer')">Ayer</button>
+                            <button class="btn btn-sm btn-secondary" onclick="absShortcut('semana')">Esta semana</button>
                             <button class="btn btn-sm btn-secondary" onclick="absShortcut('mes_actual')">Este mes</button>
                             <button class="btn btn-sm btn-secondary" onclick="absShortcut('mes_pasado')">Mes pasado</button>
                             <button class="btn btn-sm btn-secondary" onclick="absShortcut('anio_actual')">Año actual</button>
