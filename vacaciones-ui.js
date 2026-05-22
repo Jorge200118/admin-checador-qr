@@ -261,7 +261,7 @@ function _filasVacSaldos() {
             derecho: s.derecho,
             tomados: s.tomados,
             restantes: s.restantes,
-            aniversario: s.proximoAniversario,
+            aniversario: s.periodoInicio,
             fechaLimite: s.fechaLimite,
             diasParaVencer: s.diasParaVencer,
             estado: s.estado
