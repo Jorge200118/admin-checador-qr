@@ -77,7 +77,10 @@ window.addEventListener('load', () => {
     eq(r.tomados, 0);
     eq(r.restantes, 18);
     eq(r.periodoInicio, '2026-03-15');
-    eq(r.fechaLimite, '2027-03-14');
+    eq(r.periodoFin, '2027-03-14');
+    // LFT Art. 81: aniversario + 6m
+    eq(r.fechaLimiteLFT, '2026-09-15');
+    eq(r.fechaLimite, '2026-09-15'); // alias legacy
   });
 
   test('saldo descuenta solo dias dentro del periodo', () => {
@@ -126,9 +129,40 @@ window.addEventListener('load', () => {
     eq(h[2].perdidos, null);
   });
 
-  test('diasParaVencer cuenta hasta proximo aniversario', () => {
+  test('diasParaVencer cuenta hasta limite LFT (+6m)', () => {
+    // empA aniv 2026-03-15, limite LFT 2026-09-15, hoy 2026-05-20 → ~118 días
     const r = calcularSaldo(empA, [], '2026-05-20');
-    eq(r.diasParaVencer >= 290 && r.diasParaVencer <= 310, true, `got ${r.diasParaVencer}`);
+    eq(r.diasParaLimiteLFT >= 110 && r.diasParaLimiteLFT <= 125, true, `got ${r.diasParaLimiteLFT}`);
+    eq(r.diasParaVencer, r.diasParaLimiteLFT); // alias legacy
+  });
+
+  // === Estados LFT 2026 ===
+  test('estado vigente cuando faltan >30d para limite LFT', () => {
+    const r = calcularSaldo(empA, [], '2026-05-20');
+    eq(r.estado, 'vigente');
+  });
+
+  test('estado por_vencer cuando faltan ≤30d para limite LFT', () => {
+    // empA aniv 2026-03-15, limite 2026-09-15, hoy 2026-08-25 → ~21 días
+    const r = calcularSaldo(empA, [], '2026-08-25');
+    eq(r.estado, 'por_vencer');
+  });
+
+  test('estado vencidas_operativas tras pasar 6m sin disfrutar', () => {
+    // empA aniv 2026-03-15, limite 2026-09-15, hoy 2026-10-15 → vencidas operativas
+    const r = calcularSaldo(empA, [], '2026-10-15');
+    eq(r.estado, 'vencidas_operativas');
+    eq(r.diasParaLimiteLFT < 0, true);
+  });
+
+  test('estado sin_saldo cuando tomó todo lo del periodo', () => {
+    // empA año 4 (18 días). Tomar 18 hábiles entre 2026-04-13 y 2026-05-09 (4 semanas L-S sin festivos)
+    const vacs = [
+      { tipo: 'VACACION', fecha_inicio: '2026-04-13', fecha_fin: '2026-05-09' }
+    ];
+    const r = calcularSaldo(empA, vacs, '2026-05-20');
+    eq(r.restantes, 0);
+    eq(r.estado, 'sin_saldo');
   });
 
   out.innerHTML += `<h2>${pass} pasaron, ${fail} fallaron</h2>`;

@@ -38,6 +38,23 @@ function _vacHoyYYYYMMDD() {
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
+// Mapeo de estados LFT 2026 → etiqueta + colores para badges/tablas.
+function _vacEstadoMeta(estado) {
+    switch (estado) {
+        case 'vigente':              return { label: 'Vigente',     bg: '#22c55e22', text: '#22c55e' };
+        case 'por_vencer':           return { label: 'Por vencer',  bg: '#f59e0b22', text: '#f59e0b' };
+        case 'vencidas_operativas':  return { label: 'Vencidas',    bg: '#ef444422', text: '#ef4444' };
+        case 'prescritas':           return { label: 'Prescritas',  bg: '#6b728022', text: '#9ca3af' };
+        case 'sin_saldo':            return { label: 'Sin saldo',   bg: '#64748b22', text: '#94a3b8' };
+        default:                      return { label: '—',           bg: 'transparent', text: '#94a3b8' };
+    }
+}
+
+function _vacEstadoBadge(estado) {
+    const m = _vacEstadoMeta(estado);
+    return `<span style="display:inline-block;padding:3px 10px;border-radius:999px;background:${m.bg};color:${m.text};font-size:11px;font-weight:600;letter-spacing:.02em;">${m.label}</span>`;
+}
+
 function renderBloqueVacacionesExpediente(empleado, vacaciones) {
     const _t = _vacTema();
     if (!empleado || !empleado.fecha_ingreso) {
@@ -55,12 +72,16 @@ function renderBloqueVacacionesExpediente(empleado, vacaciones) {
     }
 
     const colorRestantes = s.restantes === 0 ? '#ef4444' : (s.restantes <= 3 ? '#f59e0b' : '#22c55e');
-    const urgente = s.diasParaVencer <= 60 && s.restantes > 0;
-    const avisoVence = urgente
-        ? `<div style="margin-top:8px;padding:8px 12px;background:#f59e0b22;border-left:3px solid #f59e0b;border-radius:4px;color:#fbbf24;font-size:12px;">
-             <i class="fas fa-exclamation-triangle"></i> Vence en ${s.diasParaVencer} días — usar antes del ${_vacFormatFechaCorta(s.fechaLimite)}
-           </div>`
-        : '';
+    let avisoVence = '';
+    if (s.estado === 'por_vencer') {
+        avisoVence = `<div style="margin-top:8px;padding:8px 12px;background:#f59e0b22;border-left:3px solid #f59e0b;border-radius:4px;color:#fbbf24;font-size:12px;">
+             <i class="fas fa-exclamation-triangle"></i> Vence en ${s.diasParaLimiteLFT} días — Art. 81 LFT: usar antes del ${_vacFormatFechaCorta(s.fechaLimiteLFT)}
+           </div>`;
+    } else if (s.estado === 'vencidas_operativas') {
+        avisoVence = `<div style="margin-top:8px;padding:8px 12px;background:#ef444422;border-left:3px solid #ef4444;border-radius:4px;color:#fca5a5;font-size:12px;">
+             <i class="fas fa-exclamation-circle"></i> Plazo Art. 81 LFT vencido hace ${Math.abs(s.diasParaLimiteLFT)} días. El patrón está incumpliendo el deber de otorgarlas.
+           </div>`;
+    }
 
     const filaBloque = (lbl, val, color) => `
         <div style="display:flex;padding:9px 0;border-bottom:1px solid ${_t.borderSoft};gap:12px;">
@@ -231,7 +252,7 @@ function _filasVacSaldos() {
         const s = calcularSaldo({ fecha_ingreso: e.fecha_ingreso?.substring(0,10) }, vacs, hoy);
         if (s.añoServicio < 1) continue;
         if (soloConSaldo && s.restantes <= 0) continue;
-        if (soloPorVencer && s.diasParaVencer > 60) continue;
+        if (soloPorVencer && !(s.estado === 'por_vencer' || s.estado === 'vencidas_operativas')) continue;
         rows.push({
             id: e.id,
             nombre,
@@ -240,8 +261,10 @@ function _filasVacSaldos() {
             derecho: s.derecho,
             tomados: s.tomados,
             restantes: s.restantes,
+            aniversario: s.proximoAniversario,
             fechaLimite: s.fechaLimite,
-            diasParaVencer: s.diasParaVencer
+            diasParaVencer: s.diasParaVencer,
+            estado: s.estado
         });
     }
     const { key, dir } = window._vacSaldosSort;
@@ -289,9 +312,13 @@ function renderVacSaldos() {
         return;
     }
     const filas = rows.map(r => {
-        const urgente = r.diasParaVencer <= 60 && r.restantes > 0;
         const colorRest = r.restantes === 0 ? _t.muted : (r.restantes <= 3 ? '#f59e0b' : '#22c55e');
-        const colorDias = r.diasParaVencer <= 15 ? '#dc2626' : (urgente ? '#f59e0b' : _t.muted);
+        let colorDias;
+        if (r.estado === 'vencidas_operativas' || r.estado === 'prescritas') colorDias = '#ef4444';
+        else if (r.estado === 'por_vencer') colorDias = '#f59e0b';
+        else colorDias = _t.muted;
+        // Para estados vencidos los días salen en negativo (informativo)
+        const diasMostrados = r.diasParaVencer < 0 ? `${r.diasParaVencer}` : `${r.diasParaVencer}`;
         return `
         <tr>
             <td style="padding:8px;color:${_t.text};">${r.nombre}</td>
@@ -300,8 +327,10 @@ function renderVacSaldos() {
             <td style="padding:8px;text-align:right;color:${_t.text};">${r.derecho}</td>
             <td style="padding:8px;text-align:right;color:#3b82f6;">${r.tomados}</td>
             <td style="padding:8px;text-align:right;color:${colorRest};font-weight:600;">${r.restantes}</td>
-            <td style="padding:8px;text-align:center;color:${urgente ? '#f59e0b' : _t.textSec};">${_vacFormatFechaCorta(r.fechaLimite)}</td>
-            <td style="padding:8px;text-align:right;color:${colorDias};">${r.diasParaVencer}</td>
+            <td style="padding:8px;text-align:center;color:${_t.textSec};">${_vacFormatFechaCorta(r.aniversario)}</td>
+            <td style="padding:8px;text-align:center;color:${r.estado === 'por_vencer' ? '#f59e0b' : _t.textSec};">${_vacFormatFechaCorta(r.fechaLimite)}</td>
+            <td style="padding:8px;text-align:right;color:${colorDias};">${diasMostrados}</td>
+            <td style="padding:8px;text-align:center;">${_vacEstadoBadge(r.estado)}</td>
         </tr>`;
     }).join('');
     cont.innerHTML = `
@@ -314,13 +343,15 @@ function renderVacSaldos() {
                     ${_vacTh('Derecho', 'derecho', 'right')}
                     ${_vacTh('Tomados', 'tomados', 'right')}
                     ${_vacTh('Restantes', 'restantes', 'right')}
-                    ${_vacTh('Fecha límite', 'fechaLimite', 'center')}
+                    ${_vacTh('Aniversario', 'aniversario', 'center')}
+                    ${_vacTh('Límite LFT (+6m)', 'fechaLimite', 'center')}
                     ${_vacTh('Días para vencer', 'diasParaVencer', 'right')}
+                    ${_vacTh('Estado', 'estado', 'center')}
                 </tr>
             </thead>
             <tbody>${filas}</tbody>
         </table>
-        <div style="margin-top:8px;color:${_t.muted};font-size:12px;">${rows.length} empleados</div>`;
+        <div style="margin-top:8px;color:${_t.muted};font-size:12px;">${rows.length} empleados · <span style="color:${_t.textSec};">Fechas según Art. 81 LFT (6 meses post-aniversario)</span></div>`;
 }
 
 function exportarVacSaldosExcel() {
@@ -336,8 +367,10 @@ function exportarVacSaldosExcel() {
         'Derecho LFT': r.derecho,
         Tomados: r.tomados,
         Restantes: r.restantes,
-        'Fecha límite': r.fechaLimite,
-        'Días para vencer': r.diasParaVencer
+        Aniversario: r.aniversario,
+        'Límite LFT (+6m)': r.fechaLimite,
+        'Días para vencer': r.diasParaVencer,
+        Estado: _vacEstadoMeta(r.estado).label
     }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
@@ -361,22 +394,26 @@ function renderVacPorVencer() {
         );
         if (s.añoServicio < 1) continue;
         if (s.restantes <= 0) continue;
-        if (s.diasParaVencer > 60) continue;
+        // Por vencer Art.81 (≤30d antes del límite +6m) o ya vencidas operativas (post-6m, pre-18m)
+        if (s.estado !== 'por_vencer' && s.estado !== 'vencidas_operativas') continue;
         rows.push({
             nombre: `${e.nombre} ${e.apellido || ''}`.trim(),
             sucursal: e.sucursal || '—',
             restantes: s.restantes,
-            fechaLimite: s.fechaLimite,
-            diasParaVencer: s.diasParaVencer
+            fechaLimite: s.fechaLimiteLFT,
+            diasParaVencer: s.diasParaLimiteLFT,
+            estado: s.estado
         });
     }
+    // Vencidas primero (más urgentes), luego por vencer ordenadas por proximidad
     rows.sort((a, b) => a.diasParaVencer - b.diasParaVencer);
 
     if (rows.length === 0) {
         cont.innerHTML = `
             <div style="padding:40px;text-align:center;color:#22c55e;">
                 <i class="fas fa-check-circle" style="font-size:48px;"></i>
-                <p style="margin-top:12px;font-size:14px;">Nadie con vacaciones por vencer en los próximos 60 días.</p>
+                <p style="margin-top:12px;font-size:14px;">Nadie con vacaciones por vencer ni vencidas operativamente.</p>
+                <p style="margin-top:4px;font-size:12px;color:${_t.muted};">Plazo Art. 81 LFT: 6 meses post-aniversario.</p>
             </div>`;
         return;
     }
@@ -385,18 +422,23 @@ function renderVacPorVencer() {
     cont.style.padding = '';
     cont.style.textAlign = '';
     cont.innerHTML = rows.map(r => {
-        const color = r.diasParaVencer <= 15 ? '#dc2626' : (r.diasParaVencer <= 30 ? '#f59e0b' : '#3b82f6');
+        const esVencida = r.estado === 'vencidas_operativas';
+        const color = esVencida ? '#ef4444' : (r.diasParaVencer <= 15 ? '#dc2626' : '#f59e0b');
+        const textoFecha = esVencida
+            ? `Vencidas hace ${Math.abs(r.diasParaVencer)} días (${_vacFormatFechaCorta(r.fechaLimite)})`
+            : `Vence ${_vacFormatFechaCorta(r.fechaLimite)} (${r.diasParaVencer} días)`;
         return `
         <div style="background:${_t.surface};border-left:4px solid ${color};border-radius:8px;padding:16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 1px 3px rgba(0,0,0,.06);">
             <div>
-                <div style="font-weight:600;font-size:15px;color:${_t.text};">${r.nombre}</div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="font-weight:600;font-size:15px;color:${_t.text};">${r.nombre}</span>
+                    ${_vacEstadoBadge(r.estado)}
+                </div>
                 <div style="color:${_t.textSec};font-size:13px;margin-top:2px;">${r.sucursal}</div>
             </div>
             <div style="text-align:right;">
                 <div style="font-size:14px;color:${_t.text};"><strong>${r.restantes}</strong> días pendientes</div>
-                <div style="font-size:12px;color:${color};margin-top:2px;">
-                    Vence ${_vacFormatFechaCorta(r.fechaLimite)} (${r.diasParaVencer} días)
-                </div>
+                <div style="font-size:12px;color:${color};margin-top:2px;">${textoFecha}</div>
             </div>
         </div>`;
     }).join('');

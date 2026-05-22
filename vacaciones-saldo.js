@@ -20,9 +20,23 @@ function _diasJustEnPeriodo(just, periodoInicio, periodoFin) {
     return diasHabilesEntre(ini, fin);
 }
 
+// Suma meses a una fecha YYYY-MM-DD. Maneja overflow de días (ej. 31-mar +1m → 30-abr).
+function _sumarMeses(fechaYYYYMMDD, n) {
+    const [y, m, d] = fechaYYYYMMDD.split('-').map(Number);
+    const dt = new Date(y, m - 1 + n, 1, 12, 0, 0);
+    const ultimoDiaMes = new Date(dt.getFullYear(), dt.getMonth() + 1, 0).getDate();
+    const dia = Math.min(d, ultimoDiaMes);
+    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+}
+
 // Devuelve el saldo de vacaciones del periodo actual.
-// { añoServicio, derecho, tomados, restantes, excedido,
-//   periodoInicio, periodoFin, fechaLimite, proximoAniversario, diasParaVencer }
+// Estados LFT 2026 (Art. 78, 81):
+//   - 'sin_saldo'           → restantes = 0
+//   - 'vigente'             → restantes > 0, faltan >30d para el límite LFT (aniversario+6m)
+//   - 'por_vencer'          → restantes > 0, faltan ≤30 días para aniversario+6m (Art. 81)
+//   - 'vencidas_operativas' → ya pasaron 6m sin disfrutarlas; el patrón incumple Art. 81.
+// Nota: el estado 'prescritas' (Art. 516, 18m post-aniversario) aplica a periodos
+// pasados, no al actual; se ve reflejado en `historialPeriodos()` como días perdidos.
 function calcularSaldo(empleado, vacacionesEmpleado, hoyYYYYMMDD) {
     const p = periodoActual(empleado.fecha_ingreso, hoyYYYYMMDD);
     const derecho = diasLFT(p.añoServicio);
@@ -30,7 +44,24 @@ function calcularSaldo(empleado, vacacionesEmpleado, hoyYYYYMMDD) {
     let tomados = 0;
     for (const v of vacs) tomados += _diasJustEnPeriodo(v, p.inicio, p.fin);
     const restantes = Math.max(0, derecho - tomados);
-    const diasParaVencer = _diasCalendarioEntre(hoyYYYYMMDD, p.proximoAniversario);
+
+    // Art. 81 LFT: el patrón debe otorgar las vacaciones dentro de los 6 meses
+    // siguientes al cumplimiento del año de servicios → se computa desde el inicio
+    // del periodo (aniversario actual), no desde hoy.
+    const fechaLimiteLFT = _sumarMeses(p.inicio, 6);
+    const diasParaLimiteLFT = _diasCalendarioEntre(hoyYYYYMMDD, fechaLimiteLFT);
+
+    let estado;
+    if (restantes <= 0) {
+        estado = 'sin_saldo';
+    } else if (diasParaLimiteLFT <= 0) {
+        estado = 'vencidas_operativas';
+    } else if (diasParaLimiteLFT <= 30) {
+        estado = 'por_vencer';
+    } else {
+        estado = 'vigente';
+    }
+
     return {
         añoServicio: p.añoServicio,
         derecho,
@@ -39,9 +70,14 @@ function calcularSaldo(empleado, vacacionesEmpleado, hoyYYYYMMDD) {
         excedido: tomados > derecho,
         periodoInicio: p.inicio,
         periodoFin: p.fin,
-        fechaLimite: p.fin,
         proximoAniversario: p.proximoAniversario,
-        diasParaVencer
+        // Campos LFT 2026
+        fechaLimiteLFT,
+        diasParaLimiteLFT,
+        estado,
+        // Alias legacy (apuntan al nuevo cálculo LFT)
+        fechaLimite: fechaLimiteLFT,
+        diasParaVencer: diasParaLimiteLFT
     };
 }
 
