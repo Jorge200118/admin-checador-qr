@@ -77,10 +77,6 @@ function renderBloqueVacacionesExpediente(empleado, vacaciones) {
         avisoVence = `<div style="margin-top:8px;padding:8px 12px;background:#f59e0b22;border-left:3px solid #f59e0b;border-radius:4px;color:#fbbf24;font-size:12px;">
              <i class="fas fa-exclamation-triangle"></i> Vence en ${s.diasParaLimiteLFT} días — Art. 81 LFT: usar antes del ${_vacFormatFechaCorta(s.fechaLimiteLFT)}
            </div>`;
-    } else if (s.estado === 'vencidas_operativas') {
-        avisoVence = `<div style="margin-top:8px;padding:8px 12px;background:#ef444422;border-left:3px solid #ef4444;border-radius:4px;color:#fca5a5;font-size:12px;">
-             <i class="fas fa-exclamation-circle"></i> Plazo Art. 81 LFT vencido hace ${Math.abs(s.diasParaLimiteLFT)} días. El patrón está incumpliendo el deber de otorgarlas.
-           </div>`;
     }
 
     const filaBloque = (lbl, val, color) => `
@@ -251,8 +247,11 @@ function _filasVacSaldos() {
         const vacs = vacacionesPorEmp.get(e.id) || [];
         const s = calcularSaldo({ fecha_ingreso: e.fecha_ingreso?.substring(0,10) }, vacs, hoy);
         if (s.añoServicio < 1) continue;
+        // Política: ignorar vacaciones vencidas operativas (post-6m Art. 81).
+        // Las del pasado no se rastrean operativamente.
+        if (s.estado === 'vencidas_operativas') continue;
         if (soloConSaldo && s.restantes <= 0) continue;
-        if (soloPorVencer && !(s.estado === 'por_vencer' || s.estado === 'vencidas_operativas')) continue;
+        if (soloPorVencer && s.estado !== 'por_vencer') continue;
         rows.push({
             id: e.id,
             nombre,
@@ -394,8 +393,9 @@ function renderVacPorVencer() {
         );
         if (s.añoServicio < 1) continue;
         if (s.restantes <= 0) continue;
-        // Por vencer Art.81 (≤30d antes del límite +6m) o ya vencidas operativas (post-6m, pre-18m)
-        if (s.estado !== 'por_vencer' && s.estado !== 'vencidas_operativas') continue;
+        // Solo por_vencer (≤30d antes del límite Art. 81). Las vencidas operativas
+        // se ignoran por política (ver vacaciones-ui.js _filasVacSaldos).
+        if (s.estado !== 'por_vencer') continue;
         rows.push({
             nombre: `${e.nombre} ${e.apellido || ''}`.trim(),
             sucursal: e.sucursal || '—',
@@ -422,23 +422,18 @@ function renderVacPorVencer() {
     cont.style.padding = '';
     cont.style.textAlign = '';
     cont.innerHTML = rows.map(r => {
-        const esVencida = r.estado === 'vencidas_operativas';
-        const color = esVencida ? '#ef4444' : (r.diasParaVencer <= 15 ? '#dc2626' : '#f59e0b');
-        const textoFecha = esVencida
-            ? `Vencidas hace ${Math.abs(r.diasParaVencer)} días (${_vacFormatFechaCorta(r.fechaLimite)})`
-            : `Vence ${_vacFormatFechaCorta(r.fechaLimite)} (${r.diasParaVencer} días)`;
+        const color = r.diasParaVencer <= 15 ? '#dc2626' : '#f59e0b';
         return `
         <div style="background:${_t.surface};border-left:4px solid ${color};border-radius:8px;padding:16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 1px 3px rgba(0,0,0,.06);">
             <div>
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <span style="font-weight:600;font-size:15px;color:${_t.text};">${r.nombre}</span>
-                    ${_vacEstadoBadge(r.estado)}
-                </div>
+                <div style="font-weight:600;font-size:15px;color:${_t.text};">${r.nombre}</div>
                 <div style="color:${_t.textSec};font-size:13px;margin-top:2px;">${r.sucursal}</div>
             </div>
             <div style="text-align:right;">
                 <div style="font-size:14px;color:${_t.text};"><strong>${r.restantes}</strong> días pendientes</div>
-                <div style="font-size:12px;color:${color};margin-top:2px;">${textoFecha}</div>
+                <div style="font-size:12px;color:${color};margin-top:2px;">
+                    Vence ${_vacFormatFechaCorta(r.fechaLimite)} (${r.diasParaVencer} días)
+                </div>
             </div>
         </div>`;
     }).join('');
