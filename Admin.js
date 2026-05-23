@@ -761,6 +761,23 @@ function regShortcut(tipo) {
             inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 16);
             fin    = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
         }
+    } else if (tipo === 'quincena_pasada') {
+        const dia = hoy.getDate();
+        if (dia <= 15) {
+            // 2da quincena del mes anterior (16 al último día del mes anterior)
+            inicio = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 16);
+            fin    = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
+        } else {
+            // 1ra quincena del mes actual (1-15)
+            inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+            fin    = new Date(hoy.getFullYear(), hoy.getMonth(), 15);
+        }
+    } else if (tipo === 'mes_pasado') {
+        inicio = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+        fin    = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
+    } else if (tipo === 'anio_actual') {
+        inicio = new Date(hoy.getFullYear(), 0, 1);
+        fin    = hoy;
     } else {
         return;
     }
@@ -7880,6 +7897,27 @@ function absShortcut(tipo) {
         const offsetLunes = diaSemana === 0 ? 6 : diaSemana - 1;
         inicio = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - offsetLunes);
         fin = hoy;
+    } else if (tipo === 'quincena') {
+        // 1ra quincena: 1-15. 2da quincena: 16 al último día del mes.
+        const dia = hoy.getDate();
+        if (dia <= 15) {
+            inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+            fin    = new Date(hoy.getFullYear(), hoy.getMonth(), 15);
+        } else {
+            inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 16);
+            fin    = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+        }
+    } else if (tipo === 'quincena_pasada') {
+        const dia = hoy.getDate();
+        if (dia <= 15) {
+            // 2da quincena del mes anterior
+            inicio = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 16);
+            fin    = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
+        } else {
+            // 1ra quincena del mes actual
+            inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+            fin    = new Date(hoy.getFullYear(), hoy.getMonth(), 15);
+        }
     } else if (tipo === 'mes_actual') {
         inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
         fin = hoy;
