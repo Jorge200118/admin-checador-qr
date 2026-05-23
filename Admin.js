@@ -7934,6 +7934,54 @@ function absShortcut(tipo) {
     cargarAbsentismo();
 }
 
+function justShortcut(tipo) {
+    const hoy = new Date();
+    let inicio, fin;
+    if (tipo === 'hoy') {
+        inicio = hoy; fin = hoy;
+    } else if (tipo === 'ayer') {
+        const ayer = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - 1);
+        inicio = ayer; fin = ayer;
+    } else if (tipo === 'semana') {
+        const diaSemana = hoy.getDay();
+        const offsetLunes = diaSemana === 0 ? 6 : diaSemana - 1;
+        inicio = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - offsetLunes);
+        fin = hoy;
+    } else if (tipo === 'quincena') {
+        const dia = hoy.getDate();
+        if (dia <= 15) {
+            inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+            fin    = new Date(hoy.getFullYear(), hoy.getMonth(), 15);
+        } else {
+            inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 16);
+            fin    = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+        }
+    } else if (tipo === 'quincena_pasada') {
+        const dia = hoy.getDate();
+        if (dia <= 15) {
+            inicio = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 16);
+            fin    = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
+        } else {
+            inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+            fin    = new Date(hoy.getFullYear(), hoy.getMonth(), 15);
+        }
+    } else if (tipo === 'mes_actual') {
+        inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+        fin = hoy;
+    } else if (tipo === 'mes_pasado') {
+        inicio = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+        fin    = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
+    } else if (tipo === 'anio_actual') {
+        inicio = new Date(hoy.getFullYear(), 0, 1);
+        fin = hoy;
+    }
+    const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    document.getElementById('filterJustFechaInicio').value = fmt(inicio);
+    document.getElementById('filterJustFechaFin').value    = fmt(fin);
+    if (typeof filtrarJustificaciones === 'function') filtrarJustificaciones();
+}
+window.justShortcut = justShortcut;
+
 async function cargarAbsentismo() {
     const fechaInicio = document.getElementById('absFechaInicio').value;
     const fechaFin    = document.getElementById('absFechaFin').value;
