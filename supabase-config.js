@@ -132,9 +132,14 @@ const SupabaseAPI = {
             // Llegadas Tarde = todas las ENTRADAs marcadas tarde (mismo criterio que el rojo en Registros)
             const llegadasTarde = entradas.filter(esTardanzaParaDashboard).length;
 
-            // Faltas Hoy = empleados activos sin ENTRADA hoy y sin justificación que cubra hoy
+            // Faltas Hoy = empleados activos sin ENTRADA hoy y sin justificación válida que cubra hoy.
+            // PERMISO_SIN_GOCE no es justificación válida → cuenta como falta.
             const empleadosConEntrada = new Set(entradas.map(r => r.empleado_id));
-            const empleadosJustificados = new Set(justificaciones.map(j => j.empleado_id));
+            const empleadosJustificados = new Set(
+                justificaciones
+                    .filter(j => j.tipo !== 'PERMISO_SIN_GOCE')
+                    .map(j => j.empleado_id)
+            );
             const faltasHoy = empleadosActivos.filter(emp =>
                 !empleadosConEntrada.has(emp.id) && !empleadosJustificados.has(emp.id)
             ).length;

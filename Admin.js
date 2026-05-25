@@ -1063,7 +1063,9 @@ function buscarJustificacionParaFecha(empleadoId, fecha) {
 const JUSTIFICACION_TIPO_LABEL = {
     VACACION: 'VACACIONES',
     INCAPACIDAD: 'INCAPACIDAD',
-    PERMISO: 'PERMISO'
+    PERMISO: 'PERMISO CON GOCE',
+    PERMISO_CON_GOCE: 'PERMISO CON GOCE',
+    PERMISO_SIN_GOCE: 'PERMISO SIN GOCE'
 };
 
 function getInitials(nombre) {
@@ -1261,10 +1263,12 @@ async function obtenerEmpleadosSinEntradaRango(event) {
             // IDs de empleados que SÍ registraron entrada
             const empleadosConEntrada = new Set(registrosFecha.map(reg => reg.empleado_id));
 
-            // Empleados que NO registraron entrada y NO tienen justificación
+            // Empleados que NO registraron entrada y NO tienen justificación válida.
+            // PERMISO_SIN_GOCE no es justificación válida → cuenta como falta.
             const faltasDia = empleadosActivos.filter(emp => {
                 if (empleadosConEntrada.has(emp.id)) return false;
                 const tieneJustificacion = justificaciones.some(j =>
+                    j.tipo !== 'PERMISO_SIN_GOCE' &&
                     j.empleado_id === emp.id &&
                     j.fecha_inicio <= fecha &&
                     j.fecha_fin >= fecha
@@ -4392,12 +4396,13 @@ function generarDatosResumenGeneral(justificaciones = []) {
             }
         });
 
-        // Calcular faltas: días laborables sin registro y sin justificación
+        // Calcular faltas: días laborables sin registro y sin justificación válida.
+        // PERMISO_SIN_GOCE no es justificación válida → cuenta como falta.
         let faltasCount = 0;
         for (const fechaLab of fechasLaborables) {
             if (!diasConRegistro.has(fechaLab)) {
-                // Verificar si tiene justificación para ese día
                 const tieneJustificacion = justificaciones.some(j =>
+                    j.tipo !== 'PERMISO_SIN_GOCE' &&
                     j.empleado_id === empleadoId &&
                     j.fecha_inicio <= fechaLab &&
                     j.fecha_fin >= fechaLab
@@ -4889,15 +4894,15 @@ function mostrarDetalleEmpleadoResumen(empleadoId) {
     // Generar filas
     const filasHTML = diasCompletos.map(dia => {
         if (!dia.data) {
-            // Verificar si tiene justificación para ese día
+            // PERMISO_SIN_GOCE no es justificación válida → falta
             const justificacion = justificacionesResumenGeneral.find(j =>
+                j.tipo !== 'PERMISO_SIN_GOCE' &&
                 j.empleado_id === emp.empleado_id &&
                 j.fecha_inicio <= dia.fecha &&
                 j.fecha_fin >= dia.fecha
             );
             if (justificacion) {
-                // Día justificado - no es falta
-                const tipoJust = justificacion.tipo || 'Justificación';
+                const tipoJust = JUSTIFICACION_TIPO_LABEL[justificacion.tipo] || justificacion.tipo || 'Justificación';
                 return `
                 <tr style="background: #f0fdf4;">
                     <td><strong>${formatearFechaCorta(dia.fecha)}</strong> <span class="dia-semana">${dia.diaSemana}</span></td>
@@ -4906,7 +4911,7 @@ function mostrarDetalleEmpleadoResumen(empleadoId) {
                     </td>
                 </tr>`;
             }
-            // Día sin registro y sin justificación = falta
+            // Día sin registro y sin justificación válida = falta
             return `
                 <tr class="detalle-falta">
                     <td><strong>${formatearFechaCorta(dia.fecha)}</strong> <span class="dia-semana">${dia.diaSemana}</span></td>
@@ -5035,14 +5040,15 @@ function imprimirDetalleEmpleado(empleadoId) {
 
     const filasHTML = diasCompletos.map(dia => {
         if (!dia.data) {
-            // Verificar si tiene justificación
+            // PERMISO_SIN_GOCE no es justificación válida → falta
             const justificacion = justificacionesResumenGeneral.find(j =>
+                j.tipo !== 'PERMISO_SIN_GOCE' &&
                 j.empleado_id === emp.empleado_id &&
                 j.fecha_inicio <= dia.fecha &&
                 j.fecha_fin >= dia.fecha
             );
             if (justificacion) {
-                const tipoJust = justificacion.tipo || 'Justificación';
+                const tipoJust = JUSTIFICACION_TIPO_LABEL[justificacion.tipo] || justificacion.tipo || 'Justificación';
                 return `<tr style="background: #f0fdf4;">
                 <td>${formatearFechaCorta(dia.fecha)} <small>${dia.diaSemana}</small></td>
                 <td colspan="5" style="text-align: center; color: #16a34a; font-weight: 600;">${tipoJust.toUpperCase()}</td>
@@ -6502,7 +6508,9 @@ function renderJustificaciones(data) {
     const tipoLabels = {
         'VACACION': '<span style="background:#3b82f6;color:white;padding:2px 8px;border-radius:4px;">Vacaciones</span>',
         'INCAPACIDAD': '<span style="background:#ef4444;color:white;padding:2px 8px;border-radius:4px;">Incapacidad</span>',
-        'PERMISO': '<span style="background:#f59e0b;color:white;padding:2px 8px;border-radius:4px;">Permiso</span>'
+        'PERMISO': '<span style="background:#f59e0b;color:white;padding:2px 8px;border-radius:4px;">Permiso c/goce</span>',
+        'PERMISO_CON_GOCE': '<span style="background:#f59e0b;color:white;padding:2px 8px;border-radius:4px;">Permiso c/goce</span>',
+        'PERMISO_SIN_GOCE': '<span style="background:#64748b;color:white;padding:2px 8px;border-radius:4px;">Permiso s/goce</span>'
     };
 
     const usuarioActual = window.currentUser?.nombreCompleto || '';
@@ -6595,7 +6603,12 @@ function filtrarJustificaciones() {
     let filtered = justificacionesData;
 
     if (tipo) {
-        filtered = filtered.filter(j => j.tipo === tipo);
+        // Compatibilidad: el tipo legado 'PERMISO' equivale a 'PERMISO_CON_GOCE'
+        if (tipo === 'PERMISO_CON_GOCE') {
+            filtered = filtered.filter(j => j.tipo === 'PERMISO_CON_GOCE' || j.tipo === 'PERMISO');
+        } else {
+            filtered = filtered.filter(j => j.tipo === tipo);
+        }
     }
     if (busqueda) {
         filtered = filtered.filter(j =>
@@ -6977,7 +6990,7 @@ async function guardarJustificacion() {
         parseInt(empleadoId), fechaInicio, fechaFin, id ? parseInt(id) : null
     );
     if (traslape.success && traslape.data.length > 0) {
-        const tipoLegibleMap = { VACACION: 'Vacaciones', INCAPACIDAD: 'Incapacidad', PERMISO: 'Permiso' };
+        const tipoLegibleMap = { VACACION: 'Vacaciones', INCAPACIDAD: 'Incapacidad', PERMISO: 'Permiso c/goce', PERMISO_CON_GOCE: 'Permiso c/goce', PERMISO_SIN_GOCE: 'Permiso s/goce' };
         const detalle = traslape.data.map(t =>
             `• ${tipoLegibleMap[t.tipo] || t.tipo}: ${formatearFechaCorta(t.fecha_inicio)} → ${formatearFechaCorta(t.fecha_fin)}`
         ).join('\n');
@@ -7017,7 +7030,7 @@ async function guardarJustificacion() {
     // Confirmación cuando son varios días (≥5)
     const totalDias = calcularDiasJustificacion(fechaInicio, fechaFin);
     if (totalDias >= 5) {
-        const tipoLegible = { VACACION: 'VACACIONES', INCAPACIDAD: 'INCAPACIDAD', PERMISO: 'PERMISO' }[tipo] || tipo;
+        const tipoLegible = { VACACION: 'VACACIONES', INCAPACIDAD: 'INCAPACIDAD', PERMISO: 'PERMISO CON GOCE', PERMISO_CON_GOCE: 'PERMISO CON GOCE', PERMISO_SIN_GOCE: 'PERMISO SIN GOCE' }[tipo] || tipo;
         const empNombre = document.getElementById('justEmpleadoNombre')?.textContent || 'el empleado';
         const ok = confirm(
             `Estás registrando ${totalDias} días de ${tipoLegible} para ${empNombre}.\n\n` +
@@ -8032,15 +8045,20 @@ async function cargarAbsentismo() {
         });
 
         // Mapa: empleadoId → { vac, inc, per }
+        // PERMISO_SIN_GOCE NO cuenta como justificación (se trata como falta).
+        // PERMISO legado y PERMISO_CON_GOCE se agrupan en la columna Permiso.
         const justPorEmp = new Map();
         empleadosActivos.forEach(e => justPorEmp.set(e.id, { VACACION: 0, INCAPACIDAD: 0, PERMISO: 0 }));
         justificaciones.forEach(j => {
             const cont = justPorEmp.get(j.empleado_id);
             if (!cont) return;
-            // Contar días dentro del rango filtrado que también estén dentro de la justificación
+            // Normalizar tipo: PERMISO_CON_GOCE → PERMISO; PERMISO_SIN_GOCE no se cuenta
+            let tipoConteo = j.tipo;
+            if (tipoConteo === 'PERMISO_CON_GOCE') tipoConteo = 'PERMISO';
+            if (tipoConteo === 'PERMISO_SIN_GOCE') return;
             fechas.forEach(f => {
                 if (f >= j.fecha_inicio && f <= j.fecha_fin) {
-                    if (cont[j.tipo] !== undefined) cont[j.tipo]++;
+                    if (cont[tipoConteo] !== undefined) cont[tipoConteo]++;
                 }
             });
         });
@@ -8049,12 +8067,14 @@ async function cargarAbsentismo() {
 
         const filas = empleadosActivos.map(emp => {
             const cont = justPorEmp.get(emp.id) || { VACACION: 0, INCAPACIDAD: 0, PERMISO: 0 };
-            // Faltas reales: días sin entrada y sin justificación
+            // Faltas reales: días sin entrada y sin justificación válida.
+            // PERMISO_SIN_GOCE NO es justificación válida → cuenta como falta.
             let faltas = 0;
             fechas.forEach(f => {
                 const tieneEntrada = entradasSet.has(`${emp.id}-${f}`);
                 if (tieneEntrada) return;
                 const tieneJust = justificaciones.some(j =>
+                    j.tipo !== 'PERMISO_SIN_GOCE' &&
                     j.empleado_id === emp.id && f >= j.fecha_inicio && f <= j.fecha_fin
                 );
                 if (!tieneJust) faltas++;
