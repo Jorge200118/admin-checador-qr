@@ -30,6 +30,28 @@ if (typeof supabase !== 'undefined') {
     initSupabase();
 }
 
+// Determina si un registro ENTRADA llegó tarde según su bloque_horario, en zona Mazatlán
+function esTardanzaParaDashboard(reg) {
+    if (!reg || reg.tipo_registro !== 'ENTRADA') return false;
+
+    // Hora del registro en Mazatlán
+    const partesReg = new Date(reg.fecha_hora)
+        .toLocaleTimeString('en-GB', { timeZone: 'America/Mazatlan', hour12: false })
+        .split(':');
+    const minRegistro = parseInt(partesReg[0]) * 60 + parseInt(partesReg[1]);
+
+    // Hora del bloque + tolerancia (si hay bloque); fallback 8:10
+    if (reg.bloque_horario && reg.bloque_horario.hora_entrada) {
+        const partes = reg.bloque_horario.hora_entrada.split(':');
+        const horaLimite = parseInt(partes[0]);
+        const minLimite = parseInt(partes[1] || 0);
+        const tolerancia = reg.bloque_horario.tolerancia_entrada_min ?? 10;
+        const limite = horaLimite * 60 + minLimite + tolerancia;
+        return minRegistro > limite;
+    }
+    return minRegistro > (8 * 60 + 10);
+}
+
 // API Helper para Admin Panel
 const SupabaseAPI = {
     // ==========================================
@@ -37,28 +59,25 @@ const SupabaseAPI = {
     // ==========================================
     async getDashboardEstadisticas(sucursal = null) {
         try {
-            const hoy = new Date();
-            const inicioHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
-            const finHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59);
+            // Calcular inicio/fin del día en Mazatlán (UTC-7, sin DST)
+            const ahoraMzt = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Mazatlan' }));
+            const inicioHoy = new Date(ahoraMzt.getFullYear(), ahoraMzt.getMonth(), ahoraMzt.getDate());
+            const finHoy = new Date(ahoraMzt.getFullYear(), ahoraMzt.getMonth(), ahoraMzt.getDate(), 23, 59, 59);
 
-            // Contar empleados presentes (con entrada hoy sin salida)
-            let queryPresentes = supabaseClient
-                .from('registros')
-                .select('empleado_id, empleado:empleados!inner(sucursal)', { count: 'exact', head: true })
-                .eq('tipo_registro', 'ENTRADA')
-                .gte('fecha_hora', inicioHoy.toISOString())
-                .lte('fecha_hora', finHoy.toISOString());
-
-            if (sucursal) {
-                queryPresentes = queryPresentes.eq('empleado.sucursal', sucursal);
-            }
-
-            const { count: presentes } = await queryPresentes;
-
-            // Contar total de registros hoy
+            // Traer todos los registros de hoy con datos necesarios en una sola consulta
             let queryRegistros = supabaseClient
                 .from('registros')
-                .select('*, empleado:empleados!inner(sucursal)', { count: 'exact', head: true })
+                .select(`
+                    empleado_id,
+                    tipo_registro,
+                    fecha_hora,
+                    tablet_id,
+                    empleado:empleados!inner(sucursal),
+                    bloque_horario:bloques_horario(
+                        hora_entrada,
+                        tolerancia_entrada_min
+                    )
+                `)
                 .gte('fecha_hora', inicioHoy.toISOString())
                 .lte('fecha_hora', finHoy.toISOString());
 
@@ -66,65 +85,57 @@ const SupabaseAPI = {
                 queryRegistros = queryRegistros.eq('empleado.sucursal', sucursal);
             }
 
-            const { count: registrosHoy } = await queryRegistros;
+            const { data: registros } = await queryRegistros;
+            const lista = registros || [];
 
-            // Contar llegadas tarde (usando bloques de horario)
-            let queryTarde = supabaseClient
-                .from('registros')
-                .select(`
-                    id,
-                    fecha_hora,
-                    empleado:empleados!inner(sucursal),
-                    bloque_horario:bloques_horario(
-                        hora_entrada,
-                        tolerancia_entrada_min
-                    )
-                `)
-                .eq('tipo_registro', 'ENTRADA')
-                .gte('fecha_hora', inicioHoy.toISOString())
-                .lte('fecha_hora', finHoy.toISOString())
-                .not('bloque_horario_id', 'is', null);
+            // Registros Hoy = solo ENTRADAS
+            const entradas = lista.filter(r => r.tipo_registro === 'ENTRADA');
+            const registrosHoy = entradas.length;
 
-            if (sucursal) {
-                queryTarde = queryTarde.eq('empleado.sucursal', sucursal);
-            }
+            // Empleados Presentes = únicos con ENTRADA sin SALIDA posterior
+            const ultimoTipoPorEmpleado = new Map();
+            // Ordenar por fecha asc para que el último gane
+            lista
+                .slice()
+                .sort((a, b) => new Date(a.fecha_hora) - new Date(b.fecha_hora))
+                .forEach(r => {
+                    if (r.tipo_registro === 'ENTRADA' || r.tipo_registro === 'SALIDA') {
+                        ultimoTipoPorEmpleado.set(r.empleado_id, r.tipo_registro);
+                    }
+                });
+            let empleadosPresentes = 0;
+            ultimoTipoPorEmpleado.forEach(tipo => {
+                if (tipo === 'ENTRADA') empleadosPresentes++;
+            });
 
-            const { data: registrosConBloque } = await queryTarde;
+            // Llegadas Tarde = empleados únicos cuya PRIMERA entrada del día superó la tolerancia
+            const primeraEntradaPorEmpleado = new Map();
+            entradas
+                .slice()
+                .sort((a, b) => new Date(a.fecha_hora) - new Date(b.fecha_hora))
+                .forEach(r => {
+                    if (!primeraEntradaPorEmpleado.has(r.empleado_id)) {
+                        primeraEntradaPorEmpleado.set(r.empleado_id, r);
+                    }
+                });
 
             let llegadasTarde = 0;
-            if (registrosConBloque) {
-                llegadasTarde = registrosConBloque.filter(reg => {
-                    if (!reg.bloque_horario) return false;
-                    const horaEntrada = new Date(`1970-01-01T${reg.bloque_horario.hora_entrada}`);
-                    const tolerancia = reg.bloque_horario.tolerancia_entrada_min || 15;
-                    horaEntrada.setMinutes(horaEntrada.getMinutes() + tolerancia);
-                    const horaRegistro = new Date(`1970-01-01T${new Date(reg.fecha_hora).toISOString().substring(11, 19)}`);
-                    return horaRegistro > horaEntrada;
-                }).length;
-            }
+            primeraEntradaPorEmpleado.forEach(reg => {
+                if (esTardanzaParaDashboard(reg)) llegadasTarde++;
+            });
 
-            // Tablets activas (contar tablets únicas en registros de hoy)
-            let queryTablets = supabaseClient
-                .from('registros')
-                .select('tablet_id, empleado:empleados!inner(sucursal)')
-                .gte('fecha_hora', inicioHoy.toISOString())
-                .lte('fecha_hora', finHoy.toISOString());
-
-            if (sucursal) {
-                queryTablets = queryTablets.eq('empleado.sucursal', sucursal);
-            }
-
-            const { data: tablets } = await queryTablets;
-
-            const tabletsActivas = tablets ? new Set(tablets.map(t => t.tablet_id)).size : 0;
+            // Tablets activas = tablets únicas con registros hoy
+            const tabletsSet = new Set();
+            lista.forEach(r => { if (r.tablet_id) tabletsSet.add(r.tablet_id); });
+            const tabletsActivas = tabletsSet.size;
 
             return {
                 success: true,
                 data: {
-                    empleadosPresentes: presentes || 0,
-                    registrosHoy: registrosHoy || 0,
-                    llegadasTarde: llegadasTarde,
-                    tabletsActivas: tabletsActivas
+                    empleadosPresentes,
+                    registrosHoy,
+                    llegadasTarde,
+                    tabletsActivas
                 }
             };
 
