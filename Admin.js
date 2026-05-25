@@ -222,8 +222,8 @@ const elements = {
     empleadosPresentes: document.getElementById('empleadosPresentes'),
     registrosHoy: document.getElementById('registrosHoy'),
     llegadasTarde: document.getElementById('llegadasTarde'),
-    tabletsActivas: document.getElementById('tabletsActivas'),
-    
+
+
     // Tablas
     empleadosPresentesTable: document.getElementById('empleadosPresentesTable'),
     ultimosRegistrosTable: document.getElementById('ultimosRegistrosTable'),
@@ -496,8 +496,7 @@ async function loadDashboardData() {
         updateDashboardStats({
             empleados_presentes: 0,
             registros_hoy: 0,
-            tardanzas: 0,
-            tablets_activas: 0
+            tardanzas: 0
         });
 
     } finally {
@@ -615,7 +614,7 @@ const SUCURSALES_LIST = ['MATRIZ','LA PAZ','SAN JOSE','TAMARAL','CABOS','EL FUER
 async function cargarSucursales() {
     const tbody = document.getElementById('sucursalesTableBody');
     if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#64748b"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:#64748b"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>';
 
     const resultados = await Promise.all(
         SUCURSALES_LIST.map(suc => SupabaseAPI.getDashboardEstadisticas(suc))
@@ -629,7 +628,6 @@ async function cargarSucursales() {
         const presentes  = d.empleadosPresentes ?? '—';
         const registros  = d.registrosHoy       ?? '—';
         const tarde      = d.llegadasTarde       ?? '—';
-        const tablets    = d.tabletsActivas      ?? '—';
 
         if (res.success) {
             totalPresentes += d.empleadosPresentes || 0;
@@ -642,7 +640,6 @@ async function cargarSucursales() {
             <td>${presentes}</td>
             <td>${registros}</td>
             <td>${tarde}</td>
-            <td>${tablets}</td>
         </tr>`;
     });
 
@@ -1682,15 +1679,13 @@ function updateDashboardStats(stats) {
     const valores = {
         presentes: parseInt(stats.empleadosPresentes || stats.empleados_presentes || 0),
         registros: parseInt(stats.registrosHoy || stats.registros_hoy?.total_registros || stats.registros_hoy || 0) || 0,
-        tardanzas: parseInt(stats.llegadasTarde || stats.tardanzas || stats.llegadas_tarde || 0),
-        tablets: parseInt(stats.tabletsActivas || stats.tablets_activas || 0)
+        tardanzas: parseInt(stats.llegadasTarde || stats.tardanzas || stats.llegadas_tarde || 0)
     };
-    
+
     const elementos = {
         presentes: elements.empleadosPresentes,
         registros: elements.registrosHoy,
-        tardanzas: elements.llegadasTarde,
-        tablets: elements.tabletsActivas
+        tardanzas: elements.llegadasTarde
     };
     
     Object.keys(elementos).forEach(key => {
@@ -1713,11 +1708,8 @@ function updateDashboardStats(stats) {
         const el = document.querySelector('[data-stat="tardanzas"] .stat-number, .stat-card:nth-child(3) .stat-number');
         if (el) el.textContent = valores.tardanzas;
     }
-    if (!elementos.tablets) {
-        const el = document.querySelector('[data-stat="tablets"] .stat-number, .stat-card:nth-child(4) .stat-number');
-        if (el) el.textContent = valores.tablets;
-    }
-    
+
+
     setTimeout(() => {
         document.querySelectorAll('.stat-number').forEach(el => {
             if (el.textContent.includes('[object') || el.textContent.includes('undefined') || el.textContent === '') {

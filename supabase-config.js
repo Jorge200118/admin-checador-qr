@@ -71,7 +71,6 @@ const SupabaseAPI = {
                     empleado_id,
                     tipo_registro,
                     fecha_hora,
-                    tablet_id,
                     empleado:empleados!inner(sucursal),
                     bloque_horario:bloques_horario(
                         hora_entrada,
@@ -124,18 +123,12 @@ const SupabaseAPI = {
                 if (esTardanzaParaDashboard(reg)) llegadasTarde++;
             });
 
-            // Tablets activas = tablets únicas con registros hoy
-            const tabletsSet = new Set();
-            lista.forEach(r => { if (r.tablet_id) tabletsSet.add(r.tablet_id); });
-            const tabletsActivas = tabletsSet.size;
-
             return {
                 success: true,
                 data: {
                     empleadosPresentes,
                     registrosHoy,
-                    llegadasTarde,
-                    tabletsActivas
+                    llegadasTarde
                 }
             };
 
