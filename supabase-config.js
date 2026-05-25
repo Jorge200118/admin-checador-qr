@@ -30,24 +30,21 @@ if (typeof supabase !== 'undefined') {
     initSupabase();
 }
 
-// Determina si un registro ENTRADA llegó tarde según su bloque_horario, en zona Mazatlán
+// Determina si un registro ENTRADA llegó tarde. Misma lógica que esTardanzaRegistro en Admin.js:
+// 10 min fijos de tolerancia con bloque, fallback 8:10 sin bloque. Comparado en zona Mazatlán.
 function esTardanzaParaDashboard(reg) {
     if (!reg || reg.tipo_registro !== 'ENTRADA') return false;
 
-    // Hora del registro en Mazatlán
     const partesReg = new Date(reg.fecha_hora)
         .toLocaleTimeString('en-GB', { timeZone: 'America/Mazatlan', hour12: false })
         .split(':');
     const minRegistro = parseInt(partesReg[0]) * 60 + parseInt(partesReg[1]);
 
-    // Hora del bloque + tolerancia (si hay bloque); fallback 8:10
     if (reg.bloque_horario && reg.bloque_horario.hora_entrada) {
         const partes = reg.bloque_horario.hora_entrada.split(':');
         const horaLimite = parseInt(partes[0]);
         const minLimite = parseInt(partes[1] || 0);
-        const tolerancia = reg.bloque_horario.tolerancia_entrada_min ?? 10;
-        const limite = horaLimite * 60 + minLimite + tolerancia;
-        return minRegistro > limite;
+        return minRegistro > (horaLimite * 60 + minLimite + 10);
     }
     return minRegistro > (8 * 60 + 10);
 }
@@ -107,21 +104,8 @@ const SupabaseAPI = {
                 if (tipo === 'ENTRADA') empleadosPresentes++;
             });
 
-            // Llegadas Tarde = empleados únicos cuya PRIMERA entrada del día superó la tolerancia
-            const primeraEntradaPorEmpleado = new Map();
-            entradas
-                .slice()
-                .sort((a, b) => new Date(a.fecha_hora) - new Date(b.fecha_hora))
-                .forEach(r => {
-                    if (!primeraEntradaPorEmpleado.has(r.empleado_id)) {
-                        primeraEntradaPorEmpleado.set(r.empleado_id, r);
-                    }
-                });
-
-            let llegadasTarde = 0;
-            primeraEntradaPorEmpleado.forEach(reg => {
-                if (esTardanzaParaDashboard(reg)) llegadasTarde++;
-            });
+            // Llegadas Tarde = todas las ENTRADAs marcadas tarde (mismo criterio que el rojo en Registros)
+            const llegadasTarde = entradas.filter(esTardanzaParaDashboard).length;
 
             return {
                 success: true,
