@@ -222,6 +222,7 @@ const elements = {
     empleadosPresentes: document.getElementById('empleadosPresentes'),
     registrosHoy: document.getElementById('registrosHoy'),
     llegadasTarde: document.getElementById('llegadasTarde'),
+    faltasHoy: document.getElementById('faltasHoy'),
 
 
     // Tablas
@@ -496,7 +497,8 @@ async function loadDashboardData() {
         updateDashboardStats({
             empleados_presentes: 0,
             registros_hoy: 0,
-            tardanzas: 0
+            tardanzas: 0,
+            faltas_hoy: 0
         });
 
     } finally {
@@ -614,13 +616,13 @@ const SUCURSALES_LIST = ['MATRIZ','LA PAZ','SAN JOSE','TAMARAL','CABOS','EL FUER
 async function cargarSucursales() {
     const tbody = document.getElementById('sucursalesTableBody');
     if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:#64748b"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#64748b"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>';
 
     const resultados = await Promise.all(
         SUCURSALES_LIST.map(suc => SupabaseAPI.getDashboardEstadisticas(suc))
     );
 
-    let totalPresentes = 0, totalRegistros = 0, totalTarde = 0;
+    let totalPresentes = 0, totalRegistros = 0, totalTarde = 0, totalFaltas = 0;
     let rows = '';
 
     resultados.forEach((res, i) => {
@@ -628,11 +630,13 @@ async function cargarSucursales() {
         const presentes  = d.empleadosPresentes ?? '—';
         const registros  = d.registrosHoy       ?? '—';
         const tarde      = d.llegadasTarde       ?? '—';
+        const faltas     = d.faltasHoy           ?? '—';
 
         if (res.success) {
             totalPresentes += d.empleadosPresentes || 0;
             totalRegistros += d.registrosHoy       || 0;
             totalTarde     += d.llegadasTarde       || 0;
+            totalFaltas    += d.faltasHoy           || 0;
         }
 
         rows += `<tr>
@@ -640,6 +644,7 @@ async function cargarSucursales() {
             <td>${presentes}</td>
             <td>${registros}</td>
             <td>${tarde}</td>
+            <td>${faltas}</td>
         </tr>`;
     });
 
@@ -649,6 +654,7 @@ async function cargarSucursales() {
     if (el('totalPresentesGlobal')) el('totalPresentesGlobal').textContent = totalPresentes;
     if (el('totalRegistrosGlobal')) el('totalRegistrosGlobal').textContent = totalRegistros;
     if (el('totalTardeGlobal'))     el('totalTardeGlobal').textContent     = totalTarde;
+    if (el('totalFaltasGlobal'))    el('totalFaltasGlobal').textContent    = totalFaltas;
 }
 
 window.cargarSucursales = cargarSucursales;
@@ -1679,13 +1685,15 @@ function updateDashboardStats(stats) {
     const valores = {
         presentes: parseInt(stats.empleadosPresentes || stats.empleados_presentes || 0),
         registros: parseInt(stats.registrosHoy || stats.registros_hoy?.total_registros || stats.registros_hoy || 0) || 0,
-        tardanzas: parseInt(stats.llegadasTarde || stats.tardanzas || stats.llegadas_tarde || 0)
+        tardanzas: parseInt(stats.llegadasTarde || stats.tardanzas || stats.llegadas_tarde || 0),
+        faltas: parseInt(stats.faltasHoy || stats.faltas_hoy || 0)
     };
 
     const elementos = {
         presentes: elements.empleadosPresentes,
         registros: elements.registrosHoy,
-        tardanzas: elements.llegadasTarde
+        tardanzas: elements.llegadasTarde,
+        faltas: elements.faltasHoy
     };
     
     Object.keys(elementos).forEach(key => {

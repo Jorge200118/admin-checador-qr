@@ -191,7 +191,17 @@
                         <p>Llegadas Tarde</p>
                     </div>
                 </div>
-                
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-user-times"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="faltasHoy">0</h3>
+                        <p>Faltas Hoy</p>
+                    </div>
+                </div>
+
             </div>
 
             <div class="dashboard-content">
@@ -1070,6 +1080,13 @@
                         <p>Llegadas Tarde (Total)</p>
                     </div>
                 </div>
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-user-times"></i></div>
+                    <div class="stat-info">
+                        <h3 id="totalFaltasGlobal">—</h3>
+                        <p>Faltas Hoy (Total)</p>
+                    </div>
+                </div>
             </div>
 
             <!-- Tabla resumen por sucursal -->
@@ -1089,10 +1106,11 @@
                                     <th>Presentes Hoy</th>
                                     <th>Registros Hoy</th>
                                     <th>Llegadas Tarde</th>
+                                    <th>Faltas Hoy</th>
                                 </tr>
                             </thead>
                             <tbody id="sucursalesTableBody">
-                                <tr><td colspan="4" style="text-align:center;padding:20px;color:#64748b">Cargando...</td></tr>
+                                <tr><td colspan="5" style="text-align:center;padding:20px;color:#64748b">Cargando...</td></tr>
                             </tbody>
                         </table>
                     </div>

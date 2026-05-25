@@ -61,7 +61,10 @@ const SupabaseAPI = {
             const inicioHoy = new Date(ahoraMzt.getFullYear(), ahoraMzt.getMonth(), ahoraMzt.getDate());
             const finHoy = new Date(ahoraMzt.getFullYear(), ahoraMzt.getMonth(), ahoraMzt.getDate(), 23, 59, 59);
 
-            // Traer todos los registros de hoy con datos necesarios en una sola consulta
+            // Fecha de hoy en Mazatlán como YYYY-MM-DD (para comparar con justificaciones)
+            const fechaHoyStr = `${ahoraMzt.getFullYear()}-${String(ahoraMzt.getMonth() + 1).padStart(2, '0')}-${String(ahoraMzt.getDate()).padStart(2, '0')}`;
+
+            // Query base de registros del día
             let queryRegistros = supabaseClient
                 .from('registros')
                 .select(`
@@ -77,12 +80,35 @@ const SupabaseAPI = {
                 .gte('fecha_hora', inicioHoy.toISOString())
                 .lte('fecha_hora', finHoy.toISOString());
 
+            // Query de empleados activos
+            let queryEmpleados = supabaseClient
+                .from('empleados')
+                .select('id, sucursal, activo')
+                .eq('activo', true);
+
+            // Query de justificaciones que cubren HOY
+            let queryJustificaciones = supabaseClient
+                .from('justificaciones')
+                .select('empleado_id, fecha_inicio, fecha_fin, empleado:empleados!inner(sucursal)')
+                .is('eliminado_en', null)
+                .lte('fecha_inicio', fechaHoyStr)
+                .gte('fecha_fin', fechaHoyStr);
+
             if (sucursal) {
                 queryRegistros = queryRegistros.eq('empleado.sucursal', sucursal);
+                queryEmpleados = queryEmpleados.eq('sucursal', sucursal);
+                queryJustificaciones = queryJustificaciones.eq('empleado.sucursal', sucursal);
             }
 
-            const { data: registros } = await queryRegistros;
-            const lista = registros || [];
+            const [registrosRes, empleadosRes, justificacionesRes] = await Promise.all([
+                queryRegistros,
+                queryEmpleados,
+                queryJustificaciones
+            ]);
+
+            const lista = registrosRes.data || [];
+            const empleadosActivos = empleadosRes.data || [];
+            const justificaciones = justificacionesRes.data || [];
 
             // Registros Hoy = solo ENTRADAS
             const entradas = lista.filter(r => r.tipo_registro === 'ENTRADA');
@@ -90,7 +116,6 @@ const SupabaseAPI = {
 
             // Empleados Presentes = únicos con ENTRADA sin SALIDA posterior
             const ultimoTipoPorEmpleado = new Map();
-            // Ordenar por fecha asc para que el último gane
             lista
                 .slice()
                 .sort((a, b) => new Date(a.fecha_hora) - new Date(b.fecha_hora))
@@ -107,12 +132,20 @@ const SupabaseAPI = {
             // Llegadas Tarde = todas las ENTRADAs marcadas tarde (mismo criterio que el rojo en Registros)
             const llegadasTarde = entradas.filter(esTardanzaParaDashboard).length;
 
+            // Faltas Hoy = empleados activos sin ENTRADA hoy y sin justificación que cubra hoy
+            const empleadosConEntrada = new Set(entradas.map(r => r.empleado_id));
+            const empleadosJustificados = new Set(justificaciones.map(j => j.empleado_id));
+            const faltasHoy = empleadosActivos.filter(emp =>
+                !empleadosConEntrada.has(emp.id) && !empleadosJustificados.has(emp.id)
+            ).length;
+
             return {
                 success: true,
                 data: {
                     empleadosPresentes,
                     registrosHoy,
-                    llegadasTarde
+                    llegadasTarde,
+                    faltasHoy
                 }
             };
 
