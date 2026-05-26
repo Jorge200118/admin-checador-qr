@@ -103,6 +103,12 @@
                         <span>Estadísticas</span>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="#rotacion" data-section="rotacion">
+                        <i class="fas fa-people-arrows"></i>
+                        <span>Rotación</span>
+                    </a>
+                </li>
                 <li class="nav-item" data-superadmin-only="true">
                     <a href="#configuracion" data-section="configuracion">
                         <i class="fas fa-cog"></i>
@@ -941,7 +947,25 @@
                     </div>
                 </div>
             </div>
+        </section>
 
+        <!-- ==================== SECCIÓN ROTACIÓN ==================== -->
+        <section id="rotacion" class="content-section">
+            <div class="section-header">
+                <div><h2 style="margin:0 0 2px">Rotación</h2></div>
+            </div>
+
+            <!-- Sub-pestañas -->
+            <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid #334155">
+                <button class="rot-tab" data-rottab="resumen" onclick="mostrarTabRotacion('resumen')"
+                    style="background:none;border:none;border-bottom:2px solid #3b82f6;color:#3b82f6;padding:10px 16px;cursor:pointer;font-size:14px;font-weight:600">Resumen</button>
+                <button class="rot-tab" data-rottab="porpuesto" onclick="mostrarTabRotacion('porpuesto')"
+                    style="background:none;border:none;border-bottom:2px solid transparent;color:#94a3b8;padding:10px 16px;cursor:pointer;font-size:14px;font-weight:600">Por Puesto</button>
+                <button class="rot-tab" data-rottab="permanencia" onclick="mostrarTabRotacion('permanencia')"
+                    style="background:none;border:none;border-bottom:2px solid transparent;color:#94a3b8;padding:10px 16px;cursor:pointer;font-size:14px;font-weight:600">Permanencia</button>
+            </div>
+
+            <div id="rotTabResumen" class="rot-tab-content">
             <!-- Tabla de rotación — tarjeta full-width -->
             <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)">
                 <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px">
@@ -967,7 +991,8 @@
                     </table>
                 </div>
             </div>
-
+            </div>
+            <div id="rotTabPorPuesto" class="rot-tab-content" style="display:none">
             <!-- Rotación por Puesto -->
             <div class="card" style="margin-top:24px">
                 <div class="card-body">
@@ -1009,6 +1034,10 @@
                         </table>
                     </div>
                 </div>
+            </div>
+            </div>
+            <div id="rotTabPermanencia" class="rot-tab-content" style="display:none">
+                <!-- Permanencia: se llena en otra tarea -->
             </div>
         </section>
 
