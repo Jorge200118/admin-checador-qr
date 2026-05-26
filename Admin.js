@@ -7857,6 +7857,12 @@ function _renderTablaRotacionPuesto(rows) {
         return;
     }
 
+    const _esOscuro = (typeof getCurrentTheme === 'function') && getCurrentTheme() === 'dark';
+    const _colTexto    = _esOscuro ? '#e8eef5' : '#0f172a';
+    const _colTextoSec = _esOscuro ? '#94a8c4' : '#64748b';
+    const _bgTrack     = _esOscuro ? 'rgba(255,255,255,0.08)' : '#f1f5f9';
+    const _bordeTotal  = _esOscuro ? '#334155' : '#cbd5e1';
+
     const tot = rows.reduce((a, r) => ({
         pi: a.pi + r.plantilla_inicial,
         c:  a.c  + r.contrataciones,
@@ -7866,22 +7872,25 @@ function _renderTablaRotacionPuesto(rows) {
     const promTot = (tot.pi + tot.pf) / 2;
     const tasaTot = promTot > 0 ? ((tot.b / promTot) * 100).toFixed(1) : '0.0';
 
-    const filas = rows.map(r => {
+    const filas = rows.map((r, idx) => {
         const tasa = parseFloat(r.tasa) || 0;
         const color = _colorTasaRot(tasa);
         const bg = tasa > 40 ? 'rgba(239,68,68,.12)' : tasa > 20 ? 'rgba(245,158,11,.12)' : 'rgba(16,185,129,.12)';
         const barW = Math.min(100, tasa).toFixed(1);
+        const rowBg = _esOscuro
+            ? (idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.04)')
+            : (idx % 2 === 0 ? '#ffffff' : '#fafafa');
         return `
-        <tr>
-            <td style="padding:10px 16px;font-size:13px;font-weight:600">${r.puesto}</td>
-            <td style="padding:10px 16px;font-size:13px">${_codigoSucursal(r.sucursal)}</td>
-            <td style="padding:10px 16px;text-align:right;font-size:13px">${r.plantilla_inicial}</td>
+        <tr style="background:${rowBg}">
+            <td style="padding:10px 16px;font-size:13px;font-weight:600;color:${_colTexto}">${r.puesto}</td>
+            <td style="padding:10px 16px;font-size:13px;color:${_colTextoSec}">${_codigoSucursal(r.sucursal)}</td>
+            <td style="padding:10px 16px;text-align:right;font-size:13px;color:${_colTexto}">${r.plantilla_inicial}</td>
             <td style="padding:10px 16px;text-align:right;font-size:13px;color:#10b981;font-weight:600">+${r.contrataciones}</td>
             <td style="padding:10px 16px;text-align:right;font-size:13px;color:#ef4444;font-weight:600">−${r.bajas}</td>
-            <td style="padding:10px 16px;text-align:right;font-size:13px">${r.plantilla_final}</td>
+            <td style="padding:10px 16px;text-align:right;font-size:13px;color:${_colTexto}">${r.plantilla_final}</td>
             <td style="padding:10px 16px">
                 <div style="display:flex;align-items:center;gap:10px;justify-content:flex-end">
-                    <div style="flex:1;max-width:70px;height:5px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden">
+                    <div style="flex:1;max-width:70px;height:5px;background:${_bgTrack};border-radius:3px;overflow:hidden">
                         <div style="width:${barW}%;height:100%;background:${color};border-radius:3px"></div>
                     </div>
                     <span style="background:${bg};color:${color};padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;min-width:52px;text-align:center">${r.tasa}%</span>
@@ -7891,14 +7900,14 @@ function _renderTablaRotacionPuesto(rows) {
     }).join('');
 
     const filaTotal = `
-        <tr style="border-top:2px solid #334155;font-weight:700">
-            <td style="padding:10px 16px;font-size:13px">TOTAL</td>
+        <tr style="border-top:2px solid ${_bordeTotal};font-weight:700">
+            <td style="padding:10px 16px;font-size:13px;color:${_colTexto}">TOTAL</td>
             <td></td>
-            <td style="padding:10px 16px;text-align:right;font-size:13px">${tot.pi}</td>
+            <td style="padding:10px 16px;text-align:right;font-size:13px;color:${_colTexto}">${tot.pi}</td>
             <td style="padding:10px 16px;text-align:right;font-size:13px;color:#10b981">+${tot.c}</td>
             <td style="padding:10px 16px;text-align:right;font-size:13px;color:#ef4444">−${tot.b}</td>
-            <td style="padding:10px 16px;text-align:right;font-size:13px">${tot.pf}</td>
-            <td style="padding:10px 16px;text-align:right;font-size:13px">${tasaTot}%</td>
+            <td style="padding:10px 16px;text-align:right;font-size:13px;color:${_colTexto}">${tot.pf}</td>
+            <td style="padding:10px 16px;text-align:right;font-size:13px;color:${_colTexto}">${tasaTot}%</td>
         </tr>`;
 
     tbody.innerHTML = filas + filaTotal;
