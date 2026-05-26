@@ -8235,6 +8235,7 @@ async function cargarHistogramaPermanencia(detalle) {
         }
         if (_estCharts['chartPermanencia']) { _estCharts['chartPermanencia'].destroy(); }
         _renderChartBarrasRangos('chartPermanencia', json.data, '#3b82f6');
+        _renderChartPermanenciaAcum(json.data, json.total_empleados);
 
         // Adjuntar handler de drill-down al chart recién creado (solo en vista principal)
         const chart = _estCharts['chartPermanencia'];
@@ -8280,6 +8281,98 @@ function _actualizarBotonVolverPermanencia() {
 
 function volverHistogramaPermanencia() {
     cargarHistogramaPermanencia(null);
+}
+
+// Curva de supervivencia: por cada bucket i muestra cuántos empleados duran
+// AL MENOS hasta ese bucket (suma desde i hasta el final), tanto en absoluto
+// (barras) como en % del total (línea, eje derecho).
+function _renderChartPermanenciaAcum(buckets, total) {
+    const ctx = document.getElementById('chartPermanenciaAcum');
+    if (!ctx) return;
+    if (_estCharts['chartPermanenciaAcum']) _estCharts['chartPermanenciaAcum'].destroy();
+    if (!buckets || !buckets.length || !total) return;
+
+    const ordenados = [...buckets].sort((a, b) => (a.orden ?? 99) - (b.orden ?? 99));
+    // sobreviven[i] = sum(total de buckets desde i hasta el final)
+    const sobreviven = [];
+    let acumDesdeFinal = 0;
+    for (let i = ordenados.length - 1; i >= 0; i--) {
+        acumDesdeFinal += ordenados[i].total;
+        sobreviven[i] = acumDesdeFinal;
+    }
+    const labels = ordenados.map(b => `≥ ${b.rango}`);
+    const pct = sobreviven.map(v => total > 0 ? Number(((v / total) * 100).toFixed(1)) : 0);
+
+    const _cc = getChartThemeColors();
+    _estCharts['chartPermanenciaAcum'] = new Chart(ctx, {
+        data: {
+            labels,
+            datasets: [
+                {
+                    type: 'bar',
+                    label: 'Sobreviven',
+                    data: sobreviven,
+                    backgroundColor: 'rgba(16,185,129,0.55)',
+                    borderRadius: { topLeft: 5, topRight: 5 },
+                    borderSkipped: false,
+                    maxBarThickness: 38,
+                    yAxisID: 'y'
+                },
+                {
+                    type: 'line',
+                    label: '% del total',
+                    data: pct,
+                    borderColor: '#f59e0b',
+                    backgroundColor: '#f59e0b',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    tension: 0.25,
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: true, labels: { color: _cc.text, font: { size: 12 } } },
+                tooltip: {
+                    ..._ttBase,
+                    callbacks: {
+                        label: c => {
+                            if (c.dataset.label === '% del total') return `  ${c.parsed.y}%`;
+                            return `  ${c.parsed.y} empleados`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: _cc.text, font: { size: 11, weight: '500' } },
+                    grid: { display: false },
+                    border: { color: _cc.border }
+                },
+                y: {
+                    position: 'left',
+                    ticks: { color: _cc.muted, font: { size: 10 }, precision: 0 },
+                    grid: { color: _cc.grid, drawTicks: false },
+                    border: { dash: [3, 3], color: 'transparent' },
+                    beginAtZero: true,
+                    title: { display: true, text: 'Empleados', color: _cc.muted, font: { size: 10 } }
+                },
+                y1: {
+                    position: 'right',
+                    min: 0, max: 100,
+                    ticks: { color: '#f59e0b', font: { size: 10 }, callback: v => v + '%' },
+                    grid: { display: false },
+                    border: { color: _cc.border },
+                    title: { display: true, text: '% del total', color: '#f59e0b', font: { size: 10 } }
+                }
+            }
+        }
+    });
 }
 
 // ================================

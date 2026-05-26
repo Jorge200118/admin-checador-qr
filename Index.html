@@ -1123,6 +1123,14 @@
                             <button id="permBotonVolver" onclick="volverHistogramaPermanencia()" style="display:none;padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);cursor:pointer;font-size:12px"></button>
                         </div>
                         <div style="padding:8px 4px 4px"><canvas id="chartPermanencia" style="min-height:340px"></canvas></div>
+                        <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                                <div style="width:8px;height:8px;border-radius:50%;background:var(--accent-success)"></div>
+                                <span style="font-size:13px;font-weight:600;color:var(--text-primary)">Curva de supervivencia</span>
+                                <span style="font-size:11px;color:var(--text-muted);margin-left:auto">cuántos aguantan al menos X tiempo · % del total</span>
+                            </div>
+                            <div style="padding:4px"><canvas id="chartPermanenciaAcum" style="min-height:260px"></canvas></div>
+                        </div>
                     </div>
                 </div>
             </div>
