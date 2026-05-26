@@ -3018,29 +3018,114 @@ async function deleteEmployee(empleadoId) {
 // ================================
 // FILTROS Y BÚSQUEDA
 // ================================
+let ordenEmpleados = { columna: null, direccion: 'asc' };
+
 function applyEmployeeFilters() {
     let filtered = [...adminState.employeesData];
-    
+
     const search = elements.searchEmpleados?.value?.toLowerCase();
     if (search) {
-        filtered = filtered.filter(emp => 
+        filtered = filtered.filter(emp =>
             (emp.nombre || '').toLowerCase().includes(search) ||
             (emp.apellido || '').toLowerCase().includes(search) ||
             (emp.codigo_empleado || '').toLowerCase().includes(search)
         );
     }
-    
+
     const horarioFilter = elements.filterHorario?.value;
     if (horarioFilter) {
         filtered = filtered.filter(emp => emp.horario_id == horarioFilter);
     }
-    
+
     const estadoFilter = elements.filterEstado?.value;
     if (estadoFilter !== '' && estadoFilter !== undefined) {
         filtered = filtered.filter(emp => emp.activo == (estadoFilter === '1'));
     }
-    
+
+    // Ordenar por la columna seleccionada
+    if (ordenEmpleados.columna) {
+        filtered.sort((a, b) => {
+            let valorA, valorB;
+
+            switch (ordenEmpleados.columna) {
+                case 'codigo':
+                    valorA = a.codigo_empleado || '';
+                    valorB = b.codigo_empleado || '';
+                    break;
+                case 'nombre':
+                    valorA = ((a.nombre || '') + ' ' + (a.apellido || '')).trim();
+                    valorB = ((b.nombre || '') + ' ' + (b.apellido || '')).trim();
+                    break;
+                case 'sucursal':
+                    valorA = a.sucursal || '';
+                    valorB = b.sucursal || '';
+                    break;
+                case 'puesto':
+                    valorA = a.puesto || '';
+                    valorB = b.puesto || '';
+                    break;
+                case 'horario':
+                    valorA = a.horario_nombre || '';
+                    valorB = b.horario_nombre || '';
+                    break;
+                case 'estado':
+                    valorA = a.activo ? 1 : 0;
+                    valorB = b.activo ? 1 : 0;
+                    break;
+                case 'fecha_alta':
+                    valorA = a.fecha_alta ? new Date(a.fecha_alta).getTime() : 0;
+                    valorB = b.fecha_alta ? new Date(b.fecha_alta).getTime() : 0;
+                    break;
+                default:
+                    return 0;
+            }
+
+            if (typeof valorA === 'string') {
+                return ordenEmpleados.direccion === 'asc'
+                    ? valorA.localeCompare(valorB)
+                    : valorB.localeCompare(valorA);
+            } else {
+                return ordenEmpleados.direccion === 'asc'
+                    ? valorA - valorB
+                    : valorB - valorA;
+            }
+        });
+    }
+
     return filtered;
+}
+
+function ordenarEmpleados(columna) {
+    // Cambiar dirección si es la misma columna, si no empezar en asc
+    if (ordenEmpleados.columna === columna) {
+        ordenEmpleados.direccion = ordenEmpleados.direccion === 'asc' ? 'desc' : 'asc';
+    } else {
+        ordenEmpleados.columna = columna;
+        ordenEmpleados.direccion = 'asc';
+    }
+
+    renderEmployeesTable();
+    actualizarIconosOrdenEmpleados();
+}
+
+// Actualiza los íconos de las cabeceras para reflejar la columna/dirección activa
+function actualizarIconosOrdenEmpleados() {
+    const headers = elements.empleadosTable?.querySelectorAll('thead th[onclick]');
+    if (!headers) return;
+
+    headers.forEach(th => {
+        const icono = th.querySelector('i');
+        if (!icono) return;
+
+        const match = th.getAttribute('onclick').match(/ordenarEmpleados\('([^']+)'\)/);
+        const col = match ? match[1] : null;
+
+        if (col === ordenEmpleados.columna) {
+            icono.className = ordenEmpleados.direccion === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+        } else {
+            icono.className = 'fas fa-sort';
+        }
+    });
 }
 
 function filterEmployees() {
@@ -5144,6 +5229,7 @@ window.mostrarResumenGeneral = mostrarResumenGeneral;
 window.filtrarResumenGeneral = filtrarResumenGeneral;
 window.ordenarResumenGeneral = ordenarResumenGeneral;
 window.exportarResumenGeneral = exportarResumenGeneral;
+window.ordenarEmpleados = ordenarEmpleados;
 window.imprimirResumenGeneral = imprimirResumenGeneral;
 window.cerrarResumenGeneral = cerrarResumenGeneral;
 window.mostrarDetalleEmpleadoResumen = mostrarDetalleEmpleadoResumen;
