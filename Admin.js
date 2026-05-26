@@ -7951,8 +7951,8 @@ function mostrarTabRotacion(tab) {
 
     document.querySelectorAll('.rot-tab').forEach(btn => {
         const esActivo = btn.getAttribute('data-rottab') === tab;
-        btn.style.borderBottomColor = esActivo ? '#3b82f6' : 'transparent';
-        btn.style.color = esActivo ? '#3b82f6' : '#94a3b8';
+        btn.style.borderBottomColor = esActivo ? 'var(--accent-primary)' : 'transparent';
+        btn.style.color = esActivo ? 'var(--accent-primary)' : 'var(--text-muted)';
     });
 
     if (tab === 'permanencia' && !_permCargado) {
@@ -7982,6 +7982,7 @@ function _poblarFiltrosPermanencia() {
 async function cargarHistogramaPermanencia() {
     const puesto = document.getElementById('permFiltroPuesto')?.value || '';
     const sucursal = document.getElementById('permFiltroSucursal')?.value || '';
+    const estatus = document.getElementById('permFiltroEstatus')?.value || '';
     const desde = document.getElementById('permDesde')?.value || '';
     const hasta = document.getElementById('permHasta')?.value || '';
     const resumen = document.getElementById('permResumen');
@@ -7991,6 +7992,7 @@ async function cargarHistogramaPermanencia() {
         const params = new URLSearchParams();
         if (puesto) params.set('puesto', puesto);
         if (sucursal) params.set('sucursal', sucursal);
+        if (estatus) params.set('estatus', estatus);
         if (desde) params.set('desde', desde);
         if (hasta) params.set('hasta', hasta);
         const res = await fetch(`${ADMIN_CONFIG.apiUrl}/empleados/permanencia?${params}`);
@@ -7999,7 +8001,8 @@ async function cargarHistogramaPermanencia() {
 
         if (resumen) {
             const etq = puesto || 'todos los puestos';
-            resumen.textContent = `${json.total_empleados} empleados · ${etq}`;
+            const etqEstatus = estatus === 'activos' ? ' · solo activos' : estatus === 'bajas' ? ' · solo bajas' : '';
+            resumen.textContent = `${json.total_empleados} empleados · ${etq}${etqEstatus}`;
         }
         if (_estCharts['chartPermanencia']) { _estCharts['chartPermanencia'].destroy(); }
         _renderChartBarrasRangos('chartPermanencia', json.data, '#3b82f6');

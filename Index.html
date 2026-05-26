@@ -146,7 +146,7 @@
                     <span>Sistema activo</span>
                 </div>
                 <!-- ── BADGE DE ALERTAS ── -->
-                <button class="btn btn-alertas" id="btnAlertas" onclick="abrirPanelAlertas()" title="Alertas del día" style="position:relative;background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:8px 14px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:14px;">
+                <button class="btn btn-alertas" id="btnAlertas" onclick="abrirPanelAlertas()" title="Alertas del día" style="position:relative;background:#1e293b;border:1px solid #334155;color:var(--text-muted);padding:8px 14px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:14px;">
                     <i class="fas fa-bell"></i>
                     <span id="badgeAlertas" style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;align-items:center;justify-content:center;display:none;"></span>
                 </button>
@@ -742,11 +742,11 @@
             </div>
 
             <div id="vacTabPorVencer" class="vac-tabpane" style="display:none;">
-                <div id="vacPorVencerLista" style="color:#94a3b8;padding:24px;text-align:center;">Disponible en próxima entrega</div>
+                <div id="vacPorVencerLista" style="color:var(--text-muted);padding:24px;text-align:center;">Disponible en próxima entrega</div>
             </div>
 
             <div id="vacTabCalendario" class="vac-tabpane" style="display:none;">
-                <div id="vacCalendario" style="color:#94a3b8;padding:24px;text-align:center;">Disponible en próxima entrega</div>
+                <div id="vacCalendario" style="color:var(--text-muted);padding:24px;text-align:center;">Disponible en próxima entrega</div>
             </div>
         </section>
 
@@ -814,7 +814,7 @@
             <div class="section-header">
                 <div>
                     <h2 style="margin:0 0 2px">Estadísticas de Plantilla</h2>
-                    <span id="estActualizadoEn" style="font-size:12px;color:#94a3b8"></span>
+                    <span id="estActualizadoEn" style="font-size:12px;color:var(--text-muted)"></span>
                 </div>
                 <div class="header-actions-group">
                     <button class="btn btn-secondary" onclick="cargarEstadisticas()" title="Recargar datos">
@@ -839,7 +839,7 @@
                             </div>
                         </div>
                         <div id="estTotalActivos" style="font-size:2rem;font-weight:800;color:#0f172a;line-height:1">–</div>
-                        <div style="font-size:12px;color:#94a3b8;margin-top:6px">empleados activos hoy</div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-top:6px">empleados activos hoy</div>
                     </div>
                 </div>
                 <!-- Bajas -->
@@ -853,7 +853,7 @@
                             </div>
                         </div>
                         <div id="estTotalBajas" style="font-size:2rem;font-weight:800;color:#0f172a;line-height:1">–</div>
-                        <div style="font-size:12px;color:#94a3b8;margin-top:6px">últimos 365 días</div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-top:6px">últimos 365 días</div>
                     </div>
                 </div>
                 <!-- Ingresos -->
@@ -867,7 +867,7 @@
                             </div>
                         </div>
                         <div id="estIngresos30" style="font-size:2rem;font-weight:800;color:#0f172a;line-height:1">–</div>
-                        <div style="font-size:12px;color:#94a3b8;margin-top:6px">últimos 30 días</div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-top:6px">últimos 30 días</div>
                     </div>
                 </div>
                 <!-- Antigüedad -->
@@ -881,7 +881,7 @@
                             </div>
                         </div>
                         <div id="estAntigüedad" style="font-size:2rem;font-weight:800;color:#0f172a;line-height:1">–</div>
-                        <div style="font-size:12px;color:#94a3b8;margin-top:6px">años en promedio</div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-top:6px">años en promedio</div>
                     </div>
                 </div>
             </div>
@@ -916,7 +916,7 @@
                             <div style="width:8px;height:8px;border-radius:50%;background:#10b981"></div>
                             <span style="font-size:13px;font-weight:600;color:#0f172a">Ingresos por Mes</span>
                         </div>
-                        <span style="font-size:11px;color:#94a3b8">Año en curso</span>
+                        <span style="font-size:11px;color:var(--text-muted)">Año en curso</span>
                     </div>
                     <div style="padding:20px 20px 16px">
                         <canvas id="chartIngresosMes" style="min-height:320px"></canvas>
@@ -930,7 +930,7 @@
                     <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px">
                         <div style="width:8px;height:8px;border-radius:50%;background:#8b5cf6"></div>
                         <span style="font-size:13px;font-weight:600;color:#0f172a">Por Puesto</span>
-                        <span style="font-size:11px;color:#94a3b8;margin-left:auto">Top 15</span>
+                        <span style="font-size:11px;color:var(--text-muted);margin-left:auto">Top 15</span>
                     </div>
                     <div style="padding:16px 20px 20px">
                         <canvas id="chartDepartamentos"></canvas>
@@ -940,7 +940,7 @@
                     <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px">
                         <div style="width:8px;height:8px;border-radius:50%;background:#f59e0b"></div>
                         <span style="font-size:13px;font-weight:600;color:#0f172a">Por Área</span>
-                        <span style="font-size:11px;color:#94a3b8;margin-left:auto">Top 15</span>
+                        <span style="font-size:11px;color:var(--text-muted);margin-left:auto">Top 15</span>
                     </div>
                     <div style="padding:16px 20px 20px">
                         <canvas id="chartAreas"></canvas>
@@ -956,37 +956,37 @@
             </div>
 
             <!-- Sub-pestañas -->
-            <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid #334155">
+            <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid var(--border)">
                 <button class="rot-tab" data-rottab="resumen" onclick="mostrarTabRotacion('resumen')"
-                    style="background:none;border:none;border-bottom:2px solid #3b82f6;color:#3b82f6;padding:10px 16px;cursor:pointer;font-size:14px;font-weight:600">Resumen</button>
+                    style="background:none;border:none;border-bottom:2px solid var(--accent-primary);color:var(--accent-primary);padding:10px 16px;cursor:pointer;font-size:14px;font-weight:600">Resumen</button>
                 <button class="rot-tab" data-rottab="porpuesto" onclick="mostrarTabRotacion('porpuesto')"
-                    style="background:none;border:none;border-bottom:2px solid transparent;color:#94a3b8;padding:10px 16px;cursor:pointer;font-size:14px;font-weight:600">Por Puesto</button>
+                    style="background:none;border:none;border-bottom:2px solid transparent;color:var(--text-muted);padding:10px 16px;cursor:pointer;font-size:14px;font-weight:600">Por Puesto</button>
                 <button class="rot-tab" data-rottab="permanencia" onclick="mostrarTabRotacion('permanencia')"
-                    style="background:none;border:none;border-bottom:2px solid transparent;color:#94a3b8;padding:10px 16px;cursor:pointer;font-size:14px;font-weight:600">Permanencia</button>
+                    style="background:none;border:none;border-bottom:2px solid transparent;color:var(--text-muted);padding:10px 16px;cursor:pointer;font-size:14px;font-weight:600">Permanencia</button>
             </div>
 
             <div id="rotTabResumen" class="rot-tab-content">
             <!-- Tabla de rotación — tarjeta full-width -->
-            <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)">
-                <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px">
-                    <div style="width:8px;height:8px;border-radius:50%;background:#ef4444"></div>
-                    <span style="font-size:13px;font-weight:600;color:#0f172a">Índice de Rotación</span>
-                    <span style="font-size:11px;color:#94a3b8;margin-left:auto">Últimos 6 meses · <span style="color:#10b981">verde</span> &lt;2% · <span style="color:#f59e0b">amarillo</span> 2–5% · <span style="color:#ef4444">rojo</span> &gt;5%</span>
+            <div style="background:var(--bg-surface);border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow-md)">
+                <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
+                    <div style="width:8px;height:8px;border-radius:50%;background:var(--accent-danger)"></div>
+                    <span style="font-size:13px;font-weight:600;color:var(--text-primary)">Índice de Rotación</span>
+                    <span style="font-size:11px;color:var(--text-muted);margin-left:auto">Últimos 6 meses · <span style="color:var(--accent-success)">verde</span> &lt;2% · <span style="color:var(--accent-warning)">amarillo</span> 2–5% · <span style="color:var(--accent-danger)">rojo</span> &gt;5%</span>
                 </div>
                 <div style="padding:0">
                     <table id="tablaRotacion" style="width:100%;border-collapse:collapse">
                         <thead>
-                            <tr style="background:#f8fafc">
-                                <th style="padding:10px 20px;text-align:left;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #f1f5f9">Mes</th>
-                                <th style="padding:10px 20px;text-align:right;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #f1f5f9">P. Inicial</th>
-                                <th style="padding:10px 20px;text-align:right;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #f1f5f9">Altas</th>
-                                <th style="padding:10px 20px;text-align:right;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #f1f5f9">Bajas</th>
-                                <th style="padding:10px 20px;text-align:right;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #f1f5f9">P. Final</th>
-                                <th style="padding:10px 20px;text-align:center;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #f1f5f9">% Rotación</th>
+                            <tr style="background:var(--bg-elevated)">
+                                <th style="padding:10px 20px;text-align:left;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">Mes</th>
+                                <th style="padding:10px 20px;text-align:right;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">P. Inicial</th>
+                                <th style="padding:10px 20px;text-align:right;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">Altas</th>
+                                <th style="padding:10px 20px;text-align:right;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">Bajas</th>
+                                <th style="padding:10px 20px;text-align:right;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">P. Final</th>
+                                <th style="padding:10px 20px;text-align:center;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">% Rotación</th>
                             </tr>
                         </thead>
                         <tbody id="tbodyRotacion">
-                            <tr><td colspan="6" style="text-align:center;color:#64748b;padding:24px">Cargando...</td></tr>
+                            <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px">Cargando...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -999,16 +999,16 @@
                     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
                         <h3 style="margin:0;font-size:16px;font-weight:600">Rotación por Puesto</h3>
                         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                            <label style="font-size:12px;color:#94a3b8">Desde
-                                <input type="date" id="rotPuestoDesde" style="margin-left:4px;padding:4px 8px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#e2e8f0">
+                            <label style="font-size:12px;color:var(--text-muted)">Desde
+                                <input type="date" id="rotPuestoDesde" style="margin-left:4px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary)">
                             </label>
-                            <label style="font-size:12px;color:#94a3b8">Hasta
-                                <input type="date" id="rotPuestoHasta" style="margin-left:4px;padding:4px 8px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#e2e8f0">
+                            <label style="font-size:12px;color:var(--text-muted)">Hasta
+                                <input type="date" id="rotPuestoHasta" style="margin-left:4px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary)">
                             </label>
-                            <select id="rotPuestoFiltroSucursal" onchange="filtrarRotacionPuesto()" style="padding:4px 8px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;font-size:12px">
+                            <select id="rotPuestoFiltroSucursal" onchange="filtrarRotacionPuesto()" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);font-size:12px">
                                 <option value="">Todas las sucursales</option>
                             </select>
-                            <select id="rotPuestoFiltroPuesto" onchange="filtrarRotacionPuesto()" style="padding:4px 8px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;font-size:12px">
+                            <select id="rotPuestoFiltroPuesto" onchange="filtrarRotacionPuesto()" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);font-size:12px">
                                 <option value="">Todos los puestos</option>
                             </select>
                             <button class="btn btn-primary" onclick="cargarRotacionPuesto()"><i class="fas fa-sync-alt"></i> Generar</button>
@@ -1029,7 +1029,7 @@
                                 </tr>
                             </thead>
                             <tbody id="tbodyRotacionPuesto">
-                                <tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:24px">Elige un rango y pulsa Generar</td></tr>
+                                <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:24px">Elige un rango y pulsa Generar</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -1042,22 +1042,27 @@
                         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
                             <h3 style="margin:0;font-size:16px;font-weight:600">Permanencia por Puesto</h3>
                             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                                <select id="permFiltroPuesto" style="padding:4px 8px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;font-size:12px">
+                                <select id="permFiltroEstatus" onchange="cargarHistogramaPermanencia()" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);font-size:12px">
+                                    <option value="">Todos</option>
+                                    <option value="activos">Solo activos</option>
+                                    <option value="bajas">Solo bajas</option>
+                                </select>
+                                <select id="permFiltroPuesto" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);font-size:12px">
                                     <option value="">Todos los puestos</option>
                                 </select>
-                                <select id="permFiltroSucursal" style="padding:4px 8px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;font-size:12px">
+                                <select id="permFiltroSucursal" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);font-size:12px">
                                     <option value="">Todas las sucursales</option>
                                 </select>
-                                <label style="font-size:12px;color:#94a3b8">Desde
-                                    <input type="date" id="permDesde" style="margin-left:4px;padding:4px 8px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#e2e8f0">
+                                <label style="font-size:12px;color:var(--text-muted)">Desde
+                                    <input type="date" id="permDesde" style="margin-left:4px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary)">
                                 </label>
-                                <label style="font-size:12px;color:#94a3b8">Hasta
-                                    <input type="date" id="permHasta" style="margin-left:4px;padding:4px 8px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#e2e8f0">
+                                <label style="font-size:12px;color:var(--text-muted)">Hasta
+                                    <input type="date" id="permHasta" style="margin-left:4px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary)">
                                 </label>
                                 <button class="btn btn-primary" onclick="cargarHistogramaPermanencia()"><i class="fas fa-sync-alt"></i> Generar</button>
                             </div>
                         </div>
-                        <div id="permResumen" style="font-size:13px;color:#94a3b8;margin-bottom:8px"></div>
+                        <div id="permResumen" style="font-size:13px;color:var(--text-muted);margin-bottom:8px"></div>
                         <div style="padding:8px 4px 4px"><canvas id="chartPermanencia" style="min-height:340px"></canvas></div>
                     </div>
                 </div>
@@ -1219,7 +1224,7 @@
             <div class="section-header">
                 <div>
                     <h2 style="margin:0 0 2px">Reporte de Absentismo</h2>
-                    <span style="font-size:12px;color:#94a3b8">Faltas reales vs días justificados</span>
+                    <span style="font-size:12px;color:var(--text-muted)">Faltas reales vs días justificados</span>
                 </div>
                 <div class="header-actions-group">
                     <button class="btn btn-secondary" onclick="cargarAbsentismo()" title="Recargar">
@@ -1289,7 +1294,7 @@
                     <div style="padding:18px 20px;">
                         <span style="font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em">Faltas Reales</span>
                         <div id="absKpiFaltas" style="font-size:2rem;font-weight:800;color:#0f172a;margin-top:6px;">–</div>
-                        <div style="font-size:12px;color:#94a3b8">sin justificar</div>
+                        <div style="font-size:12px;color:var(--text-muted)">sin justificar</div>
                     </div>
                 </div>
                 <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05);">
@@ -1297,7 +1302,7 @@
                     <div style="padding:18px 20px;">
                         <span style="font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em">Días Justificados</span>
                         <div id="absKpiJustificados" style="font-size:2rem;font-weight:800;color:#0f172a;margin-top:6px;">–</div>
-                        <div style="font-size:12px;color:#94a3b8">vac+inc+permiso</div>
+                        <div style="font-size:12px;color:var(--text-muted)">vac+inc+permiso</div>
                     </div>
                 </div>
                 <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05);">
@@ -1305,7 +1310,7 @@
                     <div style="padding:18px 20px;">
                         <span style="font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em">Empleados c/ Ausencias</span>
                         <div id="absKpiEmpleados" style="font-size:2rem;font-weight:800;color:#0f172a;margin-top:6px;">–</div>
-                        <div style="font-size:12px;color:#94a3b8">al menos 1 día</div>
+                        <div style="font-size:12px;color:var(--text-muted)">al menos 1 día</div>
                     </div>
                 </div>
                 <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05);">
@@ -1313,7 +1318,7 @@
                     <div style="padding:18px 20px;">
                         <span style="font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em">% Asistencia</span>
                         <div id="absKpiAsistencia" style="font-size:2rem;font-weight:800;color:#0f172a;margin-top:6px;">–</div>
-                        <div style="font-size:12px;color:#94a3b8">global del período</div>
+                        <div style="font-size:12px;color:var(--text-muted)">global del período</div>
                     </div>
                 </div>
             </div>
@@ -1324,30 +1329,30 @@
                     <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-trophy" style="color:#ef4444;font-size:14px;"></i>
                         <span style="font-size:13px;font-weight:600;color:#0f172a">Top 10 con más Faltas</span>
-                        <span style="font-size:11px;color:#94a3b8;margin-left:auto">sin justificar</span>
+                        <span style="font-size:11px;color:var(--text-muted);margin-left:auto">sin justificar</span>
                     </div>
                     <div id="absRankingFaltas" style="padding:8px 0;">
-                        <div style="text-align:center;color:#94a3b8;padding:24px 12px;font-size:13px;">Genera el reporte</div>
+                        <div style="text-align:center;color:var(--text-muted);padding:24px 12px;font-size:13px;">Genera el reporte</div>
                     </div>
                 </div>
                 <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05);">
                     <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-user-injured" style="color:#7c3aed;font-size:14px;"></i>
                         <span style="font-size:13px;font-weight:600;color:#0f172a">Top 10 con más Incapacidades</span>
-                        <span style="font-size:11px;color:#94a3b8;margin-left:auto">días</span>
+                        <span style="font-size:11px;color:var(--text-muted);margin-left:auto">días</span>
                     </div>
                     <div id="absRankingIncapacidades" style="padding:8px 0;">
-                        <div style="text-align:center;color:#94a3b8;padding:24px 12px;font-size:13px;">Genera el reporte</div>
+                        <div style="text-align:center;color:var(--text-muted);padding:24px 12px;font-size:13px;">Genera el reporte</div>
                     </div>
                 </div>
                 <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05);">
                     <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-users-slash" style="color:#f59e0b;font-size:14px;"></i>
                         <span style="font-size:13px;font-weight:600;color:#0f172a">Top 10 con más Ausencias Totales</span>
-                        <span style="font-size:11px;color:#94a3b8;margin-left:auto">faltas+just</span>
+                        <span style="font-size:11px;color:var(--text-muted);margin-left:auto">faltas+just</span>
                     </div>
                     <div id="absRankingAusencias" style="padding:8px 0;">
-                        <div style="text-align:center;color:#94a3b8;padding:24px 12px;font-size:13px;">Genera el reporte</div>
+                        <div style="text-align:center;color:var(--text-muted);padding:24px 12px;font-size:13px;">Genera el reporte</div>
                     </div>
                 </div>
             </div>
@@ -1609,7 +1614,7 @@
                     </div>
                     <div class="form-group">
                         <label>Comprobante: <span class="required-asterisk">*</span>
-                            <span style="font-size:11px;color:#94a3b8;font-weight:normal;">PDF/imagen, máx 5 MB</span>
+                            <span style="font-size:11px;color:var(--text-muted);font-weight:normal;">PDF/imagen, máx 5 MB</span>
                         </label>
                         <input type="file" id="justDocumento" class="form-input"
                             accept="application/pdf,image/jpeg,image/png,image/webp">
