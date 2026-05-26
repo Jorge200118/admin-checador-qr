@@ -588,7 +588,11 @@ async function loadSectionData(section) {
             break;
         case 'estadisticas':
             cargarEstadisticas();
+            break;
+        case 'rotacion':
+            cargarEstadisticas();
             _initFechasRotPuesto();
+            mostrarTabRotacion('resumen');
             break;
         case 'creditos':
             cargarCreditos();
@@ -7931,6 +7935,81 @@ function exportarRotacionPuestoExcel() {
 }
 
 // ================================
+// ROTACIÓN: SUB-PESTAÑAS + PERMANENCIA
+// ================================
+
+let _permCargado = false;
+
+function mostrarTabRotacion(tab) {
+    const mapa = { resumen: 'rotTabResumen', porpuesto: 'rotTabPorPuesto', permanencia: 'rotTabPermanencia' };
+    Object.values(mapa).forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+    const activo = document.getElementById(mapa[tab]);
+    if (activo) activo.style.display = '';
+
+    document.querySelectorAll('.rot-tab').forEach(btn => {
+        const esActivo = btn.getAttribute('data-rottab') === tab;
+        btn.style.borderBottomColor = esActivo ? '#3b82f6' : 'transparent';
+        btn.style.color = esActivo ? '#3b82f6' : '#94a3b8';
+    });
+
+    if (tab === 'permanencia' && !_permCargado) {
+        _permCargado = true;
+        _poblarFiltrosPermanencia();
+        cargarHistogramaPermanencia();
+    }
+}
+
+// Llena el dropdown de puestos (reutiliza _estDatos.puestos de /estadisticas si existe)
+// y el de sucursales (claves del mapa SUCURSAL_CODIGO).
+function _poblarFiltrosPermanencia() {
+    const selPue = document.getElementById('permFiltroPuesto');
+    if (selPue && typeof _estDatos !== 'undefined' && _estDatos && Array.isArray(_estDatos.puestos)) {
+        const pues = _estDatos.puestos.map(p => p.puesto).filter(Boolean).sort();
+        selPue.innerHTML = '<option value="">Todos los puestos</option>' +
+            pues.map(p => `<option value="${p}">${p}</option>`).join('');
+    }
+    const selSuc = document.getElementById('permFiltroSucursal');
+    if (selSuc) {
+        const nombres = Object.keys(SUCURSAL_CODIGO);
+        selSuc.innerHTML = '<option value="">Todas las sucursales</option>' +
+            nombres.map(n => `<option value="${n}">${SUCURSAL_CODIGO[n]}</option>`).join('');
+    }
+}
+
+async function cargarHistogramaPermanencia() {
+    const puesto = document.getElementById('permFiltroPuesto')?.value || '';
+    const sucursal = document.getElementById('permFiltroSucursal')?.value || '';
+    const desde = document.getElementById('permDesde')?.value || '';
+    const hasta = document.getElementById('permHasta')?.value || '';
+    const resumen = document.getElementById('permResumen');
+    if (resumen) resumen.textContent = 'Cargando…';
+
+    try {
+        const params = new URLSearchParams();
+        if (puesto) params.set('puesto', puesto);
+        if (sucursal) params.set('sucursal', sucursal);
+        if (desde) params.set('desde', desde);
+        if (hasta) params.set('hasta', hasta);
+        const res = await fetch(`${ADMIN_CONFIG.apiUrl}/empleados/permanencia?${params}`);
+        const json = await res.json();
+        if (!json.success) throw new Error(json.message);
+
+        if (resumen) {
+            const etq = puesto || 'todos los puestos';
+            resumen.textContent = `${json.total_empleados} empleados · ${etq}`;
+        }
+        if (_estCharts['chartPermanencia']) { _estCharts['chartPermanencia'].destroy(); }
+        _renderChartBarrasRangos('chartPermanencia', json.data, '#3b82f6');
+    } catch (err) {
+        console.error('cargarHistogramaPermanencia:', err);
+        if (resumen) resumen.textContent = `Error: ${err.message}`;
+    }
+}
+
+// ================================
 // CONTROL DE CRÉDITOS
 // ================================
 
@@ -8057,6 +8136,8 @@ window.cargarRotacionPuesto = cargarRotacionPuesto;
 window.ordenarRotacionPuesto = ordenarRotacionPuesto;
 window.filtrarRotacionPuesto = filtrarRotacionPuesto;
 window.exportarRotacionPuestoExcel = exportarRotacionPuestoExcel;
+window.mostrarTabRotacion = mostrarTabRotacion;
+window.cargarHistogramaPermanencia = cargarHistogramaPermanencia;
 window.exportarCreditosExcel     = exportarCreditosExcel;
 window.filtrarTablaCreditos      = filtrarTablaCreditos;
 window.cargarCreditos            = cargarCreditos;

@@ -1037,7 +1037,30 @@
             </div>
             </div>
             <div id="rotTabPermanencia" class="rot-tab-content" style="display:none">
-                <!-- Permanencia: se llena en otra tarea -->
+                <div class="card">
+                    <div class="card-body">
+                        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+                            <h3 style="margin:0;font-size:16px;font-weight:600">Permanencia por Puesto</h3>
+                            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                                <select id="permFiltroPuesto" style="padding:4px 8px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;font-size:12px">
+                                    <option value="">Todos los puestos</option>
+                                </select>
+                                <select id="permFiltroSucursal" style="padding:4px 8px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;font-size:12px">
+                                    <option value="">Todas las sucursales</option>
+                                </select>
+                                <label style="font-size:12px;color:#94a3b8">Desde
+                                    <input type="date" id="permDesde" style="margin-left:4px;padding:4px 8px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#e2e8f0">
+                                </label>
+                                <label style="font-size:12px;color:#94a3b8">Hasta
+                                    <input type="date" id="permHasta" style="margin-left:4px;padding:4px 8px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#e2e8f0">
+                                </label>
+                                <button class="btn btn-primary" onclick="cargarHistogramaPermanencia()"><i class="fas fa-sync-alt"></i> Generar</button>
+                            </div>
+                        </div>
+                        <div id="permResumen" style="font-size:13px;color:#94a3b8;margin-bottom:8px"></div>
+                        <div style="padding:8px 4px 4px"><canvas id="chartPermanencia" style="min-height:340px"></canvas></div>
+                    </div>
+                </div>
             </div>
         </section>
 
