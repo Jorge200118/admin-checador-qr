@@ -34,6 +34,25 @@ corte por puesto y un periodo configurable. Eso es lo que cubre esta fase.
 - **Periodo:** **rango de fechas configurable** (`desde` / `hasta`), no solo año.
 - **Filas vacías:** se omiten — solo puestos/sucursales con al menos un movimiento
   (contratación, baja) o plantilla > 0 en el rango.
+- **Default de fechas:** 1-ene del año actual → hoy.
+- **Umbrales de color del %Rotación** (acordes a tasas anuales): verde ≤20%,
+  amarillo ≤40%, rojo >40%.
+- **Sucursales:** se muestran con **código corto** (no el nombre largo de BMS). El
+  endpoint devuelve el nombre largo; el admin lo mapea a código en cliente. Tabla de
+  equivalencias confirmada:
+
+  | Código | Sucursal BMS |
+  |--------|--------------|
+  | LMM | MATRIZ (Los Mochis) |
+  | CSL | CABOS |
+  | SJC | SAN JOSE |
+  | LPZ | LA PAZ |
+  | TML | TAMARAL |
+  | FTE | EL FUERTE |
+  | CLN | CULIACAN |
+  | JJR | JUAN JOSE RIOS |
+
+  Si BMS devuelve una sucursal fuera de la tabla, se muestra el nombre tal cual.
 
 ## Arquitectura
 
@@ -98,8 +117,9 @@ debajo de la tabla de rotación mensual actual.
 |--------|----------|---------------|----------------|-------|---------------|-----------|
 
 - Encabezados clicables con ícono `fa-sort` → `fa-sort-up` / `fa-sort-down`.
-- %Rotación con badge de color (verde ≤2, amarillo ≤5, rojo >5) y barra, reusando el
-  estilo de `_renderTablaRotacion`.
+- %Rotación con badge de color (verde ≤20, amarillo ≤40, rojo >40) y barra, reusando el
+  estilo de `_renderTablaRotacion` (umbrales ajustados a tasas anuales).
+- Sucursal mostrada como **código corto** vía mapa de equivalencias (ver sección Decisiones).
 - **Fila de totales** al pie (suma de columnas; %Rotación global recalculada con la fórmula).
 - Filtros de puesto/sucursal aplican **en cliente** sobre los datos ya traídos (sin re-fetch).
   Cambiar fechas **sí** re-consulta el endpoint.
