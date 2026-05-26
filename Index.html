@@ -1118,7 +1118,10 @@
                                 <button class="btn btn-primary" onclick="cargarHistogramaPermanencia()"><i class="fas fa-sync-alt"></i> Generar</button>
                             </div>
                         </div>
-                        <div id="permResumen" style="font-size:13px;color:var(--text-muted);margin-bottom:8px"></div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px">
+                            <div id="permResumen" style="font-size:13px;color:var(--text-muted)"></div>
+                            <button id="permBotonVolver" onclick="volverHistogramaPermanencia()" style="display:none;padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);cursor:pointer;font-size:12px"></button>
+                        </div>
                         <div style="padding:8px 4px 4px"><canvas id="chartPermanencia" style="min-height:340px"></canvas></div>
                     </div>
                 </div>

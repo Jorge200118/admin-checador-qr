@@ -8199,7 +8199,11 @@ function _poblarFiltrosPermanencia() {
     }
 }
 
-async function cargarHistogramaPermanencia() {
+// Rangos cuyo clic permite drill-down (los demás no se desglosan más).
+const _PERM_DESGLOSABLES = new Set(['1-3 meses','3-6 meses','6-12 meses','1-2 años','2-5 años','5+ años']);
+let _permDetalleActivo = null; // nombre del rango si estamos viendo drill-down, si no null
+
+async function cargarHistogramaPermanencia(detalle) {
     const puesto = document.getElementById('permFiltroPuesto')?.value || '';
     const sucursal = document.getElementById('permFiltroSucursal')?.value || '';
     const estatus = document.getElementById('permFiltroEstatus')?.value || '';
@@ -8208,6 +8212,9 @@ async function cargarHistogramaPermanencia() {
     const resumen = document.getElementById('permResumen');
     if (resumen) resumen.textContent = 'Cargando…';
 
+    _permDetalleActivo = detalle || null;
+    _actualizarBotonVolverPermanencia();
+
     try {
         const params = new URLSearchParams();
         if (puesto) params.set('puesto', puesto);
@@ -8215,6 +8222,7 @@ async function cargarHistogramaPermanencia() {
         if (estatus) params.set('estatus', estatus);
         if (desde) params.set('desde', desde);
         if (hasta) params.set('hasta', hasta);
+        if (detalle) params.set('detalle', detalle);
         const res = await fetch(`${ADMIN_CONFIG.apiUrl}/empleados/permanencia?${params}`);
         const json = await res.json();
         if (!json.success) throw new Error(json.message);
@@ -8222,14 +8230,56 @@ async function cargarHistogramaPermanencia() {
         if (resumen) {
             const etq = puesto || 'todos los puestos';
             const etqEstatus = estatus === 'activos' ? ' · solo activos' : estatus === 'bajas' ? ' · solo bajas' : '';
-            resumen.textContent = `${json.total_empleados} empleados · ${etq}${etqEstatus}`;
+            const etqDetalle = detalle ? ` · detalle de ${detalle}` : '';
+            resumen.textContent = `${json.total_empleados} empleados · ${etq}${etqEstatus}${etqDetalle}`;
         }
         if (_estCharts['chartPermanencia']) { _estCharts['chartPermanencia'].destroy(); }
         _renderChartBarrasRangos('chartPermanencia', json.data, '#3b82f6');
+
+        // Adjuntar handler de drill-down al chart recién creado (solo en vista principal)
+        const chart = _estCharts['chartPermanencia'];
+        if (chart && !detalle) {
+            chart.options.onClick = (evt, elems) => {
+                if (!elems || !elems.length) return;
+                const idx = elems[0].index;
+                const lbl = chart.data.labels[idx];
+                if (_PERM_DESGLOSABLES.has(lbl)) {
+                    cargarHistogramaPermanencia(lbl);
+                }
+            };
+            // Cursor pointer al pasar sobre barras desglosables
+            chart.options.onHover = (evt, elems) => {
+                const canvas = chart.canvas;
+                if (!canvas) return;
+                if (elems && elems.length) {
+                    const lbl = chart.data.labels[elems[0].index];
+                    canvas.style.cursor = _PERM_DESGLOSABLES.has(lbl) ? 'pointer' : 'default';
+                } else {
+                    canvas.style.cursor = 'default';
+                }
+            };
+            chart.update('none');
+        }
     } catch (err) {
         console.error('cargarHistogramaPermanencia:', err);
         if (resumen) resumen.textContent = `Error: ${err.message}`;
     }
+}
+
+// Muestra/oculta el botón "Volver" según haya o no drill-down activo.
+function _actualizarBotonVolverPermanencia() {
+    const cont = document.getElementById('permBotonVolver');
+    if (!cont) return;
+    if (_permDetalleActivo) {
+        cont.style.display = '';
+        cont.textContent = `← Volver (${_permDetalleActivo})`;
+    } else {
+        cont.style.display = 'none';
+    }
+}
+
+function volverHistogramaPermanencia() {
+    cargarHistogramaPermanencia(null);
 }
 
 // ================================
@@ -8361,6 +8411,7 @@ window.filtrarRotacionPuesto = filtrarRotacionPuesto;
 window.exportarRotacionPuestoExcel = exportarRotacionPuestoExcel;
 window.mostrarTabRotacion = mostrarTabRotacion;
 window.cargarHistogramaPermanencia = cargarHistogramaPermanencia;
+window.volverHistogramaPermanencia = volverHistogramaPermanencia;
 window.cargarRotacionAnual = cargarRotacionAnual;
 window.ordenarRotacionAnual = ordenarRotacionAnual;
 window._toggleSucursalAnual = _toggleSucursalAnual;
