@@ -966,29 +966,85 @@
             </div>
 
             <div id="rotTabResumen" class="rot-tab-content">
-            <!-- Tabla de rotación — tarjeta full-width -->
-            <div style="background:var(--bg-surface);border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow-md)">
-                <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
-                    <div style="width:8px;height:8px;border-radius:50%;background:var(--accent-danger)"></div>
-                    <span style="font-size:13px;font-weight:600;color:var(--text-primary)">Índice de Rotación</span>
-                    <span style="font-size:11px;color:var(--text-muted);margin-left:auto">Últimos 6 meses · <span style="color:var(--accent-success)">verde</span> &lt;2% · <span style="color:var(--accent-warning)">amarillo</span> 2–5% · <span style="color:var(--accent-danger)">rojo</span> &gt;5%</span>
+            <!-- Controles -->
+            <div class="card" style="margin-bottom:16px">
+                <div class="card-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+                    <h3 style="margin:0;font-size:16px;font-weight:600">Rotación por Año y Sucursal</h3>
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                        <label style="font-size:12px;color:var(--text-muted)">Año desde
+                            <input type="number" id="rotAnualDesde" min="2000" max="2100" step="1" style="width:80px;margin-left:4px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary)">
+                        </label>
+                        <label style="font-size:12px;color:var(--text-muted)">hasta
+                            <input type="number" id="rotAnualHasta" min="2000" max="2100" step="1" style="width:80px;margin-left:4px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary)">
+                        </label>
+                        <button class="btn btn-primary" onclick="cargarRotacionAnual()"><i class="fas fa-sync-alt"></i> Generar</button>
+                    </div>
                 </div>
-                <div style="padding:0">
-                    <table id="tablaRotacion" style="width:100%;border-collapse:collapse">
-                        <thead>
-                            <tr style="background:var(--bg-elevated)">
-                                <th style="padding:10px 20px;text-align:left;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">Mes</th>
-                                <th style="padding:10px 20px;text-align:right;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">P. Inicial</th>
-                                <th style="padding:10px 20px;text-align:right;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">Altas</th>
-                                <th style="padding:10px 20px;text-align:right;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">Bajas</th>
-                                <th style="padding:10px 20px;text-align:right;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">P. Final</th>
-                                <th style="padding:10px 20px;text-align:center;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">% Rotación</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tbodyRotacion">
-                            <tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:24px">Cargando...</td></tr>
-                        </tbody>
-                    </table>
+            </div>
+
+            <!-- Segmentador de sucursales -->
+            <div class="card" style="margin-bottom:16px">
+                <div class="card-body">
+                    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Sucursales</div>
+                    <div id="rotAnualSegmentador" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+                </div>
+            </div>
+
+            <!-- Resumen anual + Gráfica -->
+            <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:16px;margin-bottom:16px;align-items:start">
+                <div class="card">
+                    <div class="card-body">
+                        <h3 style="margin:0 0 12px;font-size:14px;font-weight:600">Resumen Anual</h3>
+                        <table id="resumenAnualTable" style="width:100%;border-collapse:collapse">
+                            <thead>
+                                <tr style="background:var(--bg-elevated)">
+                                    <th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">Año</th>
+                                    <th style="padding:8px 12px;text-align:right;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">P. Inicial</th>
+                                    <th style="padding:8px 12px;text-align:right;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">P. Final</th>
+                                    <th style="padding:8px 12px;text-align:right;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">Dif.</th>
+                                    <th style="padding:8px 12px;text-align:right;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">%</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyResumenAnual">
+                                <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px">—</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <h3 style="margin:0 0 12px;font-size:14px;font-weight:600">Evolución de Plantilla por Año</h3>
+                        <canvas id="chartRotacionAnual" style="min-height:280px"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla Año × Sucursal -->
+            <div class="card">
+                <div class="card-body" style="padding:0">
+                    <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
+                        <div style="width:8px;height:8px;border-radius:50%;background:var(--accent-danger)"></div>
+                        <span style="font-size:13px;font-weight:600;color:var(--text-primary)">Detalle por Año y Sucursal</span>
+                        <span style="font-size:11px;color:var(--text-muted);margin-left:auto"><span style="color:var(--accent-success)">verde</span> &lt;20% · <span style="color:var(--accent-warning)">amarillo</span> 20–40% · <span style="color:var(--accent-danger)">rojo</span> &gt;40%</span>
+                    </div>
+                    <div class="table-container">
+                        <table id="rotacionAnualTable" style="width:100%;border-collapse:collapse">
+                            <thead>
+                                <tr style="background:var(--bg-elevated)">
+                                    <th onclick="ordenarRotacionAnual('anio')" style="cursor:pointer;padding:10px 20px;text-align:left;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">Año <i class="fas fa-sort"></i></th>
+                                    <th onclick="ordenarRotacionAnual('sucursal')" style="cursor:pointer;padding:10px 20px;text-align:left;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">Sucursal <i class="fas fa-sort"></i></th>
+                                    <th onclick="ordenarRotacionAnual('plantilla_inicial')" style="cursor:pointer;padding:10px 20px;text-align:right;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">P. Inicial <i class="fas fa-sort"></i></th>
+                                    <th onclick="ordenarRotacionAnual('contrataciones')" style="cursor:pointer;padding:10px 20px;text-align:right;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">Contrataciones <i class="fas fa-sort"></i></th>
+                                    <th onclick="ordenarRotacionAnual('dltc')" style="cursor:pointer;padding:10px 20px;text-align:right;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">DLTC <i class="fas fa-sort"></i></th>
+                                    <th onclick="ordenarRotacionAnual('plantilla_final')" style="cursor:pointer;padding:10px 20px;text-align:right;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">P. Final <i class="fas fa-sort"></i></th>
+                                    <th onclick="ordenarRotacionAnual('tasa')" style="cursor:pointer;padding:10px 20px;text-align:right;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">%Rotación <i class="fas fa-sort"></i></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyRotacionAnual">
+                                <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:24px">Elige un rango de años y pulsa Generar</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
             </div>
