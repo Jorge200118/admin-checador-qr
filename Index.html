@@ -958,23 +958,23 @@
             <!-- Sub-pestañas -->
             <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid var(--border)">
                 <button class="rot-tab" data-rottab="resumen" onclick="mostrarTabRotacion('resumen')"
-                    style="background:none;border:none;border-bottom:2px solid var(--accent-primary);color:var(--accent-primary);padding:10px 16px;cursor:pointer;font-size:14px;font-weight:600">Resumen</button>
+                    style="background:none;border:none;border-bottom:2px solid var(--accent-primary);color:var(--accent-primary);padding:10px 16px;cursor:pointer;font-size:18px;font-weight:600">Resumen</button>
                 <button class="rot-tab" data-rottab="porpuesto" onclick="mostrarTabRotacion('porpuesto')"
-                    style="background:none;border:none;border-bottom:2px solid transparent;color:var(--text-muted);padding:10px 16px;cursor:pointer;font-size:14px;font-weight:600">Por Puesto</button>
+                    style="background:none;border:none;border-bottom:2px solid transparent;color:var(--text-muted);padding:10px 16px;cursor:pointer;font-size:18px;font-weight:600">Por Puesto</button>
                 <button class="rot-tab" data-rottab="permanencia" onclick="mostrarTabRotacion('permanencia')"
-                    style="background:none;border:none;border-bottom:2px solid transparent;color:var(--text-muted);padding:10px 16px;cursor:pointer;font-size:14px;font-weight:600">Permanencia</button>
+                    style="background:none;border:none;border-bottom:2px solid transparent;color:var(--text-muted);padding:10px 16px;cursor:pointer;font-size:18px;font-weight:600">Permanencia</button>
             </div>
 
             <div id="rotTabResumen" class="rot-tab-content">
             <!-- Controles -->
             <div class="card" style="margin-bottom:16px">
                 <div class="card-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
-                    <h3 style="margin:0;font-size:16px;font-weight:600">Rotación por Año y Sucursal</h3>
+                    <h3 style="margin:0;font-size:20px;font-weight:600">Rotación por Año y Sucursal</h3>
                     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                        <label style="font-size:12px;color:var(--text-muted)">Año desde
+                        <label style="font-size:16px;color:var(--text-muted)">Año desde
                             <input type="number" id="rotAnualDesde" min="2000" max="2100" step="1" style="width:80px;margin-left:4px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary)">
                         </label>
-                        <label style="font-size:12px;color:var(--text-muted)">hasta
+                        <label style="font-size:16px;color:var(--text-muted)">hasta
                             <input type="number" id="rotAnualHasta" min="2000" max="2100" step="1" style="width:80px;margin-left:4px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary)">
                         </label>
                         <button class="btn btn-primary" onclick="cargarRotacionAnual()"><i class="fas fa-sync-alt"></i> Generar</button>
@@ -985,7 +985,7 @@
             <!-- Segmentador de sucursales -->
             <div class="card" style="margin-bottom:16px">
                 <div class="card-body">
-                    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Sucursales</div>
+                    <div style="font-size:16px;color:var(--text-muted);margin-bottom:8px">Sucursales</div>
                     <div id="rotAnualSegmentador" style="display:flex;flex-wrap:wrap;gap:8px"></div>
                 </div>
             </div>
@@ -994,15 +994,15 @@
             <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:16px;margin-bottom:16px;align-items:start">
                 <div class="card">
                     <div class="card-body">
-                        <h3 style="margin:0 0 12px;font-size:14px;font-weight:600">Resumen Anual</h3>
+                        <h3 style="margin:0 0 12px;font-size:18px;font-weight:600">Resumen Anual</h3>
                         <table id="resumenAnualTable" style="width:100%;border-collapse:collapse">
                             <thead>
                                 <tr style="background:var(--bg-elevated)">
-                                    <th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">Año</th>
-                                    <th style="padding:8px 12px;text-align:right;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">P. Inicial</th>
-                                    <th style="padding:8px 12px;text-align:right;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">P. Final</th>
-                                    <th style="padding:8px 12px;text-align:right;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">Dif.</th>
-                                    <th style="padding:8px 12px;text-align:right;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">%</th>
+                                    <th style="padding:8px 12px;text-align:left;font-size:14px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">Año</th>
+                                    <th style="padding:8px 12px;text-align:right;font-size:14px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">P. Inicial</th>
+                                    <th style="padding:8px 12px;text-align:right;font-size:14px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">P. Final</th>
+                                    <th style="padding:8px 12px;text-align:right;font-size:14px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">Dif.</th>
+                                    <th style="padding:8px 12px;text-align:right;font-size:14px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">%</th>
                                 </tr>
                             </thead>
                             <tbody id="tbodyResumenAnual">
@@ -1013,7 +1013,7 @@
                 </div>
                 <div class="card">
                     <div class="card-body">
-                        <h3 style="margin:0 0 12px;font-size:14px;font-weight:600">Evolución de Plantilla por Año</h3>
+                        <h3 style="margin:0 0 12px;font-size:18px;font-weight:600">Evolución de Plantilla por Año</h3>
                         <div style="position:relative;height:280px"><canvas id="chartRotacionAnual"></canvas></div>
                     </div>
                 </div>
@@ -1024,20 +1024,20 @@
                 <div class="card-body" style="padding:0">
                     <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
                         <div style="width:8px;height:8px;border-radius:50%;background:var(--accent-danger)"></div>
-                        <span style="font-size:13px;font-weight:600;color:var(--text-primary)">Detalle por Año y Sucursal</span>
-                        <span style="font-size:11px;color:var(--text-muted);margin-left:auto"><span style="color:var(--accent-success)">verde</span> &lt;20% · <span style="color:var(--accent-warning)">amarillo</span> 20–40% · <span style="color:var(--accent-danger)">rojo</span> &gt;40%</span>
+                        <span style="font-size:16px;font-weight:600;color:var(--text-primary)">Detalle por Año y Sucursal</span>
+                        <span style="font-size:14px;color:var(--text-muted);margin-left:auto"><span style="color:var(--accent-success)">verde</span> &lt;20% · <span style="color:var(--accent-warning)">amarillo</span> 20–40% · <span style="color:var(--accent-danger)">rojo</span> &gt;40%</span>
                     </div>
                     <div class="table-container">
                         <table id="rotacionAnualTable" style="width:100%;border-collapse:collapse">
                             <thead>
                                 <tr style="background:var(--bg-elevated)">
-                                    <th onclick="ordenarRotacionAnual('anio')" style="cursor:pointer;padding:10px 20px;text-align:left;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">Año <i class="fas fa-sort"></i></th>
-                                    <th onclick="ordenarRotacionAnual('sucursal')" style="cursor:pointer;padding:10px 20px;text-align:left;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">Sucursal <i class="fas fa-sort"></i></th>
-                                    <th onclick="ordenarRotacionAnual('plantilla_inicial')" style="cursor:pointer;padding:10px 20px;text-align:right;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">P. Inicial <i class="fas fa-sort"></i></th>
-                                    <th onclick="ordenarRotacionAnual('contrataciones')" style="cursor:pointer;padding:10px 20px;text-align:right;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">Contrataciones <i class="fas fa-sort"></i></th>
-                                    <th onclick="ordenarRotacionAnual('dltc')" style="cursor:pointer;padding:10px 20px;text-align:right;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">DLTC <i class="fas fa-sort"></i></th>
-                                    <th onclick="ordenarRotacionAnual('plantilla_final')" style="cursor:pointer;padding:10px 20px;text-align:right;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">P. Final <i class="fas fa-sort"></i></th>
-                                    <th onclick="ordenarRotacionAnual('tasa')" style="cursor:pointer;padding:10px 20px;text-align:right;font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">%Rotación <i class="fas fa-sort"></i></th>
+                                    <th onclick="ordenarRotacionAnual('anio')" style="cursor:pointer;padding:10px 20px;text-align:left;font-size:14px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">Año <i class="fas fa-sort"></i></th>
+                                    <th onclick="ordenarRotacionAnual('sucursal')" style="cursor:pointer;padding:10px 20px;text-align:left;font-size:14px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">Sucursal <i class="fas fa-sort"></i></th>
+                                    <th onclick="ordenarRotacionAnual('plantilla_inicial')" style="cursor:pointer;padding:10px 20px;text-align:right;font-size:14px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">P. Inicial <i class="fas fa-sort"></i></th>
+                                    <th onclick="ordenarRotacionAnual('contrataciones')" style="cursor:pointer;padding:10px 20px;text-align:right;font-size:14px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">Contrataciones <i class="fas fa-sort"></i></th>
+                                    <th onclick="ordenarRotacionAnual('dltc')" style="cursor:pointer;padding:10px 20px;text-align:right;font-size:14px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">DLTC <i class="fas fa-sort"></i></th>
+                                    <th onclick="ordenarRotacionAnual('plantilla_final')" style="cursor:pointer;padding:10px 20px;text-align:right;font-size:14px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">P. Final <i class="fas fa-sort"></i></th>
+                                    <th onclick="ordenarRotacionAnual('tasa')" style="cursor:pointer;padding:10px 20px;text-align:right;font-size:14px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;border-bottom:1px solid var(--border)">%Rotación <i class="fas fa-sort"></i></th>
                                 </tr>
                             </thead>
                             <tbody id="tbodyRotacionAnual">
@@ -1053,18 +1053,18 @@
             <div class="card" style="margin-top:24px">
                 <div class="card-body">
                     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
-                        <h3 style="margin:0;font-size:16px;font-weight:600">Rotación por Puesto</h3>
+                        <h3 style="margin:0;font-size:20px;font-weight:600">Rotación por Puesto</h3>
                         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                            <label style="font-size:12px;color:var(--text-muted)">Desde
+                            <label style="font-size:16px;color:var(--text-muted)">Desde
                                 <input type="date" id="rotPuestoDesde" style="margin-left:4px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary)">
                             </label>
-                            <label style="font-size:12px;color:var(--text-muted)">Hasta
+                            <label style="font-size:16px;color:var(--text-muted)">Hasta
                                 <input type="date" id="rotPuestoHasta" style="margin-left:4px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary)">
                             </label>
-                            <select id="rotPuestoFiltroSucursal" onchange="filtrarRotacionPuesto()" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);font-size:12px">
+                            <select id="rotPuestoFiltroSucursal" onchange="filtrarRotacionPuesto()" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);font-size:16px">
                                 <option value="">Todas las sucursales</option>
                             </select>
-                            <select id="rotPuestoFiltroPuesto" onchange="filtrarRotacionPuesto()" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);font-size:12px">
+                            <select id="rotPuestoFiltroPuesto" onchange="filtrarRotacionPuesto()" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);font-size:16px">
                                 <option value="">Todos los puestos</option>
                             </select>
                             <button class="btn btn-primary" onclick="cargarRotacionPuesto()"><i class="fas fa-sync-alt"></i> Generar</button>
@@ -1096,38 +1096,38 @@
                 <div class="card">
                     <div class="card-body">
                         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
-                            <h3 style="margin:0;font-size:16px;font-weight:600">Permanencia por Puesto</h3>
+                            <h3 style="margin:0;font-size:20px;font-weight:600">Permanencia por Puesto</h3>
                             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-                                <select id="permFiltroEstatus" onchange="cargarHistogramaPermanencia()" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);font-size:12px">
+                                <select id="permFiltroEstatus" onchange="cargarHistogramaPermanencia()" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);font-size:16px">
                                     <option value="">Todos</option>
                                     <option value="activos">Solo activos</option>
                                     <option value="bajas">Solo bajas</option>
                                 </select>
-                                <select id="permFiltroPuesto" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);font-size:12px">
+                                <select id="permFiltroPuesto" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);font-size:16px">
                                     <option value="">Todos los puestos</option>
                                 </select>
-                                <select id="permFiltroSucursal" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);font-size:12px">
+                                <select id="permFiltroSucursal" style="padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);font-size:16px">
                                     <option value="">Todas las sucursales</option>
                                 </select>
-                                <label style="font-size:12px;color:var(--text-muted)">Desde
+                                <label style="font-size:16px;color:var(--text-muted)">Desde
                                     <input type="date" id="permDesde" style="margin-left:4px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary)">
                                 </label>
-                                <label style="font-size:12px;color:var(--text-muted)">Hasta
+                                <label style="font-size:16px;color:var(--text-muted)">Hasta
                                     <input type="date" id="permHasta" style="margin-left:4px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary)">
                                 </label>
                                 <button class="btn btn-primary" onclick="cargarHistogramaPermanencia()"><i class="fas fa-sync-alt"></i> Generar</button>
                             </div>
                         </div>
                         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px">
-                            <div id="permResumen" style="font-size:13px;color:var(--text-muted)"></div>
-                            <button id="permBotonVolver" onclick="volverHistogramaPermanencia()" style="display:none;padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);cursor:pointer;font-size:12px"></button>
+                            <div id="permResumen" style="font-size:16px;color:var(--text-muted)"></div>
+                            <button id="permBotonVolver" onclick="volverHistogramaPermanencia()" style="display:none;padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);cursor:pointer;font-size:16px"></button>
                         </div>
                         <div style="padding:8px 4px 4px"><canvas id="chartPermanencia" style="min-height:340px"></canvas></div>
                         <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
                             <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
                                 <div style="width:8px;height:8px;border-radius:50%;background:var(--accent-success)"></div>
-                                <span style="font-size:13px;font-weight:600;color:var(--text-primary)">Curva de supervivencia</span>
-                                <span style="font-size:11px;color:var(--text-muted);margin-left:auto">cuántos aguantan al menos X tiempo · % del total</span>
+                                <span style="font-size:16px;font-weight:600;color:var(--text-primary)">Curva de supervivencia</span>
+                                <span style="font-size:14px;color:var(--text-muted);margin-left:auto">cuántos aguantan al menos X tiempo · % del total</span>
                             </div>
                             <div style="padding:4px"><canvas id="chartPermanenciaAcum" style="min-height:260px"></canvas></div>
                         </div>

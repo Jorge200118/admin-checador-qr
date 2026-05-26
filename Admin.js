@@ -7429,7 +7429,7 @@ function _renderChartDona(canvasId, datos, campoLabel) {
                     position: 'right',
                     labels: {
                         color: _cc.textStrong,
-                        font: { size: 11, family: 'Inter, sans-serif' },
+                        font: { size: 14, family: 'Inter, sans-serif' },
                         boxWidth: 10, boxHeight: 10,
                         borderRadius: 3,
                         padding: 10,
@@ -7504,12 +7504,12 @@ function _renderChartBarrasV(canvasId, datos) {
             },
             scales: {
                 x: {
-                    ticks: { color: _cc.text, font: { size: 11 } },
+                    ticks: { color: _cc.text, font: { size: 14 } },
                     grid:  { display: false },
                     border: { color: _cc.border }
                 },
                 y: {
-                    ticks: { color: _cc.muted, font: { size: 10 }, stepSize: 1, precision: 0 },
+                    ticks: { color: _cc.muted, font: { size: 14 }, stepSize: 1, precision: 0 },
                     grid:  { color: _cc.grid, drawTicks: false },
                     border: { dash: [3,3], color: 'transparent' },
                     beginAtZero: true
@@ -7574,7 +7574,7 @@ function _renderChartBarrasH(canvasId, datos, campoLabel, colorBase = '#3b82f6')
                 y: {
                     ticks: {
                         color: _cc.textStrong,
-                        font: { size: 11, weight: '500' },
+                        font: { size: 14, weight: '500' },
                         callback(val) {
                             const lbl = this.getLabelForValue(val);
                             return lbl && lbl.length > 24 ? lbl.slice(0, 22) + '…' : lbl;
@@ -7641,12 +7641,12 @@ function _renderChartBarrasRangos(canvasId, datos, colorBase = '#3b82f6') {
             },
             scales: {
                 x: {
-                    ticks: { color: _cc.text, font: { size: 11, weight: '500' } },
+                    ticks: { color: _cc.text, font: { size: 14, weight: '500' } },
                     grid:  { display: false },
                     border: { color: _cc.border }
                 },
                 y: {
-                    ticks: { color: _cc.muted, font: { size: 10 }, stepSize: 1, precision: 0 },
+                    ticks: { color: _cc.muted, font: { size: 14 }, stepSize: 1, precision: 0 },
                     grid:  { color: _cc.grid, drawTicks: false },
                     border: { dash: [3, 3], color: 'transparent' },
                     beginAtZero: true
@@ -8171,12 +8171,12 @@ function _renderChartRotAnual(rows) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: true, labels: { color: _cc.text, font: { size: 12 } } },
+                legend: { display: true, labels: { color: _cc.text, font: { size: 16 } } },
                 tooltip: { ..._ttBase }
             },
             scales: {
-                x: { ticks: { color: _cc.text, font: { size: 12, weight: '600' } }, grid: { display: false }, border: { color: _cc.border } },
-                y: { ticks: { color: _cc.muted, font: { size: 10 } }, grid: { color: _cc.grid }, border: { dash: [3, 3], color: 'transparent' }, beginAtZero: true }
+                x: { ticks: { color: _cc.text, font: { size: 16, weight: '600' } }, grid: { display: false }, border: { color: _cc.border } },
+                y: { ticks: { color: _cc.muted, font: { size: 14 } }, grid: { color: _cc.grid }, border: { dash: [3, 3], color: 'transparent' }, beginAtZero: true }
             }
         }
     });
@@ -8337,7 +8337,7 @@ function _renderChartPermanenciaAcum(buckets, total) {
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             plugins: {
-                legend: { display: true, labels: { color: _cc.text, font: { size: 12 } } },
+                legend: { display: true, labels: { color: _cc.text, font: { size: 16 } } },
                 tooltip: {
                     ..._ttBase,
                     callbacks: {
@@ -8350,25 +8350,25 @@ function _renderChartPermanenciaAcum(buckets, total) {
             },
             scales: {
                 x: {
-                    ticks: { color: _cc.text, font: { size: 11, weight: '500' } },
+                    ticks: { color: _cc.text, font: { size: 14, weight: '500' } },
                     grid: { display: false },
                     border: { color: _cc.border }
                 },
                 y: {
                     position: 'left',
-                    ticks: { color: _cc.muted, font: { size: 10 }, precision: 0 },
+                    ticks: { color: _cc.muted, font: { size: 14 }, precision: 0 },
                     grid: { color: _cc.grid, drawTicks: false },
                     border: { dash: [3, 3], color: 'transparent' },
                     beginAtZero: true,
-                    title: { display: true, text: 'Empleados', color: _cc.muted, font: { size: 10 } }
+                    title: { display: true, text: 'Empleados', color: _cc.muted, font: { size: 14 } }
                 },
                 y1: {
                     position: 'right',
                     min: 0, max: 100,
-                    ticks: { color: '#f59e0b', font: { size: 10 }, callback: v => v + '%' },
+                    ticks: { color: '#f59e0b', font: { size: 14 }, callback: v => v + '%' },
                     grid: { display: false },
                     border: { color: _cc.border },
-                    title: { display: true, text: '% del total', color: '#f59e0b', font: { size: 10 } }
+                    title: { display: true, text: '% del total', color: '#f59e0b', font: { size: 14 } }
                 }
             }
         }
