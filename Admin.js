@@ -588,6 +588,7 @@ async function loadSectionData(section) {
             break;
         case 'estadisticas':
             cargarEstadisticas();
+            _initFechasRotPuesto();
             break;
         case 'creditos':
             cargarCreditos();
@@ -7712,6 +7713,215 @@ function exportarEstadisticasExcel() {
 }
 
 // ================================
+// ROTACIÓN POR PUESTO
+// ================================
+
+// Mapa nombre BMS → código corto (los Excel de RH usan códigos)
+const SUCURSAL_CODIGO = {
+    'MATRIZ': 'LMM',
+    'CABOS': 'CSL',
+    'SAN JOSE': 'SJC',
+    'LA PAZ': 'LPZ',
+    'TAMARAL': 'TML',
+    'EL FUERTE': 'FTE',
+    'CULIACAN': 'CLN',
+    'JUAN JOSE RIOS': 'JJR'
+};
+
+function _codigoSucursal(nombre) {
+    if (!nombre) return '—';
+    const key = String(nombre).trim().toUpperCase();
+    return SUCURSAL_CODIGO[key] || nombre;
+}
+
+let _rotPuestoDatos = [];   // cache del último fetch (sin filtrar)
+let _ordenRotPuesto = { columna: null, direccion: 'asc' };
+
+// default de fechas: 1-ene del año actual → hoy
+function _initFechasRotPuesto() {
+    const hoy = new Date();
+    const inputDesde = document.getElementById('rotPuestoDesde');
+    const inputHasta = document.getElementById('rotPuestoHasta');
+    if (inputDesde && !inputDesde.value) {
+        inputDesde.value = `${hoy.getFullYear()}-01-01`;
+    }
+    if (inputHasta && !inputHasta.value) {
+        const m = String(hoy.getMonth() + 1).padStart(2, '0');
+        const d = String(hoy.getDate()).padStart(2, '0');
+        inputHasta.value = `${hoy.getFullYear()}-${m}-${d}`;
+    }
+}
+
+async function cargarRotacionPuesto() {
+    _initFechasRotPuesto();
+    const desde = document.getElementById('rotPuestoDesde')?.value;
+    const hasta = document.getElementById('rotPuestoHasta')?.value;
+    const tbody = document.getElementById('tbodyRotacionPuesto');
+    if (!desde || !hasta) return;
+    if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:24px">Cargando…</td></tr>';
+
+    try {
+        const params = new URLSearchParams({ desde, hasta });
+        if (window.currentUserSucursal) params.set('sucursal', window.currentUserSucursal);
+        const res = await fetch(`${ADMIN_CONFIG.apiUrl}/empleados/rotacion?${params}`);
+        const json = await res.json();
+        if (!json.success) throw new Error(json.message);
+
+        _rotPuestoDatos = json.data || [];
+        _poblarFiltrosRotPuesto();
+        filtrarRotacionPuesto();
+    } catch (err) {
+        console.error('cargarRotacionPuesto:', err);
+        if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#ef4444;padding:24px">Error: ${err.message}</td></tr>`;
+    }
+}
+
+// Llena los dropdowns de puesto y sucursal con los valores presentes en los datos
+function _poblarFiltrosRotPuesto() {
+    const selSuc = document.getElementById('rotPuestoFiltroSucursal');
+    const selPue = document.getElementById('rotPuestoFiltroPuesto');
+    if (selSuc) {
+        const cods = [...new Set(_rotPuestoDatos.map(r => _codigoSucursal(r.sucursal)))].sort();
+        selSuc.innerHTML = '<option value="">Todas las sucursales</option>' +
+            cods.map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+    if (selPue) {
+        const pues = [...new Set(_rotPuestoDatos.map(r => r.puesto))].sort();
+        selPue.innerHTML = '<option value="">Todos los puestos</option>' +
+            pues.map(p => `<option value="${p}">${p}</option>`).join('');
+    }
+}
+
+// Devuelve los datos tras aplicar filtros de puesto/sucursal y el orden actual
+function _datosRotPuestoVisibles() {
+    const fSuc = document.getElementById('rotPuestoFiltroSucursal')?.value || '';
+    const fPue = document.getElementById('rotPuestoFiltroPuesto')?.value || '';
+    let rows = _rotPuestoDatos.filter(r =>
+        (!fSuc || _codigoSucursal(r.sucursal) === fSuc) &&
+        (!fPue || r.puesto === fPue)
+    );
+
+    if (_ordenRotPuesto.columna) {
+        const col = _ordenRotPuesto.columna;
+        const dir = _ordenRotPuesto.direccion;
+        rows = [...rows].sort((a, b) => {
+            let va, vb;
+            if (col === 'puesto') { va = a.puesto || ''; vb = b.puesto || ''; }
+            else if (col === 'sucursal') { va = _codigoSucursal(a.sucursal); vb = _codigoSucursal(b.sucursal); }
+            else if (col === 'tasa') { va = parseFloat(a.tasa) || 0; vb = parseFloat(b.tasa) || 0; }
+            else { va = Number(a[col]) || 0; vb = Number(b[col]) || 0; }
+            if (typeof va === 'string') return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+            return dir === 'asc' ? va - vb : vb - va;
+        });
+    }
+    return rows;
+}
+
+function filtrarRotacionPuesto() {
+    _renderTablaRotacionPuesto(_datosRotPuestoVisibles());
+    _actualizarIconosOrdenRotPuesto();
+}
+
+function ordenarRotacionPuesto(columna) {
+    if (_ordenRotPuesto.columna === columna) {
+        _ordenRotPuesto.direccion = _ordenRotPuesto.direccion === 'asc' ? 'desc' : 'asc';
+    } else {
+        _ordenRotPuesto.columna = columna;
+        _ordenRotPuesto.direccion = 'asc';
+    }
+    filtrarRotacionPuesto();
+}
+
+function _actualizarIconosOrdenRotPuesto() {
+    const headers = document.querySelectorAll('#rotacionPuestoTable thead th[onclick]');
+    headers.forEach(th => {
+        const icono = th.querySelector('i');
+        if (!icono) return;
+        const m = th.getAttribute('onclick').match(/ordenarRotacionPuesto\('([^']+)'\)/);
+        const c = m ? m[1] : null;
+        icono.className = (c === _ordenRotPuesto.columna)
+            ? (_ordenRotPuesto.direccion === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down')
+            : 'fas fa-sort';
+    });
+}
+
+function _colorTasaRot(tasa) {
+    return tasa > 40 ? '#ef4444' : tasa > 20 ? '#f59e0b' : '#10b981';
+}
+
+function _renderTablaRotacionPuesto(rows) {
+    const tbody = document.getElementById('tbodyRotacionPuesto');
+    if (!tbody) return;
+    if (!rows || !rows.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:24px">Sin datos de rotación</td></tr>';
+        return;
+    }
+
+    const tot = rows.reduce((a, r) => ({
+        pi: a.pi + r.plantilla_inicial,
+        c:  a.c  + r.contrataciones,
+        b:  a.b  + r.bajas,
+        pf: a.pf + r.plantilla_final
+    }), { pi: 0, c: 0, b: 0, pf: 0 });
+    const promTot = (tot.pi + tot.pf) / 2;
+    const tasaTot = promTot > 0 ? ((tot.b / promTot) * 100).toFixed(1) : '0.0';
+
+    const filas = rows.map(r => {
+        const tasa = parseFloat(r.tasa) || 0;
+        const color = _colorTasaRot(tasa);
+        const bg = tasa > 40 ? 'rgba(239,68,68,.12)' : tasa > 20 ? 'rgba(245,158,11,.12)' : 'rgba(16,185,129,.12)';
+        const barW = Math.min(100, tasa).toFixed(1);
+        return `
+        <tr>
+            <td style="padding:10px 16px;font-size:13px;font-weight:600">${r.puesto}</td>
+            <td style="padding:10px 16px;font-size:13px">${_codigoSucursal(r.sucursal)}</td>
+            <td style="padding:10px 16px;text-align:right;font-size:13px">${r.plantilla_inicial}</td>
+            <td style="padding:10px 16px;text-align:right;font-size:13px;color:#10b981;font-weight:600">+${r.contrataciones}</td>
+            <td style="padding:10px 16px;text-align:right;font-size:13px;color:#ef4444;font-weight:600">−${r.bajas}</td>
+            <td style="padding:10px 16px;text-align:right;font-size:13px">${r.plantilla_final}</td>
+            <td style="padding:10px 16px">
+                <div style="display:flex;align-items:center;gap:10px;justify-content:flex-end">
+                    <div style="flex:1;max-width:70px;height:5px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden">
+                        <div style="width:${barW}%;height:100%;background:${color};border-radius:3px"></div>
+                    </div>
+                    <span style="background:${bg};color:${color};padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;min-width:52px;text-align:center">${r.tasa}%</span>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+
+    const filaTotal = `
+        <tr style="border-top:2px solid #334155;font-weight:700">
+            <td style="padding:10px 16px;font-size:13px">TOTAL</td>
+            <td></td>
+            <td style="padding:10px 16px;text-align:right;font-size:13px">${tot.pi}</td>
+            <td style="padding:10px 16px;text-align:right;font-size:13px;color:#10b981">+${tot.c}</td>
+            <td style="padding:10px 16px;text-align:right;font-size:13px;color:#ef4444">−${tot.b}</td>
+            <td style="padding:10px 16px;text-align:right;font-size:13px">${tot.pf}</td>
+            <td style="padding:10px 16px;text-align:right;font-size:13px">${tasaTot}%</td>
+        </tr>`;
+
+    tbody.innerHTML = filas + filaTotal;
+}
+
+function exportarRotacionPuestoExcel() {
+    const rows = _datosRotPuestoVisibles();
+    if (!rows.length) return;
+    const wb = XLSX.utils.book_new();
+    const plano = rows.map(r => ({
+        'Puesto': r.puesto,
+        'Sucursal': _codigoSucursal(r.sucursal),
+        'Plantilla Inicial': r.plantilla_inicial,
+        'Contrataciones': r.contrataciones,
+        'Bajas': r.bajas,
+        'Plantilla Final': r.plantilla_final,
+        '%Rotación': r.tasa
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(plano), 'Rotación por Puesto');
+    XLSX.writeFile(wb, `Rotacion_por_Puesto_${new Date().toLocaleDateString('es-MX').replace(/\//g,'-')}.xlsx`);
+}
+
+// ================================
 // CONTROL DE CRÉDITOS
 // ================================
 
@@ -7834,6 +8044,10 @@ function exportarCreditosExcel() {
 
 // Exponer al scope global (llamadas desde HTML onclick)
 window.exportarEstadisticasExcel = exportarEstadisticasExcel;
+window.cargarRotacionPuesto = cargarRotacionPuesto;
+window.ordenarRotacionPuesto = ordenarRotacionPuesto;
+window.filtrarRotacionPuesto = filtrarRotacionPuesto;
+window.exportarRotacionPuestoExcel = exportarRotacionPuestoExcel;
 window.exportarCreditosExcel     = exportarCreditosExcel;
 window.filtrarTablaCreditos      = filtrarTablaCreditos;
 window.cargarCreditos            = cargarCreditos;
