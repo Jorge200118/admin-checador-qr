@@ -967,6 +967,49 @@
                     </table>
                 </div>
             </div>
+
+            <!-- Rotación por Puesto -->
+            <div class="card" style="margin-top:24px">
+                <div class="card-body">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+                        <h3 style="margin:0;font-size:16px;font-weight:600">Rotación por Puesto</h3>
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                            <label style="font-size:12px;color:#94a3b8">Desde
+                                <input type="date" id="rotPuestoDesde" style="margin-left:4px;padding:4px 8px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#e2e8f0">
+                            </label>
+                            <label style="font-size:12px;color:#94a3b8">Hasta
+                                <input type="date" id="rotPuestoHasta" style="margin-left:4px;padding:4px 8px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#e2e8f0">
+                            </label>
+                            <select id="rotPuestoFiltroSucursal" onchange="filtrarRotacionPuesto()" style="padding:4px 8px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;font-size:12px">
+                                <option value="">Todas las sucursales</option>
+                            </select>
+                            <select id="rotPuestoFiltroPuesto" onchange="filtrarRotacionPuesto()" style="padding:4px 8px;border-radius:6px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;font-size:12px">
+                                <option value="">Todos los puestos</option>
+                            </select>
+                            <button class="btn btn-primary" onclick="cargarRotacionPuesto()"><i class="fas fa-sync-alt"></i> Generar</button>
+                            <button class="btn btn-success" onclick="exportarRotacionPuestoExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table id="rotacionPuestoTable">
+                            <thead>
+                                <tr>
+                                    <th onclick="ordenarRotacionPuesto('puesto')" style="cursor:pointer">Puesto <i class="fas fa-sort"></i></th>
+                                    <th onclick="ordenarRotacionPuesto('sucursal')" style="cursor:pointer">Sucursal <i class="fas fa-sort"></i></th>
+                                    <th onclick="ordenarRotacionPuesto('plantilla_inicial')" style="cursor:pointer;text-align:right">Plantilla Ini <i class="fas fa-sort"></i></th>
+                                    <th onclick="ordenarRotacionPuesto('contrataciones')" style="cursor:pointer;text-align:right">Contrataciones <i class="fas fa-sort"></i></th>
+                                    <th onclick="ordenarRotacionPuesto('bajas')" style="cursor:pointer;text-align:right">Bajas <i class="fas fa-sort"></i></th>
+                                    <th onclick="ordenarRotacionPuesto('plantilla_final')" style="cursor:pointer;text-align:right">Plantilla Fin <i class="fas fa-sort"></i></th>
+                                    <th onclick="ordenarRotacionPuesto('tasa')" style="cursor:pointer;text-align:right">%Rotación <i class="fas fa-sort"></i></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyRotacionPuesto">
+                                <tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:24px">Elige un rango y pulsa Generar</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <!-- ==================== SECCIÓN CONTROL DE CRÉDITOS ==================== -->
