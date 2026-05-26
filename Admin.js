@@ -7960,6 +7960,226 @@ function mostrarTabRotacion(tab) {
         _poblarFiltrosPermanencia();
         cargarHistogramaPermanencia();
     }
+
+    if (tab === 'resumen' && !_rotAnualCargado) {
+        _rotAnualCargado = true;
+        _initAniosRotAnual();
+        cargarRotacionAnual();
+    }
+}
+
+// ================================
+// ROTACIÓN ANUAL POR SUCURSAL (tab Resumen)
+// ================================
+
+let _rotAnualDatos = [];          // cache del fetch (sin filtrar)
+let _rotAnualCargado = false;
+let _sucursalesSelAnual = null;   // Set de códigos seleccionados (null = aún sin init)
+let _ordenRotAnual = { columna: 'tasa', direccion: 'desc' };
+
+function _initAniosRotAnual() {
+    const hoy = new Date().getFullYear();
+    const iD = document.getElementById('rotAnualDesde');
+    const iH = document.getElementById('rotAnualHasta');
+    if (iD && !iD.value) iD.value = hoy - 3;
+    if (iH && !iH.value) iH.value = hoy;
+}
+
+async function cargarRotacionAnual() {
+    _initAniosRotAnual();
+    const desde = document.getElementById('rotAnualDesde')?.value;
+    const hasta = document.getElementById('rotAnualHasta')?.value;
+    const tbody = document.getElementById('tbodyRotacionAnual');
+    if (!desde || !hasta) return;
+    if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:24px">Cargando…</td></tr>';
+
+    try {
+        const params = new URLSearchParams({ desde, hasta });
+        const res = await fetch(`${ADMIN_CONFIG.apiUrl}/empleados/rotacion-anual?${params}`);
+        const json = await res.json();
+        if (!json.success) throw new Error(json.message);
+
+        _rotAnualDatos = json.data || [];
+        // Inicializar segmentador con todas las sucursales presentes
+        const cods = [...new Set(_rotAnualDatos.map(r => _codigoSucursal(r.sucursal)))].sort();
+        _sucursalesSelAnual = new Set(cods);
+        _renderSegmentadorAnual(cods);
+        _redibujarRotAnual();
+    } catch (err) {
+        console.error('cargarRotacionAnual:', err);
+        if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--accent-danger);padding:24px">Error: ${err.message}</td></tr>`;
+    }
+}
+
+function _renderSegmentadorAnual(cods) {
+    const cont = document.getElementById('rotAnualSegmentador');
+    if (!cont) return;
+    const chips = ['__ALL__', ...cods];
+    cont.innerHTML = chips.map(c => {
+        const activo = c === '__ALL__'
+            ? (_sucursalesSelAnual && _sucursalesSelAnual.size === cods.length)
+            : (_sucursalesSelAnual && _sucursalesSelAnual.has(c));
+        const label = c === '__ALL__' ? 'Todas' : c;
+        const bg = activo ? 'var(--accent-primary)' : 'var(--bg-input)';
+        const col = activo ? '#fff' : 'var(--text-secondary)';
+        return `<button onclick="_toggleSucursalAnual('${c}')" style="padding:5px 12px;border-radius:16px;border:1px solid var(--border);background:${bg};color:${col};cursor:pointer;font-size:12px;font-weight:600">${label}</button>`;
+    }).join('');
+}
+
+function _toggleSucursalAnual(cod) {
+    const cods = [...new Set(_rotAnualDatos.map(r => _codigoSucursal(r.sucursal)))].sort();
+    if (!_sucursalesSelAnual) _sucursalesSelAnual = new Set(cods);
+    if (cod === '__ALL__') {
+        // Si ya están todas, no hacer nada; si no, seleccionarlas todas
+        _sucursalesSelAnual = new Set(cods);
+    } else {
+        if (_sucursalesSelAnual.has(cod)) _sucursalesSelAnual.delete(cod);
+        else _sucursalesSelAnual.add(cod);
+        if (_sucursalesSelAnual.size === 0) _sucursalesSelAnual = new Set(cods); // nunca vacío
+    }
+    _renderSegmentadorAnual(cods);
+    _redibujarRotAnual();
+}
+
+function _datosRotAnualVisibles() {
+    let rows = _rotAnualDatos.filter(r => !_sucursalesSelAnual || _sucursalesSelAnual.has(_codigoSucursal(r.sucursal)));
+    const col = _ordenRotAnual.columna, dir = _ordenRotAnual.direccion;
+    rows = [...rows].sort((a, b) => {
+        let va, vb;
+        if (col === 'sucursal') { va = _codigoSucursal(a.sucursal); vb = _codigoSucursal(b.sucursal); }
+        else if (col === 'tasa') { va = parseFloat(a.tasa) || 0; vb = parseFloat(b.tasa) || 0; }
+        else if (col === 'anio') { va = Number(a.anio); vb = Number(b.anio); }
+        else { va = Number(a[col]) || 0; vb = Number(b[col]) || 0; }
+        if (typeof va === 'string') return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+        return dir === 'asc' ? va - vb : vb - va;
+    });
+    return rows;
+}
+
+function ordenarRotacionAnual(columna) {
+    if (_ordenRotAnual.columna === columna) {
+        _ordenRotAnual.direccion = _ordenRotAnual.direccion === 'asc' ? 'desc' : 'asc';
+    } else {
+        _ordenRotAnual.columna = columna;
+        _ordenRotAnual.direccion = 'asc';
+    }
+    _redibujarRotAnual();
+}
+
+function _redibujarRotAnual() {
+    const rows = _datosRotAnualVisibles();
+    _renderTablaRotAnual(rows);
+    _renderResumenAnual(rows);
+    _renderChartRotAnual(rows);
+}
+
+function _colorTasaAnual(t) {
+    return t > 40 ? 'var(--accent-danger)' : t > 20 ? 'var(--accent-warning)' : 'var(--accent-success)';
+}
+
+function _renderTablaRotAnual(rows) {
+    const tbody = document.getElementById('tbodyRotacionAnual');
+    if (!tbody) return;
+    if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:24px">Sin datos</td></tr>';
+        return;
+    }
+    const td = 'padding:9px 20px;font-size:13px;border-bottom:1px solid var(--border)';
+    tbody.innerHTML = rows.map(r => {
+        const t = parseFloat(r.tasa) || 0;
+        const c = _colorTasaAnual(t);
+        return `<tr>
+            <td style="${td};color:var(--text-primary);font-weight:600">${r.anio}</td>
+            <td style="${td};color:var(--text-secondary)">${_codigoSucursal(r.sucursal)}</td>
+            <td style="${td};text-align:right;color:var(--text-secondary)">${r.plantilla_inicial}</td>
+            <td style="${td};text-align:right;color:var(--accent-success);font-weight:600">+${r.contrataciones}</td>
+            <td style="${td};text-align:right;color:var(--accent-danger);font-weight:600">−${r.dltc}</td>
+            <td style="${td};text-align:right;color:var(--text-secondary)">${r.plantilla_final}</td>
+            <td style="${td};text-align:right;color:${c};font-weight:700">${r.tasa}%</td>
+        </tr>`;
+    }).join('');
+}
+
+function _renderResumenAnual(rows) {
+    const tbody = document.getElementById('tbodyResumenAnual');
+    if (!tbody) return;
+    // Agregar por año
+    const porAnio = {};
+    rows.forEach(r => {
+        if (!porAnio[r.anio]) porAnio[r.anio] = { pi: 0, pf: 0 };
+        porAnio[r.anio].pi += r.plantilla_inicial;
+        porAnio[r.anio].pf += r.plantilla_final;
+    });
+    const anios = Object.keys(porAnio).map(Number).sort((a, b) => a - b);
+    if (!anios.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px">—</td></tr>';
+        return;
+    }
+    const td = 'padding:7px 12px;font-size:13px;border-bottom:1px solid var(--border)';
+    let totPi = 0, totPf = 0;
+    let filas = anios.map(a => {
+        const { pi, pf } = porAnio[a];
+        totPi += pi; totPf += pf;
+        const dif = pf - pi;
+        const pct = pi > 0 ? ((dif / pi) * 100).toFixed(0) : '0';
+        const cDif = dif >= 0 ? 'var(--accent-success)' : 'var(--accent-danger)';
+        return `<tr>
+            <td style="${td};color:var(--text-primary);font-weight:600">${a}</td>
+            <td style="${td};text-align:right;color:var(--text-secondary)">${pi}</td>
+            <td style="${td};text-align:right;color:var(--text-secondary)">${pf}</td>
+            <td style="${td};text-align:right;color:${cDif};font-weight:600">${dif >= 0 ? '+' : ''}${dif}</td>
+            <td style="${td};text-align:right;color:${cDif}">${pct}%</td>
+        </tr>`;
+    }).join('');
+    const difT = totPf - totPi;
+    const pctT = totPi > 0 ? ((difT / totPi) * 100).toFixed(0) : '0';
+    filas += `<tr style="border-top:2px solid var(--border-strong);font-weight:700">
+        <td style="${td};color:var(--text-primary)">Total</td>
+        <td style="${td};text-align:right;color:var(--text-primary)">${totPi}</td>
+        <td style="${td};text-align:right;color:var(--text-primary)">${totPf}</td>
+        <td style="${td};text-align:right;color:var(--text-primary)">${difT >= 0 ? '+' : ''}${difT}</td>
+        <td style="${td};text-align:right;color:var(--text-primary)">${pctT}%</td>
+    </tr>`;
+    tbody.innerHTML = filas;
+}
+
+function _renderChartRotAnual(rows) {
+    const ctx = document.getElementById('chartRotacionAnual');
+    if (!ctx) return;
+    const _cc = getChartThemeColors();
+    const porAnio = {};
+    rows.forEach(r => {
+        if (!porAnio[r.anio]) porAnio[r.anio] = { pi: 0, pf: 0 };
+        porAnio[r.anio].pi += r.plantilla_inicial;
+        porAnio[r.anio].pf += r.plantilla_final;
+    });
+    const anios = Object.keys(porAnio).map(Number).sort((a, b) => a - b);
+    const piData = anios.map(a => porAnio[a].pi);
+    const pfData = anios.map(a => porAnio[a].pf);
+
+    if (_estCharts['chartRotacionAnual']) _estCharts['chartRotacionAnual'].destroy();
+    _estCharts['chartRotacionAnual'] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: anios.map(String),
+            datasets: [
+                { label: 'Plantilla Inicial', data: piData, backgroundColor: '#3b82f6', borderRadius: 5, maxBarThickness: 40 },
+                { label: 'Plantilla Final', data: pfData, backgroundColor: '#f59e0b', borderRadius: 5, maxBarThickness: 40 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: true, labels: { color: _cc.text, font: { size: 12 } } },
+                tooltip: { ..._ttBase }
+            },
+            scales: {
+                x: { ticks: { color: _cc.text, font: { size: 12, weight: '600' } }, grid: { display: false }, border: { color: _cc.border } },
+                y: { ticks: { color: _cc.muted, font: { size: 10 } }, grid: { color: _cc.grid }, border: { dash: [3, 3], color: 'transparent' }, beginAtZero: true }
+            }
+        }
+    });
 }
 
 // Llena el dropdown de puestos (reutiliza _estDatos.puestos de /estadisticas si existe)
@@ -8141,6 +8361,9 @@ window.filtrarRotacionPuesto = filtrarRotacionPuesto;
 window.exportarRotacionPuestoExcel = exportarRotacionPuestoExcel;
 window.mostrarTabRotacion = mostrarTabRotacion;
 window.cargarHistogramaPermanencia = cargarHistogramaPermanencia;
+window.cargarRotacionAnual = cargarRotacionAnual;
+window.ordenarRotacionAnual = ordenarRotacionAnual;
+window._toggleSucursalAnual = _toggleSucursalAnual;
 window.exportarCreditosExcel     = exportarCreditosExcel;
 window.filtrarTablaCreditos      = filtrarTablaCreditos;
 window.cargarCreditos            = cargarCreditos;
