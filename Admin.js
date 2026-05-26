@@ -8200,7 +8200,7 @@ function _poblarFiltrosPermanencia() {
 }
 
 // Rangos cuyo clic permite drill-down (los demás no se desglosan más).
-const _PERM_DESGLOSABLES = new Set(['1-3 meses','3-6 meses','6-12 meses','1-2 años','2-5 años','5+ años']);
+const _PERM_DESGLOSABLES = new Set(['<1 mes','1-3 meses','3-6 meses','6-12 meses','1-2 años','2-5 años','5+ años']);
 let _permDetalleActivo = null; // nombre del rango si estamos viendo drill-down, si no null
 
 async function cargarHistogramaPermanencia(detalle) {
