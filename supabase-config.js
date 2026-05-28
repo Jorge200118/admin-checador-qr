@@ -1547,12 +1547,11 @@ const TabletsAPI = {
         // Query 2: checadas de hoy por tablet_id
         const inicioHoy = new Date();
         inicioHoy.setHours(0, 0, 0, 0);
-        const inicioISO = inicioHoy.toISOString().slice(0, 19).replace('T', ' ');
 
         const { data: regs, error: regsErr } = await supabaseClient
             .from('registros')
             .select('tablet_id')
-            .gte('fecha_hora', inicioISO);
+            .gte('fecha_hora', inicioHoy.toISOString());
 
         const conteo = {};
         if (!regsErr && Array.isArray(regs)) {
