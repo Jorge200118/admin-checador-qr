@@ -95,6 +95,12 @@
                         <span>Geocercas</span>
                     </a>
                 </li>
+                <li class="nav-item" data-superadmin-only="true">
+                    <a href="#tablets" data-section="tablets">
+                        <i class="fas fa-tablet-alt"></i>
+                        <span>Tablets</span>
+                    </a>
+                </li>
 
                 <li class="nav-group-label"><span>Análisis</span></li>
                 <li class="nav-item">
@@ -1523,6 +1529,51 @@
                 </div>
             </div>
         </section>
+
+        <!-- Tablets Section (solo superadmin) -->
+        <section id="tablets" class="content-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Tablets vinculadas</h3>
+                    <div>
+                        <button class="btn btn-sm btn-primary" onclick="abrirModalTablet()">
+                            <i class="fas fa-plus"></i> Nueva tablet
+                        </button>
+                        <button class="btn btn-sm btn-secondary" onclick="cargarTablets()">
+                            <i class="fas fa-refresh"></i> Actualizar
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="disp-toolbar">
+                        <input type="text" id="tabBusqueda" placeholder="Buscar por nombre, código o ID..." class="form-input disp-search" />
+                        <label class="disp-toggle">
+                            <input type="checkbox" id="tabSoloActivos" checked>
+                            Solo activas
+                        </label>
+                    </div>
+                    <div class="table-container">
+                        <table id="tabTabla">
+                            <thead>
+                                <tr>
+                                    <th>ID Tablet</th>
+                                    <th>Nombre</th>
+                                    <th>Sucursal</th>
+                                    <th>Código</th>
+                                    <th>Último uso</th>
+                                    <th>Hoy</th>
+                                    <th>Estado</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabTbody">
+                                <tr><td colspan="8" style="text-align:center;padding:20px;color:#64748b">Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
     <!-- Modals -->
@@ -2334,6 +2385,92 @@
             <input type="hidden" id="geoSucursalId">
             <input type="hidden" id="geoSucursalNombre">
             <input type="hidden" id="geoActivaInicial">
+        </div>
+    </div>
+
+    <!-- Modal Nueva/Editar Tablet -->
+    <div id="modalTablet" class="modal">
+        <div class="modal-content" style="max-width: 480px;">
+            <div class="modal-header">
+                <h3 id="modalTabletTitle">Nueva tablet</h3>
+                <span class="close" onclick="cerrarModalTablet()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="formTablet" onsubmit="guardarTablet(event)">
+                    <input type="hidden" id="tabFormId" value="">
+                    <div class="form-group">
+                        <label>ID de Tablet:</label>
+                        <input type="text" id="tabFormTabletId" class="form-input" required maxlength="50" placeholder="TABLET_02">
+                        <small style="color:#64748b">Identificador estable, ej: TABLET_02. No se puede cambiar después.</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre descriptivo:</label>
+                        <input type="text" id="tabFormNombre" class="form-input" required maxlength="100" placeholder="Tablet Recepción">
+                    </div>
+                    <div class="form-group">
+                        <label>Sucursal:</label>
+                        <select id="tabFormSucursal" class="form-input">
+                            <option value="">— Sin asignar —</option>
+                        </select>
+                    </div>
+                    <p style="color:#64748b; font-size:13px; margin:8px 0 0 0;">
+                        El código de acceso de 6 dígitos se generará automáticamente al guardar.
+                    </p>
+                    <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:8px; padding-top:12px;">
+                        <button type="button" class="btn btn-secondary" onclick="cerrarModalTablet()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: mostrar código recién generado/regenerado (alta o regenerar) -->
+    <div id="modalCodigoTablet" class="modal">
+        <div class="modal-content" style="max-width: 440px;">
+            <div class="modal-header">
+                <h3 id="modalCodigoTitulo">Código de acceso</h3>
+                <span class="close" onclick="cerrarModalCodigoTablet()">&times;</span>
+            </div>
+            <div class="modal-body" style="text-align:center;">
+                <p id="modalCodigoTexto" style="margin-bottom:12px;">
+                    Anota el código y configúralo en la tablet correspondiente.
+                </p>
+                <div id="modalCodigoValor" style="font-size:42px; font-weight:bold; letter-spacing:8px; background:#f1f5f9; padding:16px; border-radius:8px; margin:12px 0; font-family:'Courier New', monospace;">
+                    ——————
+                </div>
+                <button type="button" class="btn btn-secondary" onclick="copiarCodigoTablet()" style="margin-bottom:8px;">
+                    Copiar al portapapeles
+                </button>
+                <p style="color:#dc2626; font-size:12px; margin-top:8px;">
+                    Por seguridad, este código no se mostrará completo otra vez.
+                    Si lo pierdes, puedes regenerarlo (lo cual revocará el actual).
+                </p>
+                <div class="modal-footer" style="display:flex; justify-content:center; padding-top:12px;">
+                    <button type="button" class="btn btn-primary" onclick="cerrarModalCodigoTablet()">Listo</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Confirmar Bloqueo -->
+    <div id="modalBloqueoTablet" class="modal">
+        <div class="modal-content" style="max-width: 440px;">
+            <div class="modal-header">
+                <h3>Bloquear tablet</h3>
+                <span class="close" onclick="cerrarModalBloqueoTablet()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p id="bloqueoTabletTexto" style="margin-bottom:12px;">¿Bloquear esta tablet?</p>
+                <div class="form-group">
+                    <label>Motivo (opcional):</label>
+                    <textarea id="bloqueoTabletMotivo" class="form-input" rows="3" maxlength="500" placeholder="Ej: tablet dañada, sucursal cerrada..."></textarea>
+                </div>
+                <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:8px; padding-top:12px;">
+                    <button type="button" class="btn btn-secondary" onclick="cerrarModalBloqueoTablet()">Cancelar</button>
+                    <button type="button" class="btn btn-primary" style="background:#dc2626;border-color:#dc2626;" onclick="confirmarBloqueoTablet()">Bloquear</button>
+                </div>
+            </div>
         </div>
     </div>
 
