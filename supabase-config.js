@@ -1512,3 +1512,170 @@ const DispositivosAPI = {
         return { success: true };
     }
 };
+
+// ==========================================
+// API DE TABLETS (solo superadmin)
+// ==========================================
+const TabletsAPI = {
+    async listar({ soloActivos = true, busqueda = '' } = {}) {
+        // Query 1: tablets
+        let query = supabaseClient
+            .from('tablets')
+            .select('id, tablet_id, codigo, nombre, sucursal_codigo, activo, bloqueado_en, bloqueado_motivo, ultimo_uso, created_at')
+            .order('ultimo_uso', { ascending: false, nullsFirst: false });
+
+        if (soloActivos) query = query.eq('activo', true);
+
+        const { data, error } = await query;
+        if (error) {
+            console.error('Error listando tablets:', error);
+            return [];
+        }
+
+        let tablets = data || [];
+
+        // Filtro de búsqueda en memoria
+        if (busqueda) {
+            const b = busqueda.toLowerCase();
+            tablets = tablets.filter(t =>
+                (t.nombre || '').toLowerCase().includes(b) ||
+                (t.codigo || '').toLowerCase().includes(b) ||
+                (t.tablet_id || '').toLowerCase().includes(b)
+            );
+        }
+
+        // Query 2: checadas de hoy por tablet_id
+        const inicioHoy = new Date();
+        inicioHoy.setHours(0, 0, 0, 0);
+        const inicioISO = inicioHoy.toISOString().slice(0, 19).replace('T', ' ');
+
+        const { data: regs, error: regsErr } = await supabaseClient
+            .from('registros')
+            .select('tablet_id')
+            .gte('fecha_hora', inicioISO);
+
+        const conteo = {};
+        if (!regsErr && Array.isArray(regs)) {
+            for (const r of regs) {
+                if (!r.tablet_id) continue;
+                conteo[r.tablet_id] = (conteo[r.tablet_id] || 0) + 1;
+            }
+        }
+
+        return tablets.map(t => ({ ...t, checadas_hoy: conteo[t.tablet_id] || 0 }));
+    },
+
+    /**
+     * Genera un código numérico de 6 dígitos único.
+     * Reintenta hasta 5 veces en caso de colisión con códigos existentes.
+     */
+    async _generarCodigoUnico() {
+        for (let intento = 0; intento < 5; intento++) {
+            // Código de 6 dígitos. Math.random() puede dar valores con < 6 dígitos: padStart.
+            const codigo = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+            const { data, error } = await supabaseClient
+                .from('tablets')
+                .select('id')
+                .eq('codigo', codigo)
+                .maybeSingle();
+            if (error) {
+                console.error('Error verificando unicidad de código:', error);
+                return null;
+            }
+            if (!data) return codigo;
+        }
+        return null;
+    },
+
+    /**
+     * Crea una tablet con código autogenerado.
+     * El llamador NO pasa código — lo recibe en la respuesta para mostrarlo al usuario.
+     */
+    async crear({ tablet_id, nombre, sucursal_codigo }) {
+        const codigo = await this._generarCodigoUnico();
+        if (!codigo) {
+            return { success: false, message: 'No se pudo generar un código único, intenta de nuevo.' };
+        }
+        const { data, error } = await supabaseClient
+            .from('tablets')
+            .insert({ tablet_id, codigo, nombre, sucursal_codigo, activo: true })
+            .select()
+            .single();
+        if (error) {
+            console.error('Error creando tablet:', error);
+            return { success: false, message: error.message };
+        }
+        return { success: true, data };
+    },
+
+    /**
+     * Actualiza solo nombre y sucursal. El código NO se edita desde aquí — para cambiarlo usa regenerarCodigo().
+     */
+    async actualizar(id, { nombre, sucursal_codigo }) {
+        const { error } = await supabaseClient
+            .from('tablets')
+            .update({ nombre, sucursal_codigo, updated_at: new Date().toISOString() })
+            .eq('id', id);
+        if (error) {
+            console.error('Error actualizando tablet:', error);
+            return { success: false, message: error.message };
+        }
+        return { success: true };
+    },
+
+    async bloquear(id, motivo = null) {
+        const { error } = await supabaseClient
+            .from('tablets')
+            .update({
+                activo: false,
+                bloqueado_en: new Date().toISOString(),
+                bloqueado_motivo: motivo || null,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', id);
+        if (error) {
+            console.error('Error bloqueando tablet:', error);
+            return { success: false };
+        }
+        return { success: true };
+    },
+
+    async desbloquear(id) {
+        const { error } = await supabaseClient
+            .from('tablets')
+            .update({
+                activo: true,
+                bloqueado_en: null,
+                bloqueado_motivo: null,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', id);
+        if (error) {
+            console.error('Error desbloqueando tablet:', error);
+            return { success: false };
+        }
+        return { success: true };
+    },
+
+    /**
+     * Regenera el código de la tablet. Equivale a revocar la sesión actual.
+     * Retorna el nuevo código en data.codigo para que el admin pueda anotarlo.
+     */
+    async regenerarCodigo(id) {
+        const codigo = await this._generarCodigoUnico();
+        if (!codigo) {
+            return { success: false, message: 'No se pudo generar un código único, intenta de nuevo.' };
+        }
+        const { data, error } = await supabaseClient
+            .from('tablets')
+            .update({ codigo, updated_at: new Date().toISOString() })
+            .eq('id', id)
+            .select()
+            .single();
+        if (error) {
+            console.error('Error regenerando código:', error);
+            return { success: false, message: error.message };
+        }
+        return { success: true, data };
+    }
+};
