@@ -24,12 +24,14 @@ Esto significa que no hay forma de:
 
 1. **Inventario visible** — ver desde el admin todas las tablets, su sucursal, último uso y conteo de checadas del día.
 2. **Bloqueo remoto** — el superadmin puede bloquear/desbloquear una tablet desde el admin y eso impide que registre checadas inmediatamente (verificado en cada intento).
-3. **Migración sin downtime** — las tablets en producción siguen funcionando tras desplegar, con un único re-login manual.
+3. **Códigos autogenerados y revocables** — el admin solo define ID, nombre y sucursal; el código de 6 dígitos lo genera el sistema. Existe un botón "Regenerar código" para revocar la sesión activa de una tablet.
+4. **Tumbar el código vulnerado `1810`** — la migración crea la tabla vacía; ninguna tablet puede checar hasta que el admin la dé de alta con un código nuevo.
 
 No-objetivos:
 
 - No se introduce un modelo de auth nuevo. Sigue el patrón existente (anon key compartida, RLS sin user enforcement, validación en cliente).
 - No se elimina nada físicamente. "Bloquear" es soft-delete.
+- No hay "migración sin downtime". El código `1810` fue vulnerado: hay una ventana donde las tablets no pueden checar hasta que el operador les configure el código nuevo. Se asume aceptable.
 
 ## Modelo de datos
 
@@ -57,10 +59,11 @@ CREATE INDEX idx_tablets_activo ON tablets(activo);
 Reglas:
 
 - `tablet_id` es el identificador estable usado en `registros.tablet_id` (ej. `TABLET_01`). Inmutable después de crear.
-- `codigo` es el PIN de acceso. Sirve a la vez como contraseña y como mecanismo de identificación: una tablet "es" su código. Cambiar el código en el admin equivale a revocar esa tablet.
+- `codigo` es un PIN numérico de **6 dígitos generado por el sistema**, no escrito por el usuario. Sirve a la vez como contraseña y como mecanismo de identificación: una tablet "es" su código. La acción "Regenerar código" en el admin reemplaza el código por uno nuevo y equivale a revocar la sesión activa de esa tablet.
 - `activo = false` ⇒ tablet bloqueada. No se eliminan registros nunca.
 - `ultimo_uso` se actualiza desde la tablet con cada checada exitosa.
 - "Checadas hoy" NO se almacena; se calcula on-the-fly desde `registros` agrupando por `tablet_id`.
+- La tabla **se crea vacía**. No hay seed. Toda tablet se da de alta desde el admin.
 
 RLS (siguiendo patrón del proyecto):
 
@@ -210,22 +213,27 @@ Solo superadmin puede ver y operar la sección "Tablets" en el admin. Esto se im
 
 ## Plan de migración
 
-Sin downtime. Despliegue en este orden:
+El código `1810` ya fue vulnerado. La estrategia es **revocar todo y reinscribir desde el admin con códigos nuevos por tablet**. Hay ventana de no-servicio en cada tablet hasta que se le configure su código nuevo.
+
+Despliegue en este orden:
 
 1. **Migración SQL** (`supabase/migrations/2026-05-28_tablets.sql`):
-   - Crea tabla `tablets`.
-   - Seed inicial con las tablets actuales: `(tablet_id='TABLET_01', codigo='1810', nombre='Tablet Principal', sucursal_codigo='PTRN01', activo=true)` y cualquier otra que esté en uso.
+   - Crea tabla `tablets` **vacía**.
+   - No hay seed.
    - No toca `tablet_access_codes` (queda huérfana, se elimina manualmente más tarde).
 
 2. **Despliegue del admin:**
    - Nueva sección "Tablets" visible para superadmin.
-   - El superadmin ve las tablets sembradas y puede empezar a ajustarles nombres y configurarlas.
+   - El superadmin puede dar de alta tablets (ID + nombre + sucursal); el sistema genera un código de 6 dígitos y lo muestra para que se anote/copie.
 
 3. **Despliegue del cliente tablet:**
-   - Las tablets actuales no tienen `tablet_id` en `localStorage` (nunca lo guardaron antes).
-   - Al abrir la nueva versión, muestran login pidiendo código.
-   - El operador ingresa el código actual (`1810`) → la tablet valida contra BD → encuentra el registro sembrado → guarda en `localStorage` → funciona normalmente.
-   - **Sin reconfiguración de archivos en el dispositivo**, solo un login manual una vez.
+   - Las tablets actuales, al actualizar el cliente, ya no aceptan `1810` (no existe en BD).
+   - Muestran pantalla de login.
+   - Quedan sin servicio hasta que un operador les configure el código nuevo.
+
+4. **Reinscripción operativa (manual, por tablet):**
+   - Para cada tablet física: el superadmin la da de alta en el admin (anotando ID, sucursal), obtiene el código generado, y lo ingresa físicamente en la tablet.
+   - Recomendado coordinar con sucursales para minimizar tiempo de paro. Empleados pueden usar la PWA mientras tanto.
 
 ## Edge cases
 

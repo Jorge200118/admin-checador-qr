@@ -2,9 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Permitir que el superadmin gestione tablets desde el admin (alta/edición, listado con último uso, bloqueo remoto), y que las tablets validen su vigencia contra la BD en cada apertura y antes de cada checada.
+**Goal:** Permitir que el superadmin gestione tablets desde el admin (alta con código autogenerado, edición, listado con último uso, bloqueo y regeneración de código), y que las tablets validen su vigencia contra la BD en cada apertura y antes de cada checada.
 
-**Architecture:** Tabla nueva `tablets` en Supabase. Sección "Tablets" en admin (solo superadmin) con tabla, modales y `TabletsAPI`. Cliente de tablet reescribe login para validar contra BD, guarda `tablet_id`/`codigo` en `localStorage`, y verifica vigencia antes de cada checada. Bloqueo es soft (`activo=false`).
+**Architecture:** Tabla nueva `tablets` en Supabase (vacía al inicio — el admin las da de alta una por una). Sección "Tablets" en admin (solo superadmin) con tabla, modales y `TabletsAPI`. El código de 6 dígitos se **autogenera** en el servidor cuando el admin crea la tablet; el usuario no lo escribe ni lo edita. Cliente de tablet reescribe login para validar contra BD, guarda `tablet_id`/`codigo` en `localStorage`, y verifica vigencia antes de cada checada. Bloqueo es soft (`activo=false`). Regenerar código equivale a revocar la sesión activa de esa tablet.
+
+**Contexto operativo importante:** el código `1810` que estaba hardcodeado **fue vulnerado**. La migración crea la tabla vacía. Esto significa que al desplegar el cliente nuevo, **todas las tablets actuales quedan tumbadas automáticamente** (no pueden hacer login porque no hay códigos en BD). El operador debe: (1) dar de alta cada tablet en el admin, (2) anotar/copiar el código de 6 dígitos generado, (3) ingresarlo físicamente en la tablet correspondiente. Una sola vez por dispositivo.
 
 **Tech Stack:** Supabase (PostgreSQL + JS client), HTML/CSS/JS vanilla, sin framework de tests. La verificación se hace **manualmente** siguiendo pasos exactos en cada tarea (el proyecto no tiene Jest/Vitest configurado).
 
@@ -27,7 +29,7 @@
 **Tablet (`v2 Checador-Tablet`):**
 - Modificar: `app.js` (reescribir auth, eliminar hardcoded, agregar verificación de vigencia)
 - Modificar: `supabase-config.js` (agregar `TabletAuthAPI`, integrar verificación previa al insert)
-- Modificar: `Index.html` (agregar botón "Cerrar sesión" en panel de configuración si no existe)
+- Modificar: `Index.html` (agregar botón "Cerrar sesión" en panel de configuración si no existe; ampliar `maxlength` del input de código de 4 a 6)
 
 ---
 
@@ -58,11 +60,9 @@ CREATE INDEX idx_tablets_codigo ON tablets(codigo);
 CREATE INDEX idx_tablets_activo ON tablets(activo);
 CREATE INDEX idx_tablets_tablet_id ON tablets(tablet_id);
 
--- Seed con la tablet que existe hoy hardcodeada en el cliente
--- (TABLET_CONFIG.id='TABLET_01' / CODIGOS_VALIDOS=['1810'] / location='PTRN01')
-INSERT INTO tablets (tablet_id, codigo, nombre, sucursal_codigo, activo)
-VALUES ('TABLET_01', '1810', 'Tablet Principal', 'PTRN01', true)
-ON CONFLICT (tablet_id) DO NOTHING;
+-- NO se siembra ninguna tablet. La tabla queda vacía intencionalmente:
+-- el código '1810' fue vulnerado y todas las tablets se dan de alta desde el admin
+-- con códigos autogenerados de 6 dígitos.
 
 -- RLS: permitir SELECT/INSERT/UPDATE con anon key (patrón del proyecto)
 ALTER TABLE tablets ENABLE ROW LEVEL SECURITY;
@@ -85,15 +85,23 @@ COMMENT ON COLUMN tablets.codigo IS 'PIN de acceso que la tablet ingresa para vi
 
 Aplicar manualmente vía Supabase Dashboard → SQL Editor, o mediante MCP `mcp__supabase__apply_migration` con `name='2026-05-28_tablets'`.
 
-- [ ] **Step 3: Verificar que la tabla existe y tiene el seed**
+- [ ] **Step 3: Verificar que la tabla existe y está vacía**
 
 Ejecutar en SQL Editor de Supabase:
 
 ```sql
-SELECT tablet_id, codigo, nombre, sucursal_codigo, activo FROM tablets;
+SELECT count(*) FROM tablets;
 ```
 
-Expected: 1 fila con `('TABLET_01', '1810', 'Tablet Principal', 'PTRN01', true)`.
+Expected: `0` (la tabla está vacía intencionalmente).
+
+```sql
+\d tablets
+```
+
+(o `SELECT column_name, data_type FROM information_schema.columns WHERE table_name='tablets';`)
+
+Expected: ver todas las columnas definidas en la migración.
 
 - [ ] **Step 4: Commit**
 
@@ -166,7 +174,37 @@ const TabletsAPI = {
         return tablets.map(t => ({ ...t, checadas_hoy: conteo[t.tablet_id] || 0 }));
     },
 
-    async crear({ tablet_id, codigo, nombre, sucursal_codigo }) {
+    /**
+     * Genera un código numérico de 6 dígitos único.
+     * Reintenta hasta 5 veces en caso de colisión con códigos existentes.
+     */
+    async _generarCodigoUnico() {
+        for (let intento = 0; intento < 5; intento++) {
+            // Código de 6 dígitos. Math.random() puede dar valores con < 6 dígitos: padStart.
+            const codigo = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+            const { data, error } = await supabaseClient
+                .from('tablets')
+                .select('id')
+                .eq('codigo', codigo)
+                .maybeSingle();
+            if (error) {
+                console.error('Error verificando unicidad de código:', error);
+                return null;
+            }
+            if (!data) return codigo;
+        }
+        return null;
+    },
+
+    /**
+     * Crea una tablet con código autogenerado.
+     * El llamador NO pasa código — lo recibe en la respuesta para mostrarlo al usuario.
+     */
+    async crear({ tablet_id, nombre, sucursal_codigo }) {
+        const codigo = await this._generarCodigoUnico();
+        if (!codigo) {
+            return { success: false, message: 'No se pudo generar un código único, intenta de nuevo.' };
+        }
         const { data, error } = await supabaseClient
             .from('tablets')
             .insert({ tablet_id, codigo, nombre, sucursal_codigo, activo: true })
@@ -179,16 +217,41 @@ const TabletsAPI = {
         return { success: true, data };
     },
 
-    async actualizar(id, { codigo, nombre, sucursal_codigo }) {
+    /**
+     * Actualiza solo nombre y sucursal. El código NO se edita desde aquí — para cambiarlo usa regenerarCodigo().
+     */
+    async actualizar(id, { nombre, sucursal_codigo }) {
         const { error } = await supabaseClient
             .from('tablets')
-            .update({ codigo, nombre, sucursal_codigo, updated_at: new Date().toISOString() })
+            .update({ nombre, sucursal_codigo, updated_at: new Date().toISOString() })
             .eq('id', id);
         if (error) {
             console.error('Error actualizando tablet:', error);
             return { success: false, message: error.message };
         }
         return { success: true };
+    },
+
+    /**
+     * Regenera el código de la tablet. Equivale a revocar la sesión actual.
+     * Retorna el nuevo código en data.codigo para que el admin pueda anotarlo.
+     */
+    async regenerarCodigo(id) {
+        const codigo = await this._generarCodigoUnico();
+        if (!codigo) {
+            return { success: false, message: 'No se pudo generar un código único, intenta de nuevo.' };
+        }
+        const { data, error } = await supabaseClient
+            .from('tablets')
+            .update({ codigo, updated_at: new Date().toISOString() })
+            .eq('id', id)
+            .select()
+            .single();
+        if (error) {
+            console.error('Error regenerando código:', error);
+            return { success: false, message: error.message };
+        }
+        return { success: true, data };
     },
 
     async bloquear(id, motivo = null) {
@@ -235,7 +298,13 @@ Abrir el admin (`Index.html`) en el navegador, abrir DevTools → Console y ejec
 await TabletsAPI.listar({ soloActivos: false, busqueda: '' });
 ```
 
-Expected: array con al menos un elemento, el de TABLET_01 sembrado, con campo `checadas_hoy` numérico.
+Expected: array vacío `[]` (la tabla está vacía hasta que se den de alta tablets desde la UI).
+
+```javascript
+await TabletsAPI._generarCodigoUnico();
+```
+
+Expected: string de 6 dígitos numéricos, ej. `"483921"`.
 
 - [ ] **Step 3: Commit**
 
@@ -356,19 +425,42 @@ Buscar el último modal existente (cerca del final del `<body>`) e insertar desp
                             <option value="">— Sin asignar —</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label>Código de acceso:</label>
-                        <div style="display:flex; gap:8px;">
-                            <input type="text" id="tabFormCodigo" class="form-input" required maxlength="20" placeholder="4 a 20 caracteres" style="flex:1;">
-                            <button type="button" class="btn btn-sm btn-secondary" onclick="generarCodigoTablet()">Generar</button>
-                        </div>
-                        <small style="color:#64748b">Las tablets usarán este código para vincularse. Cambiarlo revoca la sesión activa.</small>
-                    </div>
+                    <p style="color:#64748b; font-size:13px; margin:8px 0 0 0;">
+                        El código de acceso de 6 dígitos se generará automáticamente al guardar.
+                    </p>
                     <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:8px; padding-top:12px;">
                         <button type="button" class="btn btn-secondary" onclick="cerrarModalTablet()">Cancelar</button>
                         <button type="submit" class="btn btn-primary">Guardar</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: mostrar código recién generado/regenerado (alta o regenerar) -->
+    <div id="modalCodigoTablet" class="modal">
+        <div class="modal-content" style="max-width: 440px;">
+            <div class="modal-header">
+                <h3 id="modalCodigoTitulo">Código de acceso</h3>
+                <span class="close" onclick="cerrarModalCodigoTablet()">&times;</span>
+            </div>
+            <div class="modal-body" style="text-align:center;">
+                <p id="modalCodigoTexto" style="margin-bottom:12px;">
+                    Anota el código y configúralo en la tablet correspondiente.
+                </p>
+                <div id="modalCodigoValor" style="font-size:42px; font-weight:bold; letter-spacing:8px; background:#f1f5f9; padding:16px; border-radius:8px; margin:12px 0; font-family:'Courier New', monospace;">
+                    ——————
+                </div>
+                <button type="button" class="btn btn-secondary" onclick="copiarCodigoTablet()" style="margin-bottom:8px;">
+                    📋 Copiar al portapapeles
+                </button>
+                <p style="color:#dc2626; font-size:12px; margin-top:8px;">
+                    Por seguridad, este código no se mostrará completo otra vez.
+                    Si lo pierdes, puedes regenerarlo (lo cual revocará el actual).
+                </p>
+                <div class="modal-footer" style="display:flex; justify-content:center; padding-top:12px;">
+                    <button type="button" class="btn btn-primary" onclick="cerrarModalCodigoTablet()">Listo</button>
+                </div>
             </div>
         </div>
     </div>
@@ -475,29 +567,32 @@ async function cargarTablets() {
     };
 
     tbody.innerHTML = lista.map(t => {
-        const codigoEnmascarado = '•'.repeat(Math.min(t.codigo?.length || 4, 8));
+        // Por seguridad, mostrar solo los últimos 2 dígitos del código.
+        const codigo = t.codigo || '';
+        const codigoEnmascarado = codigo.length >= 2
+            ? '••••' + codigo.slice(-2)
+            : '••••••';
         const sucursal = t.sucursal_codigo || '—';
         const uso = fmtUso(t.ultimo_uso);
         const estado = t.activo
             ? '<span class="disp-badge activo">Activa</span>'
             : `<span class="disp-badge inactivo" title="${(t.bloqueado_motivo || '').replace(/"/g,'&quot;')}">Bloqueada</span>`;
+        const nombreEsc = (t.nombre || '').replace(/"/g,'&quot;');
         const accionBloqueo = t.activo
-            ? `<button class="btn-desvincular" data-action="bloquear" data-id="${t.id}" data-nombre="${(t.nombre || '').replace(/"/g,'&quot;')}">Bloquear</button>`
-            : `<button class="btn-desvincular" style="background:#16a34a;" data-action="desbloquear" data-id="${t.id}" data-nombre="${(t.nombre || '').replace(/"/g,'&quot;')}">Desbloquear</button>`;
+            ? `<button class="btn-desvincular" data-action="bloquear" data-id="${t.id}" data-nombre="${nombreEsc}">Bloquear</button>`
+            : `<button class="btn-desvincular" style="background:#16a34a;" data-action="desbloquear" data-id="${t.id}" data-nombre="${nombreEsc}">Desbloquear</button>`;
         const accionEditar = `<button class="btn-desvincular" style="background:#2563eb;margin-left:4px;" data-action="editar" data-id="${t.id}">Editar</button>`;
+        const accionRegen = `<button class="btn-desvincular" style="background:#f59e0b;margin-left:4px;" data-action="regenerar" data-id="${t.id}" data-nombre="${nombreEsc}" title="Regenera el código; la tablet actual será revocada.">Regenerar código</button>`;
 
         return `<tr>
             <td><strong>${t.tablet_id}</strong></td>
             <td>${t.nombre || '—'}</td>
             <td>${sucursal}</td>
-            <td>
-                <span class="tab-codigo-mask" data-id="${t.id}">${codigoEnmascarado}</span>
-                <button class="btn-link tab-codigo-toggle" data-id="${t.id}" title="Mostrar/ocultar" style="background:none;border:none;cursor:pointer;color:#2563eb;">👁</button>
-            </td>
+            <td><code>${codigoEnmascarado}</code></td>
             <td>${uso}</td>
             <td style="text-align:center;">${t.checadas_hoy}</td>
             <td>${estado}</td>
-            <td>${accionBloqueo}${accionEditar}</td>
+            <td>${accionBloqueo}${accionEditar}${accionRegen}</td>
         </tr>`;
     }).join('');
 
@@ -510,23 +605,7 @@ async function cargarTablets() {
             if (action === 'bloquear') pedirBloqueoTablet(id, nombre);
             else if (action === 'desbloquear') confirmarDesbloqueoTablet(id, nombre);
             else if (action === 'editar') abrirModalTablet(id);
-        });
-    });
-
-    // Wire up toggles de código
-    tbody.querySelectorAll('.tab-codigo-toggle').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const id = parseInt(btn.getAttribute('data-id'), 10);
-            const span = tbody.querySelector(`.tab-codigo-mask[data-id="${id}"]`);
-            const tablet = _tabletsCache.find(t => t.id === id);
-            if (!span || !tablet) return;
-            if (span.dataset.revealed === '1') {
-                span.textContent = '•'.repeat(Math.min(tablet.codigo?.length || 4, 8));
-                span.dataset.revealed = '0';
-            } else {
-                span.textContent = tablet.codigo || '—';
-                span.dataset.revealed = '1';
-            }
+            else if (action === 'regenerar') confirmarRegenerarCodigo(id, nombre);
         });
     });
 }
@@ -559,10 +638,9 @@ Insertar **después** un nuevo caso para `'tablets'`:
 
 1. Recargar admin como superadmin.
 2. Click en "Tablets" del sidebar.
-3. Debe mostrar al menos la fila de TABLET_01 con: ID `TABLET_01`, nombre, sucursal `PTRN01`, código enmascarado `••••`, último uso (probablemente "Nunca"), checadas hoy `0`, estado "Activa", botones [Bloquear] [Editar].
-4. Click en el ojo del código → debe revelar `1810`. Click otra vez → vuelve a `••••`.
-5. Escribir en el buscador "1810" → debe filtrar; borrar → vuelve a aparecer.
-6. Desmarcar "Solo activas" → no cambia nada todavía (no hay bloqueadas).
+3. Debe mostrar el estado vacío: "Sin tablets" (la tabla todavía no tiene registros).
+4. El toolbar (buscador, checkbox "Solo activas") debe estar visible y funcional aunque la tabla esté vacía.
+5. El botón "Nueva tablet" debe estar visible. (La verificación funcional de creación se hace en Task 5.)
 
 - [ ] **Step 4: Commit**
 
@@ -590,7 +668,6 @@ async function abrirModalTablet(id = null) {
     const inputTabletId = document.getElementById('tabFormTabletId');
     const inputNombre = document.getElementById('tabFormNombre');
     const selectSucursal = document.getElementById('tabFormSucursal');
-    const inputCodigo = document.getElementById('tabFormCodigo');
 
     // Poblar select de sucursales
     await poblarSucursalesEnTabletForm(selectSucursal);
@@ -607,7 +684,6 @@ async function abrirModalTablet(id = null) {
         inputTabletId.readOnly = true;
         inputNombre.value = tablet.nombre || '';
         selectSucursal.value = tablet.sucursal_codigo || '';
-        inputCodigo.value = tablet.codigo || '';
     } else {
         title.textContent = 'Nueva tablet';
         formId.value = '';
@@ -615,7 +691,6 @@ async function abrirModalTablet(id = null) {
         inputTabletId.readOnly = false;
         inputNombre.value = '';
         selectSucursal.value = '';
-        inputCodigo.value = '';
     }
 
     modal.style.display = 'block';
@@ -626,7 +701,6 @@ function cerrarModalTablet() {
 }
 
 async function poblarSucursalesEnTabletForm(select) {
-    // Reusar tabla `sucursales` si está disponible
     select.innerHTML = '<option value="">— Sin asignar —</option>';
     try {
         const { data, error } = await supabaseClient
@@ -645,67 +719,98 @@ async function poblarSucursalesEnTabletForm(select) {
     }
 }
 
-function generarCodigoTablet() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let codigo = '';
-    for (let i = 0; i < 6; i++) {
-        codigo += chars[Math.floor(Math.random() * chars.length)];
-    }
-    document.getElementById('tabFormCodigo').value = codigo;
-}
-
 async function guardarTablet(e) {
     if (e) e.preventDefault();
     const id = document.getElementById('tabFormId').value;
     const tablet_id = document.getElementById('tabFormTabletId').value.trim();
     const nombre = document.getElementById('tabFormNombre').value.trim();
     const sucursal_codigo = document.getElementById('tabFormSucursal').value || null;
-    const codigo = document.getElementById('tabFormCodigo').value.trim();
 
-    if (!tablet_id || !nombre || !codigo) {
-        alert('Completa todos los campos requeridos.');
+    if (!tablet_id || !nombre) {
+        alert('Completa los campos requeridos: ID de tablet y nombre.');
         return;
     }
 
     let res;
     if (id) {
-        res = await TabletsAPI.actualizar(parseInt(id, 10), { codigo, nombre, sucursal_codigo });
+        res = await TabletsAPI.actualizar(parseInt(id, 10), { nombre, sucursal_codigo });
     } else {
-        res = await TabletsAPI.crear({ tablet_id, codigo, nombre, sucursal_codigo });
+        res = await TabletsAPI.crear({ tablet_id, nombre, sucursal_codigo });
     }
 
     if (res.success) {
         cerrarModalTablet();
         cargarTablets();
+        // En alta, mostrar el código recién generado para que el operador lo anote
+        if (!id && res.data && res.data.codigo) {
+            mostrarModalCodigo(
+                'Código de acceso generado',
+                `Tablet "${res.data.nombre || res.data.tablet_id}" creada. Anota este código y configúralo en la tablet.`,
+                res.data.codigo
+            );
+        }
     } else {
         alert('Error al guardar: ' + (res.message || 'desconocido'));
     }
 }
 
+// --- Modal de mostrar código (alta + regenerar) ---
+
+function mostrarModalCodigo(titulo, texto, codigo) {
+    document.getElementById('modalCodigoTitulo').textContent = titulo;
+    document.getElementById('modalCodigoTexto').textContent = texto;
+    document.getElementById('modalCodigoValor').textContent = codigo;
+    document.getElementById('modalCodigoTablet').style.display = 'block';
+}
+
+function cerrarModalCodigoTablet() {
+    document.getElementById('modalCodigoTablet').style.display = 'none';
+    document.getElementById('modalCodigoValor').textContent = '——————';
+}
+
+async function copiarCodigoTablet() {
+    const codigo = document.getElementById('modalCodigoValor').textContent;
+    try {
+        await navigator.clipboard.writeText(codigo);
+        const btn = event.target;
+        const orig = btn.textContent;
+        btn.textContent = '✓ Copiado';
+        setTimeout(() => { btn.textContent = orig; }, 1500);
+    } catch (err) {
+        alert('No se pudo copiar al portapapeles. Cópialo manualmente: ' + codigo);
+    }
+}
+
 window.abrirModalTablet = abrirModalTablet;
 window.cerrarModalTablet = cerrarModalTablet;
-window.generarCodigoTablet = generarCodigoTablet;
 window.guardarTablet = guardarTablet;
+window.mostrarModalCodigo = mostrarModalCodigo;
+window.cerrarModalCodigoTablet = cerrarModalCodigoTablet;
+window.copiarCodigoTablet = copiarCodigoTablet;
 ```
 
 - [ ] **Step 2: Verificar manualmente — crear tablet nueva**
 
 1. Click en "Nueva tablet".
-2. Llenar: ID `TABLET_TEST`, Nombre `Tablet Prueba`, Sucursal cualquiera, click "Generar" → debe llenar código aleatorio.
+2. Llenar: ID `TABLET_TEST`, Nombre `Tablet Prueba`, Sucursal cualquiera. No hay campo de código.
 3. Click "Guardar".
-4. Modal cierra, tabla se recarga, aparece la nueva tablet con estado "Activa".
+4. Modal del formulario cierra y aparece el **modal de código** con un número de 6 dígitos en grande (ej. `483921`).
+5. Click "Copiar al portapapeles" → debe cambiar el botón a "✓ Copiado".
+6. Pegar (Ctrl+V) en cualquier campo de texto para confirmar que se copió el código.
+7. Click "Listo".
+8. La tabla se recarga. La fila de `TABLET_TEST` aparece con código enmascarado tipo `••••21` (solo últimos 2 dígitos visibles), estado "Activa".
 
 - [ ] **Step 3: Verificar manualmente — editar tablet existente**
 
 1. Click "Editar" en la fila de `TABLET_TEST`.
-2. Verificar que el campo "ID de Tablet" está deshabilitado y muestra `TABLET_TEST`.
+2. El modal NO debe tener campo de código (solo ID readonly, nombre, sucursal).
 3. Cambiar nombre a `Tablet Prueba Editada`.
-4. Click "Guardar". La fila debe reflejar el nuevo nombre.
+4. Click "Guardar". El modal cierra, la fila refleja el nuevo nombre. NO debe aparecer el modal de código (porque es edición, no alta).
 
 - [ ] **Step 4: Verificar manualmente — error de unicidad**
 
 1. Click "Nueva tablet".
-2. Intentar crear otra con `tablet_id = TABLET_01` (ya existe).
+2. Intentar crear otra con `tablet_id = TABLET_TEST` (ya existe).
 3. Click "Guardar" → debe mostrar alert con error de constraint.
 
 - [ ] **Step 5: Limpiar la tablet de prueba**
@@ -726,12 +831,12 @@ git commit -m "Tablets: modal de alta/edicion"
 
 ---
 
-## Task 6: Admin — bloqueo y desbloqueo
+## Task 6: Admin — bloqueo, desbloqueo y regenerar código
 
 **Files:**
 - Modify: `Admin.js` (continuación)
 
-- [ ] **Step 1: Agregar funciones de bloqueo después de `guardarTablet`**
+- [ ] **Step 1: Agregar funciones de bloqueo + regenerar después de `copiarCodigoTablet`**
 
 ```javascript
 // --- Bloqueo / Desbloqueo ---
@@ -773,15 +878,40 @@ async function confirmarDesbloqueoTablet(id, nombre) {
     }
 }
 
+// --- Regenerar código ---
+
+async function confirmarRegenerarCodigo(id, nombre) {
+    const ok = confirm(
+        `¿Regenerar el código de "${nombre}"?\n\n` +
+        `Esto invalidará el código actual y la tablet vinculada quedará revocada inmediatamente. ` +
+        `Tendrás que configurar el nuevo código en la tablet física.`
+    );
+    if (!ok) return;
+    const res = await TabletsAPI.regenerarCodigo(id);
+    if (res.success && res.data && res.data.codigo) {
+        cargarTablets();
+        mostrarModalCodigo(
+            'Nuevo código generado',
+            `Código regenerado para "${res.data.nombre || res.data.tablet_id}". Configúralo en la tablet física.`,
+            res.data.codigo
+        );
+    } else {
+        alert('Error al regenerar el código: ' + (res.message || 'desconocido'));
+    }
+}
+
 window.pedirBloqueoTablet = pedirBloqueoTablet;
 window.cerrarModalBloqueoTablet = cerrarModalBloqueoTablet;
 window.confirmarBloqueoTablet = confirmarBloqueoTablet;
 window.confirmarDesbloqueoTablet = confirmarDesbloqueoTablet;
+window.confirmarRegenerarCodigo = confirmarRegenerarCodigo;
 ```
 
 - [ ] **Step 2: Verificar manualmente — bloqueo**
 
-1. Click "Bloquear" en la fila de TABLET_01.
+Para esta verificación, primero crea una tablet de prueba: click "Nueva tablet", ID `TAB_TEST_BLOQ`, nombre `Prueba Bloqueo`, sucursal cualquiera. Anota el código generado.
+
+1. Click "Bloquear" en la fila de `TAB_TEST_BLOQ`.
 2. Modal aparece con texto correcto.
 3. Escribir motivo "prueba de bloqueo" y click "Bloquear".
 4. La fila debe cambiar a estado "Bloqueada" (badge rojo) y aparecer el botón "Desbloquear" en verde.
@@ -795,16 +925,32 @@ window.confirmarDesbloqueoTablet = confirmarDesbloqueoTablet;
 
 - [ ] **Step 4: Verificar manualmente — filtro "Solo activas"**
 
-1. Bloquear TABLET_01 otra vez.
+1. Bloquear `TAB_TEST_BLOQ` otra vez.
 2. Marcar "Solo activas" → desaparece de la lista.
 3. Desmarcar → vuelve a aparecer en estado bloqueada.
-4. Desbloquear y dejar marcado "Solo activas".
+4. Desbloquear.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Verificar manualmente — regenerar código**
+
+1. Click "Regenerar código" en la fila de `TAB_TEST_BLOQ`.
+2. Confirm aparece con texto explicativo. Click OK.
+3. Aparece modal con el nuevo código de 6 dígitos.
+4. Anota o verifica el código.
+5. Click "Listo" → cierra el modal.
+6. La fila debe mostrar el código enmascarado con los últimos 2 dígitos del nuevo código.
+7. (Validación adicional, SQL Editor): `SELECT codigo FROM tablets WHERE tablet_id='TAB_TEST_BLOQ';` debe coincidir con el código mostrado.
+
+- [ ] **Step 6: Limpiar la tablet de prueba**
+
+```sql
+DELETE FROM tablets WHERE tablet_id = 'TAB_TEST_BLOQ';
+```
+
+- [ ] **Step 7: Commit**
 
 ```bash
 git add Admin.js
-git commit -m "Tablets: bloqueo y desbloqueo desde admin"
+git commit -m "Tablets: bloqueo, desbloqueo y regenerar codigo desde admin"
 ```
 
 ---
@@ -909,25 +1055,29 @@ const TabletAuthAPI = {
 
 - [ ] **Step 2: Verificar desde la consola del navegador**
 
+Antes de probar, necesitas dar de alta una tablet desde el admin: en el admin, click "Nueva tablet", ID `TAB_QA_API`, nombre `QA API`, sucursal cualquiera. Anota el código generado (ej. `483921`).
+
 Abrir la tablet en navegador (`Index.html` de `v2 Checador-Tablet`), DevTools → Console:
 
 ```javascript
-await TabletAuthAPI.validarCodigo('1810');
+await TabletAuthAPI.validarCodigo('483921'); // usa el código real que anotaste
 ```
 
-Expected: `{ ok: true, tablet_id: 'TABLET_01', nombre: 'Tablet Principal', sucursal_codigo: 'PTRN01' }`.
+Expected: `{ ok: true, tablet_id: 'TAB_QA_API', nombre: 'QA API', sucursal_codigo: '...' }`.
 
 ```javascript
-await TabletAuthAPI.validarCodigo('xxxxx');
+await TabletAuthAPI.validarCodigo('000000');
 ```
 
 Expected: `{ ok: false, motivo: 'codigo-invalido' }`.
 
 ```javascript
-await TabletAuthAPI.verificarVigencia('TABLET_01', '1810');
+await TabletAuthAPI.verificarVigencia('TAB_QA_API', '483921');
 ```
 
 Expected: `{ activo: true }`.
+
+Limpiar después: en SQL Editor `DELETE FROM tablets WHERE tablet_id='TAB_QA_API';` (o bloquear desde admin para mantenerla).
 
 - [ ] **Step 3: Commit**
 
@@ -1167,29 +1317,68 @@ async function handleAuth(e) {
 }
 ```
 
-- [ ] **Step 5: Verificar manualmente — primer login**
+- [ ] **Step 5: Crear una tablet de prueba desde el admin**
 
-1. Borrar `localStorage` de la tablet: en DevTools Console: `localStorage.clear(); location.reload();`
+En el admin (otro tab/ventana, como superadmin):
+1. Click "Nueva tablet": ID `TAB_QA`, nombre `QA`, sucursal cualquiera.
+2. Anotar el código de 6 dígitos generado (lo llamaremos `CODIGO_QA` en los pasos siguientes).
+
+- [ ] **Step 6: Verificar manualmente — primer login**
+
+1. En la tablet, borrar `localStorage`: en DevTools Console: `localStorage.clear(); location.reload();`
 2. Debe aparecer pantalla de login.
-3. Ingresar código inválido → mensaje "Código de acceso incorrecto".
-4. Ingresar `1810` → debe entrar a la app principal.
-5. Verificar en DevTools → Application → Local Storage que están `tablet_id=TABLET_01`, `tablet_codigo=1810`, `tablet_nombre=Tablet Principal`, `tablet_sucursal=PTRN01`.
+3. Ingresar `000000` → mensaje "Código de acceso incorrecto".
+4. Ingresar `CODIGO_QA` → debe entrar a la app principal.
+5. Verificar en DevTools → Application → Local Storage que están `tablet_id=TAB_QA`, `tablet_codigo=CODIGO_QA`, `tablet_nombre=QA`, `tablet_sucursal=<código>`.
 6. Recargar la página → debe entrar directamente (sin pedir login).
 
-- [ ] **Step 6: Verificar manualmente — bloqueo desde admin**
+- [ ] **Step 7: Verificar manualmente — bloqueo desde admin**
 
-1. Con la tablet en pantalla principal, ir al admin y bloquear TABLET_01.
+1. Con la tablet en pantalla principal, ir al admin y bloquear `TAB_QA`.
 2. En la tablet, recargar la página.
 3. Debe volver a la pantalla de login mostrando "Esta tablet fue bloqueada por el administrador..."
-4. Intentar ingresar `1810` → mensaje "Esta tablet está desactivada".
+4. Intentar ingresar `CODIGO_QA` → mensaje "Esta tablet está desactivada".
 5. Desde admin, desbloquear.
-6. En la tablet, ingresar `1810` → debe entrar normalmente.
+6. En la tablet, ingresar `CODIGO_QA` → debe entrar normalmente.
 
-- [ ] **Step 7: Commit (en repo tablet)**
+- [ ] **Step 8: Ampliar maxlength del input de código en `Index.html`**
+
+En `Index.html` de la tablet (línea ~48), localizar:
+
+```html
+<input type="password" 
+       id="accessCode" 
+       placeholder="Código de acceso" 
+       class="auth-input"
+       maxlength="4">
+```
+
+Cambiar `maxlength="4"` por `maxlength="6"` y `placeholder` por `"Código de 6 dígitos"`:
+
+```html
+<input type="password" 
+       id="accessCode" 
+       placeholder="Código de 6 dígitos" 
+       class="auth-input"
+       inputmode="numeric"
+       pattern="[0-9]*"
+       maxlength="6">
+```
+
+(`inputmode="numeric"` y `pattern="[0-9]*"` hacen que en tablets/móviles se abra el teclado numérico.)
+
+- [ ] **Step 9: Verificar manualmente — el campo acepta 6 dígitos**
+
+1. Recargar la pantalla de login de la tablet.
+2. El placeholder debe decir "Código de 6 dígitos".
+3. Intentar teclear más de 6 caracteres → no debe permitirlo.
+4. En dispositivo táctil (o emulador), debería abrirse el teclado numérico al hacer focus.
+
+- [ ] **Step 10: Commit (en repo tablet)**
 
 ```bash
-git add app.js
-git commit -m "Tablet: auth contra BD + verificacion al arrancar"
+git add app.js Index.html
+git commit -m "Tablet: auth contra BD + verificacion al arrancar + input 6 digitos"
 ```
 
 ---
@@ -1263,18 +1452,20 @@ Reemplazar el bloque `else` por:
 
 - [ ] **Step 4: Verificar manualmente — bloqueo durante uso**
 
-1. Desbloquear la tablet desde el admin si está bloqueada. Recargar tablet, verificar que entra a la pantalla principal.
-2. Desde el admin, bloquear TABLET_01.
+(Requiere tener la tablet `TAB_QA` vinculada del Task 8 Step 6. Si la eliminaste, vuelve a crearla.)
+
+1. Desbloquear la tablet `TAB_QA` desde el admin si está bloqueada. Recargar la tablet, verificar que entra a la pantalla principal.
+2. Desde el admin, bloquear `TAB_QA`.
 3. En la tablet, escanear un QR válido.
 4. Debe mostrar el mensaje "Tablet bloqueada por el administrador" y, después de 3 segundos, volver a la pantalla de login.
-5. Verificar en SQL: `SELECT ultimo_uso FROM tablets WHERE tablet_id='TABLET_01';` → no debe haberse actualizado en este último intento (el insert no llegó a ejecutarse).
-6. Desbloquear desde admin, volver a la tablet, ingresar código `1810`, escanear QR válido → registro normal.
-7. Verificar `SELECT ultimo_uso FROM tablets WHERE tablet_id='TABLET_01';` → debe tener un timestamp reciente.
+5. Verificar en SQL: `SELECT ultimo_uso FROM tablets WHERE tablet_id='TAB_QA';` → no debe haberse actualizado en este último intento (el insert no llegó a ejecutarse).
+6. Desbloquear desde admin, volver a la tablet, ingresar `CODIGO_QA`, escanear QR válido → registro normal.
+7. Verificar `SELECT ultimo_uso FROM tablets WHERE tablet_id='TAB_QA';` → debe tener un timestamp reciente.
 
 - [ ] **Step 5: Verificar manualmente — "Último uso" y "Hoy" en admin**
 
 1. En el admin, recargar la sección Tablets.
-2. La columna "Último uso" debe mostrar la hora reciente.
+2. La columna "Último uso" en la fila de `TAB_QA` debe mostrar la hora reciente.
 3. La columna "Hoy" debe mostrar al menos 1 (la checada que acabas de hacer).
 
 - [ ] **Step 6: Commit (en repo tablet)**
@@ -1370,11 +1561,11 @@ En `setupEventListeners()` (o donde se manejen los listeners), agregar al final:
 
 - [ ] **Step 4: Verificar manualmente**
 
-1. En la tablet (con sesión activa), click en "⚙ Configuración".
-2. Debe abrir el panel mostrando `Tablet: TABLET_01`, `Sucursal: PTRN01`.
+1. En la tablet (con sesión activa de `TAB_QA`), click en "⚙ Configuración".
+2. Debe abrir el panel mostrando `Tablet: TAB_QA`, `Sucursal: <código de la sucursal asignada>`.
 3. Click "Cerrar sesión / Cambiar tablet" → confirm → debe volver a la pantalla de login.
 4. En DevTools verificar que `localStorage` ya no tiene las llaves `tablet_*`.
-5. Ingresar `1810` → entra normalmente.
+5. Ingresar `CODIGO_QA` → entra normalmente.
 
 - [ ] **Step 5: Commit (en repo tablet)**
 
@@ -1387,30 +1578,48 @@ git commit -m "Tablet: boton cerrar sesion en configuracion"
 
 ## Task 11: Smoke test end-to-end y limpieza
 
-- [ ] **Step 1: Smoke test completo**
+- [ ] **Step 1: Smoke test completo de alta + uso**
 
-1. Limpiar `localStorage` de la tablet.
-2. En admin (como superadmin), crear una nueva tablet: `tablet_id='TABLET_QA', codigo='QA123', nombre='QA Test', sucursal=PTRN01`.
-3. En la tablet, hacer login con `QA123`. Debe entrar como tablet "QA Test".
-4. Verificar header/footer de la tablet muestra `TABLET_QA` y `PTRN01`.
-5. Desde admin, recargar Tablets → verificar `TABLET_QA` aparece, último uso "Nunca" (todavía no ha checado).
-6. En tablet, escanear un QR (o simular un checado válido) → registro exitoso.
-7. En admin recargar → `TABLET_QA` muestra último uso reciente y "Hoy = 1".
-8. Cambiar el código desde admin a `QA999`.
-9. En tablet, esperar próximo intento de checada o recargar → debe volver a login con mensaje "código actualizado".
-10. Ingresar `QA999` → entra. Ingresar `QA123` → falla con "código inválido".
-11. Desde admin, bloquear `TABLET_QA` con motivo "fin de QA".
-12. En tablet, recargar → mensaje de bloqueo con el motivo. Intentar `QA999` → "Esta tablet está desactivada".
-13. Desde admin, desbloquear y luego en SQL `DELETE FROM tablets WHERE tablet_id='TABLET_QA';` (limpieza manual).
+1. Limpiar `localStorage` de la tablet: `localStorage.clear(); location.reload();`
+2. En admin (como superadmin), click "Nueva tablet": `tablet_id='SMOKE_TEST'`, nombre `Smoke Test`, sucursal cualquiera.
+3. El modal de código muestra un valor de 6 dígitos. **Anótalo como `CODIGO_SMOKE`** y haz "Copiar".
+4. En la tablet, ingresar `CODIGO_SMOKE`. Debe entrar como tablet "Smoke Test".
+5. Verificar que el header/footer de la tablet muestra `SMOKE_TEST` y la sucursal correspondiente.
+6. Desde admin, recargar Tablets → verificar `SMOKE_TEST` aparece, último uso "Nunca".
+7. En tablet, escanear un QR (o simular un checado válido) → registro exitoso.
+8. En admin recargar → `SMOKE_TEST` muestra último uso reciente y "Hoy ≥ 1".
 
-- [ ] **Step 2: Verificar que TABLET_01 (la real) sigue funcionando**
+- [ ] **Step 2: Smoke test de regenerar código**
 
-1. Limpiar `localStorage` en la tablet.
-2. Hacer login con `1810`.
-3. Verificar que la tablet funciona normalmente: header muestra `TABLET_01` / `PTRN01`, escanea QR, registra checadas.
-4. En admin, verificar que TABLET_01 muestra último uso reciente.
+1. En admin, click "Regenerar código" en la fila de `SMOKE_TEST`. Confirmar.
+2. Anotar el nuevo código generado como `CODIGO_SMOKE_2`.
+3. En la tablet (todavía con sesión activa), recargar la página.
+4. Debe volver a login con mensaje "código actualizado".
+5. Intentar ingresar `CODIGO_SMOKE` (el viejo) → "Código de acceso incorrecto".
+6. Ingresar `CODIGO_SMOKE_2` → entra normalmente.
 
-- [ ] **Step 3: Tag/release**
+- [ ] **Step 3: Smoke test de bloqueo**
+
+1. Desde admin, bloquear `SMOKE_TEST` con motivo "fin de QA".
+2. En tablet, recargar → mensaje de bloqueo con el motivo.
+3. Intentar ingresar `CODIGO_SMOKE_2` → "Esta tablet está desactivada".
+4. Desde admin, desbloquear.
+5. En tablet, ingresar `CODIGO_SMOKE_2` → entra normalmente.
+
+- [ ] **Step 4: Smoke test de cerrar sesión**
+
+1. En tablet, click "⚙ Configuración" → "Cerrar sesión / Cambiar tablet".
+2. Confirmar → vuelve a pantalla de login.
+3. Verificar que `localStorage` ya no tiene llaves `tablet_*`.
+
+- [ ] **Step 5: Limpiar la tablet de smoke**
+
+En SQL Editor:
+```sql
+DELETE FROM tablets WHERE tablet_id = 'SMOKE_TEST';
+```
+
+- [ ] **Step 6: Tag/release**
 
 ```bash
 # En repo admin
@@ -1421,7 +1630,7 @@ git log --oneline -10
 
 Verificar que ambos repos tienen commits limpios y descriptivos de la feature completa.
 
-- [ ] **Step 4: Push (solo si el usuario lo autoriza explícitamente)**
+- [ ] **Step 7: Push (solo si el usuario lo autoriza explícitamente)**
 
 ```bash
 # Confirmar con usuario primero
@@ -1429,21 +1638,35 @@ git push origin main   # en admin
 git push origin main   # en tablet
 ```
 
+- [ ] **Step 8: Migración operativa — dar de alta las tablets reales en producción**
+
+Una vez desplegado:
+
+1. Por cada tablet física que esté actualmente en uso (TABLET_01, TABLET_02, etc.), crear su registro en el admin: `tablet_id` debe coincidir con el ID conocido, nombre descriptivo, sucursal correcta.
+2. Anotar/copiar el código generado para cada una.
+3. Ir físicamente a cada tablet, esperar a que muestre el login (después de actualizar el cliente), e ingresar el código nuevo.
+4. Verificar que cada tablet entra correctamente y aparece en el admin con su ID y sucursal.
+
+Notas para esta migración operativa:
+- El código `1810` ya no funciona. Las tablets físicas no podrán checar hasta que se les configure el código nuevo.
+- Es recomendable coordinar este proceso con las sucursales para minimizar tiempo sin servicio.
+- Si una sucursal queda mucho tiempo sin tablet operativa, los empleados pueden checar desde la PWA mientras tanto.
+
 ---
 
 ## Resumen de commits esperados
 
 **Admin (`V2 checador-system ADMIN`):**
-1. `Tablets: migracion inicial + seed`
-2. `Tablets: TabletsAPI en admin`
+1. `Tablets: migracion inicial (tabla vacia)`
+2. `Tablets: TabletsAPI en admin (codigo autogenerado)`
 3. `Tablets: sidebar + seccion HTML + modales`
 4. `Tablets: listado en admin con filtros`
-5. `Tablets: modal de alta/edicion`
-6. `Tablets: bloqueo y desbloqueo desde admin`
+5. `Tablets: modal de alta/edicion + mostrar codigo generado`
+6. `Tablets: bloqueo, desbloqueo y regenerar codigo desde admin`
 
 **Tablet (`v2 Checador-Tablet`):**
 1. `Tablet: TabletAuthAPI`
-2. `Tablet: auth contra BD + verificacion al arrancar`
+2. `Tablet: auth contra BD + verificacion al arrancar + input 6 digitos`
 3. `Tablet: verificar vigencia antes de cada checada + ultimo_uso`
 4. `Tablet: boton cerrar sesion en configuracion`
 
