@@ -9431,3 +9431,132 @@ async function cargarTablets() {
 
 window.cargarTablets = cargarTablets;
 
+// --- Modal Nueva/Editar Tablet ---
+
+async function abrirModalTablet(id = null) {
+    const modal = document.getElementById('modalTablet');
+    const title = document.getElementById('modalTabletTitle');
+    const formId = document.getElementById('tabFormId');
+    const inputTabletId = document.getElementById('tabFormTabletId');
+    const inputNombre = document.getElementById('tabFormNombre');
+    const selectSucursal = document.getElementById('tabFormSucursal');
+
+    // Poblar select de sucursales
+    await poblarSucursalesEnTabletForm(selectSucursal);
+
+    if (id) {
+        const tablet = _tabletsCache.find(t => t.id === id);
+        if (!tablet) {
+            alert('Tablet no encontrada');
+            return;
+        }
+        title.textContent = 'Editar tablet';
+        formId.value = String(tablet.id);
+        inputTabletId.value = tablet.tablet_id;
+        inputTabletId.readOnly = true;
+        inputNombre.value = tablet.nombre || '';
+        selectSucursal.value = tablet.sucursal_codigo || '';
+    } else {
+        title.textContent = 'Nueva tablet';
+        formId.value = '';
+        inputTabletId.value = '';
+        inputTabletId.readOnly = false;
+        inputNombre.value = '';
+        selectSucursal.value = '';
+    }
+
+    modal.style.display = 'block';
+}
+
+function cerrarModalTablet() {
+    document.getElementById('modalTablet').style.display = 'none';
+}
+
+async function poblarSucursalesEnTabletForm(select) {
+    select.innerHTML = '<option value="">— Sin asignar —</option>';
+    try {
+        const { data, error } = await supabaseClient
+            .from('sucursales')
+            .select('codigo, nombre')
+            .order('codigo');
+        if (error || !Array.isArray(data)) return;
+        for (const s of data) {
+            const opt = document.createElement('option');
+            opt.value = s.codigo;
+            opt.textContent = `${s.codigo} — ${s.nombre || ''}`;
+            select.appendChild(opt);
+        }
+    } catch (err) {
+        console.warn('No se pudieron cargar sucursales:', err);
+    }
+}
+
+async function guardarTablet(e) {
+    if (e) e.preventDefault();
+    const id = document.getElementById('tabFormId').value;
+    const tablet_id = document.getElementById('tabFormTabletId').value.trim();
+    const nombre = document.getElementById('tabFormNombre').value.trim();
+    const sucursal_codigo = document.getElementById('tabFormSucursal').value || null;
+
+    if (!tablet_id || !nombre) {
+        alert('Completa los campos requeridos: ID de tablet y nombre.');
+        return;
+    }
+
+    let res;
+    if (id) {
+        res = await TabletsAPI.actualizar(parseInt(id, 10), { nombre, sucursal_codigo });
+    } else {
+        res = await TabletsAPI.crear({ tablet_id, nombre, sucursal_codigo });
+    }
+
+    if (res.success) {
+        cerrarModalTablet();
+        cargarTablets();
+        // En alta, mostrar el código recién generado para que el operador lo anote
+        if (!id && res.data && res.data.codigo) {
+            mostrarModalCodigo(
+                'Código de acceso generado',
+                `Tablet "${res.data.nombre || res.data.tablet_id}" creada. Anota este código y configúralo en la tablet.`,
+                res.data.codigo
+            );
+        }
+    } else {
+        alert('Error al guardar: ' + (res.message || 'desconocido'));
+    }
+}
+
+// --- Modal de mostrar código (alta + regenerar) ---
+
+function mostrarModalCodigo(titulo, texto, codigo) {
+    document.getElementById('modalCodigoTitulo').textContent = titulo;
+    document.getElementById('modalCodigoTexto').textContent = texto;
+    document.getElementById('modalCodigoValor').textContent = codigo;
+    document.getElementById('modalCodigoTablet').style.display = 'block';
+}
+
+function cerrarModalCodigoTablet() {
+    document.getElementById('modalCodigoTablet').style.display = 'none';
+    document.getElementById('modalCodigoValor').textContent = '——————';
+}
+
+async function copiarCodigoTablet() {
+    const codigo = document.getElementById('modalCodigoValor').textContent;
+    try {
+        await navigator.clipboard.writeText(codigo);
+        const btn = event.target;
+        const orig = btn.textContent;
+        btn.textContent = 'Copiado';
+        setTimeout(() => { btn.textContent = orig; }, 1500);
+    } catch (err) {
+        alert('No se pudo copiar al portapapeles. Cópialo manualmente: ' + codigo);
+    }
+}
+
+window.abrirModalTablet = abrirModalTablet;
+window.cerrarModalTablet = cerrarModalTablet;
+window.guardarTablet = guardarTablet;
+window.mostrarModalCodigo = mostrarModalCodigo;
+window.cerrarModalCodigoTablet = cerrarModalCodigoTablet;
+window.copiarCodigoTablet = copiarCodigoTablet;
+
