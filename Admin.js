@@ -607,6 +607,9 @@ async function loadSectionData(section) {
         case 'geocercas':
             loadGeocercas();
             break;
+        case 'tablets':
+            cargarTablets();
+            break;
         case 'configuracion':
             break;
         default:
@@ -9326,4 +9329,105 @@ async function toggleGeocercaActiva(sucursalId, nuevoEstado) {
     showAlert('Listo', `Geocerca ${nuevoEstado ? 'activada' : 'desactivada'} para ${sucursal.nombre}`, 'success');
     loadGeocercas();
 }
+
+// ================================
+// SECCIÓN DE TABLETS (solo superadmin)
+// ================================
+let tabletsState = { soloActivos: true, busqueda: '' };
+let _tabletsCache = [];
+
+function setupTabletsFilters() {
+    const search = document.getElementById('tabBusqueda');
+    const toggle = document.getElementById('tabSoloActivos');
+    if (search && !search.dataset.wired) {
+        search.addEventListener('input', (e) => {
+            tabletsState.busqueda = e.target.value;
+            cargarTablets();
+        });
+        search.dataset.wired = '1';
+    }
+    if (toggle && !toggle.dataset.wired) {
+        toggle.addEventListener('change', (e) => {
+            tabletsState.soloActivos = e.target.checked;
+            cargarTablets();
+        });
+        toggle.dataset.wired = '1';
+    }
+}
+
+async function cargarTablets() {
+    const tbody = document.getElementById('tabTbody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:#64748b"><i class="fas fa-spinner fa-spin"></i> Cargando...</td></tr>';
+
+    setupTabletsFilters();
+
+    const lista = await TabletsAPI.listar(tabletsState);
+    _tabletsCache = lista;
+
+    if (!lista.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:#64748b">Sin tablets</td></tr>';
+        return;
+    }
+
+    const tz = { timeZone: 'America/Mazatlan' };
+    const parseTs = (ts) => {
+        if (!ts) return null;
+        const s = String(ts);
+        if (/Z$|[+-]\d{2}:\d{2}$/.test(s)) return new Date(s);
+        return new Date(s.replace(' ', 'T') + 'Z');
+    };
+    const fmtUso = (ts) => {
+        const d = parseTs(ts);
+        if (!d) return 'Nunca';
+        const fecha = d.toLocaleDateString('es-MX', tz);
+        const hora = d.toLocaleTimeString('es-MX', { ...tz, hour: '2-digit', minute: '2-digit' });
+        return `${fecha} ${hora}`;
+    };
+
+    tbody.innerHTML = lista.map(t => {
+        // Por seguridad, mostrar solo los últimos 2 dígitos del código.
+        const codigo = t.codigo || '';
+        const codigoEnmascarado = codigo.length >= 2
+            ? '••••' + codigo.slice(-2)
+            : '••••••';
+        const sucursal = t.sucursal_codigo || '—';
+        const uso = fmtUso(t.ultimo_uso);
+        const estado = t.activo
+            ? '<span class="disp-badge activo">Activa</span>'
+            : `<span class="disp-badge inactivo" title="${(t.bloqueado_motivo || '').replace(/"/g,'&quot;')}">Bloqueada</span>`;
+        const nombreEsc = (t.nombre || '').replace(/"/g,'&quot;');
+        const accionBloqueo = t.activo
+            ? `<button class="btn-desvincular" data-action="bloquear" data-id="${t.id}" data-nombre="${nombreEsc}">Bloquear</button>`
+            : `<button class="btn-desvincular" style="background:#16a34a;" data-action="desbloquear" data-id="${t.id}" data-nombre="${nombreEsc}">Desbloquear</button>`;
+        const accionEditar = `<button class="btn-desvincular" style="background:#2563eb;margin-left:4px;" data-action="editar" data-id="${t.id}">Editar</button>`;
+        const accionRegen = `<button class="btn-desvincular" style="background:#f59e0b;margin-left:4px;" data-action="regenerar" data-id="${t.id}" data-nombre="${nombreEsc}" title="Regenera el código; la tablet actual será revocada.">Regenerar código</button>`;
+
+        return `<tr>
+            <td><strong>${t.tablet_id}</strong></td>
+            <td>${t.nombre || '—'}</td>
+            <td>${sucursal}</td>
+            <td><code>${codigoEnmascarado}</code></td>
+            <td>${uso}</td>
+            <td style="text-align:center;">${t.checadas_hoy}</td>
+            <td>${estado}</td>
+            <td>${accionBloqueo}${accionEditar}${accionRegen}</td>
+        </tr>`;
+    }).join('');
+
+    // Wire up buttons
+    tbody.querySelectorAll('.btn-desvincular').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = parseInt(btn.getAttribute('data-id'), 10);
+            const action = btn.getAttribute('data-action');
+            const nombre = btn.getAttribute('data-nombre') || '';
+            if (action === 'bloquear') pedirBloqueoTablet(id, nombre);
+            else if (action === 'desbloquear') confirmarDesbloqueoTablet(id, nombre);
+            else if (action === 'editar') abrirModalTablet(id);
+            else if (action === 'regenerar') confirmarRegenerarCodigo(id, nombre);
+        });
+    });
+}
+
+window.cargarTablets = cargarTablets;
 
