@@ -9477,13 +9477,14 @@ async function poblarSucursalesEnTabletForm(select) {
     try {
         const { data, error } = await supabaseClient
             .from('sucursales')
-            .select('codigo, nombre')
-            .order('codigo');
+            .select('nombre')
+            .order('nombre');
         if (error || !Array.isArray(data)) return;
         for (const s of data) {
+            if (!s.nombre) continue;
             const opt = document.createElement('option');
-            opt.value = s.codigo;
-            opt.textContent = `${s.codigo} — ${s.nombre || ''}`;
+            opt.value = s.nombre;
+            opt.textContent = s.nombre;
             select.appendChild(opt);
         }
     } catch (err) {
