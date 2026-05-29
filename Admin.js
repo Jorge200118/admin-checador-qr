@@ -9560,3 +9560,69 @@ window.mostrarModalCodigo = mostrarModalCodigo;
 window.cerrarModalCodigoTablet = cerrarModalCodigoTablet;
 window.copiarCodigoTablet = copiarCodigoTablet;
 
+// --- Bloqueo / Desbloqueo ---
+
+let _tabletPendienteBloqueo = null;
+
+function pedirBloqueoTablet(id, nombre) {
+    _tabletPendienteBloqueo = id;
+    document.getElementById('bloqueoTabletTexto').textContent =
+        `¿Bloquear la tablet "${nombre}"? No podrá registrar checadas hasta que la desbloquees.`;
+    document.getElementById('bloqueoTabletMotivo').value = '';
+    document.getElementById('modalBloqueoTablet').style.display = 'block';
+}
+
+function cerrarModalBloqueoTablet() {
+    _tabletPendienteBloqueo = null;
+    document.getElementById('modalBloqueoTablet').style.display = 'none';
+}
+
+async function confirmarBloqueoTablet() {
+    if (!_tabletPendienteBloqueo) return;
+    const motivo = document.getElementById('bloqueoTabletMotivo').value.trim() || null;
+    const res = await TabletsAPI.bloquear(_tabletPendienteBloqueo, motivo);
+    cerrarModalBloqueoTablet();
+    if (res.success) {
+        cargarTablets();
+    } else {
+        alert('Error al bloquear la tablet.');
+    }
+}
+
+async function confirmarDesbloqueoTablet(id, nombre) {
+    if (!confirm(`¿Desbloquear la tablet "${nombre}"?`)) return;
+    const res = await TabletsAPI.desbloquear(id);
+    if (res.success) {
+        cargarTablets();
+    } else {
+        alert('Error al desbloquear la tablet.');
+    }
+}
+
+// --- Regenerar código ---
+
+async function confirmarRegenerarCodigo(id, nombre) {
+    const ok = confirm(
+        `¿Regenerar el código de "${nombre}"?\n\n` +
+        `Esto invalidará el código actual y la tablet vinculada quedará revocada inmediatamente. ` +
+        `Tendrás que configurar el nuevo código en la tablet física.`
+    );
+    if (!ok) return;
+    const res = await TabletsAPI.regenerarCodigo(id);
+    if (res.success && res.data && res.data.codigo) {
+        cargarTablets();
+        mostrarModalCodigo(
+            'Nuevo código generado',
+            `Código regenerado para "${res.data.nombre || res.data.tablet_id}". Configúralo en la tablet física.`,
+            res.data.codigo
+        );
+    } else {
+        alert('Error al regenerar el código: ' + (res.message || 'desconocido'));
+    }
+}
+
+window.pedirBloqueoTablet = pedirBloqueoTablet;
+window.cerrarModalBloqueoTablet = cerrarModalBloqueoTablet;
+window.confirmarBloqueoTablet = confirmarBloqueoTablet;
+window.confirmarDesbloqueoTablet = confirmarDesbloqueoTablet;
+window.confirmarRegenerarCodigo = confirmarRegenerarCodigo;
