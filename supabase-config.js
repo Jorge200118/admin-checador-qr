@@ -616,6 +616,20 @@ const SupabaseAPI = {
         }
     },
 
+    async getBloquesHorario() {
+        try {
+            const { data, error } = await supabaseClient
+                .from('bloques_horario')
+                .select('horario_id, orden_bloque, hora_entrada, hora_salida')
+                .order('horario_id')
+                .order('orden_bloque');
+            if (error) throw error;
+            return { success: true, data: data || [] };
+        } catch (error) {
+            return { success: false, message: 'Error al obtener bloques de horario' };
+        }
+    },
+
     // ==========================================
     // REGISTROS
     // ==========================================

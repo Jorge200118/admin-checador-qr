@@ -1242,6 +1242,14 @@ async function obtenerEmpleadosSinEntradaRango(event) {
         );
         const justificaciones = justResult.success ? justResult.data : [];
 
+        // Bloques por horario, para detectar "Turno tarde no cubierto" (Fase 1-A)
+        const bloquesResult = await SupabaseAPI.getBloquesHorario();
+        const bloquesPorHorario = {};
+        (bloquesResult.success ? bloquesResult.data : []).forEach(b => {
+            if (!bloquesPorHorario[b.horario_id]) bloquesPorHorario[b.horario_id] = [];
+            bloquesPorHorario[b.horario_id].push(b);
+        });
+
         // Generar todas las fechas del rango
         const fechas = generarRangoFechas(fechaInicio, fechaFin);
         const todasLasFaltas = [];
@@ -1296,6 +1304,38 @@ async function obtenerEmpleadosSinEntradaRango(event) {
                     observacion: 'Sin registro de entrada'
                 });
             });
+
+            // Turno tarde no cubierto: checó en la mañana pero nunca abrió el
+            // bloque 2 (solo L-V; sin entradas es falta completa, ya cubierta arriba)
+            const esSabadoFecha = new Date(fecha + 'T00:00:00').getDay() === 6;
+            const entradasPorEmpleado = {};
+            registrosFecha.forEach(reg => {
+                if (!entradasPorEmpleado[reg.empleado_id]) entradasPorEmpleado[reg.empleado_id] = [];
+                entradasPorEmpleado[reg.empleado_id].push(fpMinutosDeFechaHora(reg.fecha_hora));
+            });
+
+            empleadosActivos.forEach(emp => {
+                if (!empleadosConEntrada.has(emp.id)) return;
+                const tieneJustificacion = justificaciones.some(j =>
+                    j.tipo !== 'PERMISO_SIN_GOCE' &&
+                    j.empleado_id === emp.id &&
+                    j.fecha_inicio <= fecha &&
+                    j.fecha_fin >= fecha
+                );
+                if (tieneJustificacion) return;
+                const bloquesEmp = bloquesPorHorario[emp.horario_id];
+                if (fpTurnoTardeNoCubierto(bloquesEmp, entradasPorEmpleado[emp.id] || [], esSabadoFecha)) {
+                    todasLasFaltas.push({
+                        fecha_falta: fecha,
+                        codigo_empleado: emp.codigo_empleado,
+                        nombre_completo: `${emp.nombre} ${emp.apellido}`,
+                        sucursal: emp.sucursal,
+                        puesto: emp.puesto,
+                        horario_nombre: emp.horario_nombre || 'Sin horario',
+                        observacion: 'Turno tarde no cubierto'
+                    });
+                }
+            });
         }
 
 
@@ -1349,7 +1389,7 @@ function descargarExcelFaltasRango(empleados, fechaInicio, fechaFin) {
     csvContent += `Período: ${fechaInicio} al ${fechaFin}\n`;
     csvContent += `Total faltas encontradas: ${empleados.length}\n`;
     csvContent += `Generado: ${new Date().toLocaleString()}\n`;
-    csvContent += `Nota: Se excluyen domingos, días festivos LFT y días con justificaciones (vacaciones, incapacidad, permisos)\n\n`;
+    csvContent += `Nota: Se excluyen domingos, días festivos LFT y días con justificaciones (vacaciones, incapacidad, permisos). "Turno tarde no cubierto" = checó en la mañana pero no en la tarde (media falta)\n\n`;
     
     // HEADERS DE TABLA
     csvContent += 'Fecha,Código,Empleado,Sucursal,Puesto,Horario,Observación\n';

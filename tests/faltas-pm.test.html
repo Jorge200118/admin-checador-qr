@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Faltas PM tests</title>
+<style>body{font-family:monospace;padding:20px}.ok{color:#16a34a}.fail{color:#dc2626}</style>
+</head><body>
+<h1>Turno tarde no cubierto — pruebas</h1>
+<div id="out"></div>
+<script src="../faltas-pm.js"></script>
+<script>
+const out = document.getElementById('out');
+let pass = 0, fail = 0;
+function test(name, fn) {
+  try { fn(); out.innerHTML += `<div class="ok">✓ ${name}</div>`; pass++; }
+  catch (e) { out.innerHTML += `<div class="fail">✗ ${name}: ${e.message}</div>`; fail++; }
+}
+function eq(a, b, msg='') {
+  const A = JSON.stringify(a), B = JSON.stringify(b);
+  if (A !== B) throw new Error(`${msg} expected ${B} got ${A}`);
+}
+window.addEventListener('load', () => {
+  const BLOQUES = [
+    { horario_id: 2, orden_bloque: 1, hora_entrada: '08:00:00', hora_salida: '13:00:00' },
+    { horario_id: 2, orden_bloque: 2, hora_entrada: '14:30:00', hora_salida: '18:00:00' }
+  ];
+  const UN_BLOQUE = [
+    { horario_id: 1016, orden_bloque: 1, hora_entrada: '08:00:00', hora_salida: '19:00:00' }
+  ];
+  const min = (h, m) => h * 60 + m;
+
+  test('entró AM y PM → NO marcado', () =>
+    eq(fpTurnoTardeNoCubierto(BLOQUES, [min(8,5), min(14,35)], false), false));
+  test('entró AM, nunca PM → marcado', () =>
+    eq(fpTurnoTardeNoCubierto(BLOQUES, [min(8,5)], false), true));
+  test('entró AM y regresó temprano (13:40, hueco) → NO marcado (abrió bloque 2)', () =>
+    eq(fpTurnoTardeNoCubierto(BLOQUES, [min(8,5), min(13,40)], false), false));
+  test('varias entradas solo AM (8:05, 11:00) → marcado', () =>
+    eq(fpTurnoTardeNoCubierto(BLOQUES, [min(8,5), min(11,0)], false), true));
+  test('sin entradas → NO marcado (eso es falta completa, no media)', () =>
+    eq(fpTurnoTardeNoCubierto(BLOQUES, [], false), false));
+  test('sábado → NO aplica', () =>
+    eq(fpTurnoTardeNoCubierto(BLOQUES, [min(8,5)], true), false));
+  test('horario de un solo bloque (practicantes) → NO aplica', () =>
+    eq(fpTurnoTardeNoCubierto(UN_BLOQUE, [min(9,0)], false), false));
+  test('sin bloques → NO aplica', () => {
+    eq(fpTurnoTardeNoCubierto(null, [min(8,5)], false), false);
+    eq(fpTurnoTardeNoCubierto([], [min(8,5)], false), false);
+  });
+  test('solo entró PM (faltó AM, no checó mañana) → NO marcado por esta regla', () =>
+    eq(fpTurnoTardeNoCubierto(BLOQUES, [min(14,35)], false), false));
+
+  // === fpMinutosDeFechaHora ===
+  test('fpMinutosDeFechaHora con espacio', () => eq(fpMinutosDeFechaHora('2026-06-10 08:05:00.123'), 485));
+  test('fpMinutosDeFechaHora con T', () => eq(fpMinutosDeFechaHora('2026-06-10T14:35:00'), 875));
+
+  out.innerHTML += `<h2>${pass} pasaron, ${fail} fallaron</h2>`;
+});
+</script>
+</body></html>
