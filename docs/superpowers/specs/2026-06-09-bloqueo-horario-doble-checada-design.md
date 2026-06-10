@@ -38,8 +38,12 @@ Horario real de la empresa (`horario_id = 2`, "Horario Partido Oficina", 188 emp
 
 Topes de entrada (configurables vía `bloques_horario.tolerancia_entrada_min`):
 
-- Bloque 1: entrada válida hasta **8:10** (8:00 + tolerancia).
-- Bloque 2: entrada válida hasta **2:40** (14:30 + tolerancia).
+- Bloque 1: entrada válida hasta **hora_entrada + tolerancia**.
+- Bloque 2: entrada válida hasta **hora_entrada + tolerancia**.
+
+El valor de tolerancia se decide en la BD y es ajustable en cualquier momento sin tocar
+código. **Para esta fase se deja en 20 min** → tope 8:20 (bloque 1) y 2:50 (bloque 2).
+El operador puede bajarlo a 10 (tope 8:10) o lo que decida después.
 
 ## Objetivos
 
@@ -69,11 +73,17 @@ Topes de entrada (configurables vía `bloques_horario.tolerancia_entrada_min`):
 
 ```
 Al intentar ENTRADA:
+  (la validación de secuencia existente NO cambia: validarRegistro sigue
+   exigiendo alternar ENTRADA → SALIDA → ENTRADA; eso ya funciona bien)
+
   bloque = bloqueQueCorrespondeAhora()   // bloque 1 o bloque 2 según la hora actual
-  yaAbierto = existeEntradaHoyEnEseBloque(empleado, bloque)
+  yaAbierto = existeEntradaHoyDentroDeEseBloque(empleado, bloque)
+              // = ya hay una ENTRADA registrada hoy cuya hora cae dentro
+              //   de la ventana [hora_entrada, hora_salida] de ese bloque
 
   si yaAbierto:
-      PERMITIR                            // re-entrada libre, ya checó a tiempo
+      PERMITIR                            // re-entrada (regresó del baño/mandado);
+                                          // ya checó a tiempo, no se valida tope
   si no:
       topeMax = bloque.hora_entrada + bloque.tolerancia_entrada_min
       si horaActual <= topeMax:
@@ -83,7 +93,7 @@ Al intentar ENTRADA:
                     Repórtalo con tu jefe."
 
 Al intentar SALIDA:
-  PERMITIR siempre (mientras haya una entrada abierta)   // sin bloqueo
+  PERMITIR siempre que la secuencia sea válida (hay entrada abierta)   // sin tope de hora
 ```
 
 Notas:
@@ -96,10 +106,15 @@ Notas:
 
 ## Archivos que se tocan
 
-### PWA — `V3 Checador-PWA/supabase-config.js`
-- Reescribir `getBloqueValido`: regla de ENTRADA con tope (no ventana de 600 min).
-- Nueva sub-función: "¿ya existe ENTRADA de este bloque hoy?" para saber si el bloque
-  está abierto.
+### PWA — `V3 Checador-PWA`
+- Nuevo archivo de lógica pura `bloqueo-horario.js` (regla de ENTRADA con tope, mapeo
+  de bloque, "¿ya hay entrada de este bloque hoy?"), con tests en browser siguiendo el
+  patrón de `tests/vacaciones.test.html`.
+- `supabase-config.js`: nueva `validarHorarioEntrada` (usa la lógica pura);
+  `getBloqueValido` queda **solo para SALIDA** (desaparece la ventana de 600 min).
+- `views/captura.js`: una ENTRADA rechazada muestra el mensaje y no registra.
+- **`validarRegistro` NO se toca**: la secuencia alternada ENTRADA→SALIDA→ENTRADA ya
+  funciona correctamente y se conserva tal cual.
 
 ### Tablet — `v2 Checador-Tablet/supabase-config.js`
 - **Misma corrección que la PWA, idéntica.** Mantener ambas copias iguales (se acordó
@@ -111,17 +126,23 @@ Notas:
   se evaluaría con la hora equivocada.
 
 ### Admin — `V2 checador-system ADMIN`
-- Reportes/dashboard: detectar "abrió bloque 1 pero no bloque 2" en día L-V → marcar
-  **"Turno tarde no cubierto"** (media falta). Sábado no se exige bloque 2.
+- **Reporte de faltas por rango** (`Admin.js`, `obtenerEmpleadosSinEntradaRango`):
+  detectar "abrió bloque 1 pero no bloque 2" en día L-V → agregar fila con observación
+  **"Turno tarde no cubierto"**. Sábado no se exige bloque 2. Lógica pura en nuevo
+  `faltas-pm.js` con tests. El dashboard NO cambia en esta fase.
 
 ## Detección de falta PM (objetivo 5)
 
 Para un empleado en un día **L-V**:
 
 - Tiene ≥1 ENTRADA en bloque 1 pero **ninguna** ENTRADA en bloque 2 →
-  marcar **"Turno tarde no cubierto"** → cuenta como **media falta**.
+  marcar **"Turno tarde no cubierto"**.
 - **Sábado:** no aplica (no hay bloque 2).
-- Es solo **detección/reporte**. El recordatorio WhatsApp es Fase 1-B.
+- Es solo **detección/reporte** en esta fase. El recordatorio WhatsApp es Fase 1-B.
+
+**Regla de valor para nómina (a futuro, fuera de esta fase):** un día completo vale
+**1.0**; un día con turno tarde no cubierto vale **0.5** (media falta). En esta fase el
+sistema solo *marca* el día; el cálculo del descuento se implementa después.
 
 ## Riesgos y notas
 
@@ -132,4 +153,5 @@ Para un empleado en un día **L-V**:
   lógica de validación. Cualquier cambio futuro a la regla debe aplicarse en ambos repos.
 - **PRACTICANTES** (`horario_id = 1016`, `tolerancia_entrada_min = 360`): con la nueva
   regla, su tope de entrada queda en 8:00 + 360 min = 14:00. Es coherente con su uso
-  actual (tolerancia gigante = casi sin bloqueo). No se toca en esta fase.
+  actual (tolerancia gigante = casi sin bloqueo). **No se tocan en esta fase** (decisión
+  explícita del operador).
