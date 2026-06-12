@@ -1195,6 +1195,35 @@ function setupRegistrosFilters() {
         });
     }
 }
+// Construye Map<empleado.id, 'YYYY-MM-DD'> con la fecha de ingreso de cada empleado.
+// Fuente principal: FechaIngreso del expediente en BMS (la fecha laboral real).
+// Respaldo: fecha_alta de Supabase si BMS no responde para ese empleado.
+// Se usa para no contar faltas en días anteriores a que el empleado existiera.
+// Consulta BMS en lotes de 10 (mismo patrón que la sincronización de bajas).
+async function construirMapaFechaIngreso(empleados) {
+    const mapa = new Map();
+    const LOTE = 10;
+    for (let i = 0; i < empleados.length; i += LOTE) {
+        const lote = empleados.slice(i, i + LOTE);
+        await Promise.all(lote.map(async emp => {
+            // Respaldo desde Supabase (fecha_alta) por si BMS falla.
+            const respaldo = emp.fecha_alta ? String(emp.fecha_alta).split('T')[0].split(' ')[0] : null;
+            let fechaIngreso = respaldo;
+            try {
+                const res = await fetch(`${ADMIN_CONFIG.apiUrl}/empleados/expediente/${encodeURIComponent(emp.codigo_empleado)}`);
+                if (res.ok) {
+                    const json = await res.json();
+                    if (json.success && json.data?.FechaIngreso) {
+                        fechaIngreso = json.data.FechaIngreso.substring(0, 10);
+                    }
+                }
+            } catch { /* deja el respaldo (fecha_alta) */ }
+            if (fechaIngreso) mapa.set(emp.id, fechaIngreso);
+        }));
+    }
+    return mapa;
+}
+
 // Función para descargar faltas por RANGO de fechas
 async function obtenerEmpleadosSinEntradaRango(event) {
     const fechaInicio = document.getElementById('fecha-inicio-faltas').value;
@@ -1254,6 +1283,10 @@ async function obtenerEmpleadosSinEntradaRango(event) {
         const fechas = generarRangoFechas(fechaInicio, fechaFin);
         const todasLasFaltas = [];
 
+        // Tope para no contar faltas futuras ni anteriores al ingreso del empleado.
+        const hoyMzt = fpHoyMazatlan();
+        const mapaIngreso = await construirMapaFechaIngreso(empleadosActivos);
+
         // Buscar faltas por cada fecha
         for (let i = 0; i < fechas.length; i++) {
             const fecha = fechas[i];
@@ -1283,6 +1316,8 @@ async function obtenerEmpleadosSinEntradaRango(event) {
             // PERMISO_SIN_GOCE no es justificación válida → cuenta como falta.
             const faltasDia = empleadosActivos.filter(emp => {
                 if (empleadosConEntrada.has(emp.id)) return false;
+                // No contar días futuros ni anteriores al ingreso del empleado.
+                if (!fpFechaEvaluableParaFalta(fecha, mapaIngreso.get(emp.id), hoyMzt)) return false;
                 const tieneJustificacion = justificaciones.some(j =>
                     j.tipo !== 'PERMISO_SIN_GOCE' &&
                     j.empleado_id === emp.id &&
@@ -1316,6 +1351,7 @@ async function obtenerEmpleadosSinEntradaRango(event) {
 
             empleadosActivos.forEach(emp => {
                 if (!empleadosConEntrada.has(emp.id)) return;
+                if (!fpFechaEvaluableParaFalta(fecha, mapaIngreso.get(emp.id), hoyMzt)) return;
                 const tieneJustificacion = justificaciones.some(j =>
                     j.tipo !== 'PERMISO_SIN_GOCE' &&
                     j.empleado_id === emp.id &&
@@ -4412,7 +4448,7 @@ function calcularRetardoDia(entradasDelDia) {
 /**
  * Genera datos estadísticos de todos los empleados del período actual
  */
-function generarDatosResumenGeneral(justificaciones = []) {
+function generarDatosResumenGeneral(justificaciones = [], mapaIngreso = new Map()) {
     const registros = adminState.registrosData || [];
 
     if (registros.length === 0) {
@@ -4493,6 +4529,9 @@ function generarDatosResumenGeneral(justificaciones = []) {
     }
     const diasLaborables = fechasLaborables.length;
 
+    // Tope para no contar faltas futuras ni anteriores al alta del empleado.
+    const hoyMzt = fpHoyMazatlan();
+
     empleadosMap.forEach((empleado, empleadoId) => {
         // Agrupar registros por fecha usando la misma función que el resto del sistema
         const registrosPorFecha = agruparRegistrosPorEmpleadoYFecha(empleado.registros);
@@ -4532,7 +4571,11 @@ function generarDatosResumenGeneral(justificaciones = []) {
         // Calcular faltas: días laborables sin registro y sin justificación válida.
         // PERMISO_SIN_GOCE no es justificación válida → cuenta como falta.
         let faltasCount = 0;
+        let diasLaborablesEmp = 0;
         for (const fechaLab of fechasLaborables) {
+            // Acotar al periodo real del empleado: ni futuro ni antes del ingreso.
+            if (!fpFechaEvaluableParaFalta(fechaLab, mapaIngreso.get(empleadoId), hoyMzt)) continue;
+            diasLaborablesEmp++;
             if (!diasConRegistro.has(fechaLab)) {
                 const tieneJustificacion = justificaciones.some(j =>
                     j.tipo !== 'PERMISO_SIN_GOCE' &&
@@ -4557,7 +4600,7 @@ function generarDatosResumenGeneral(justificaciones = []) {
             total_salidas: totalSalidas || 0,
             total_faltas: faltasCount,
             minutos_retardo: totalRetardos || 0,
-            dias_laborables: diasLaborables,
+            dias_laborables: diasLaborablesEmp,
             dias_trabajados: diasConRegistro.size,
             detalle_dias: registrosPorFecha,
             dias_con_registro: diasConRegistro
@@ -4594,8 +4637,12 @@ async function mostrarResumenGeneral() {
     }
     justificacionesResumenGeneral = justificaciones;
 
+    // Fecha de ingreso real (BMS) por empleado, para no contar faltas previas al ingreso.
+    const activosResumen = (adminState.employeesData || []).filter(e => e.activo);
+    const mapaIngreso = await construirMapaFechaIngreso(activosResumen);
+
     // Generar datos
-    datosResumenGeneral = generarDatosResumenGeneral(justificaciones);
+    datosResumenGeneral = generarDatosResumenGeneral(justificaciones, mapaIngreso);
 
     if (datosResumenGeneral.length === 0) {
         alert('No hay datos de empleados en el período actual');
@@ -8867,13 +8914,20 @@ async function cargarAbsentismo() {
         });
 
         const totalDiasRango = fechas.length;
+        // Tope para no contar faltas futuras ni anteriores al ingreso del empleado.
+        const hoyMzt = fpHoyMazatlan();
+        const mapaIngreso = await construirMapaFechaIngreso(empleadosActivos);
 
         const filas = empleadosActivos.map(emp => {
             const cont = justPorEmp.get(emp.id) || { VACACION: 0, INCAPACIDAD: 0, PERMISO: 0 };
+            // Días del rango realmente evaluables para ESTE empleado (no futuro, no antes del ingreso).
+            // El % de asistencia se calcula contra estos días, no contra el rango completo.
+            const fechasEmp = fechas.filter(f => fpFechaEvaluableParaFalta(f, mapaIngreso.get(emp.id), hoyMzt));
+            const diasRangoEmp = fechasEmp.length;
             // Faltas reales: días sin entrada y sin justificación válida.
             // PERMISO_SIN_GOCE NO es justificación válida → cuenta como falta.
             let faltas = 0;
-            fechas.forEach(f => {
+            fechasEmp.forEach(f => {
                 const tieneEntrada = entradasSet.has(`${emp.id}-${f}`);
                 if (tieneEntrada) return;
                 const tieneJust = justificaciones.some(j =>
@@ -8883,8 +8937,8 @@ async function cargarAbsentismo() {
                 if (!tieneJust) faltas++;
             });
             const totalAusencias = faltas + cont.VACACION + cont.INCAPACIDAD + cont.PERMISO;
-            const diasAsistidos  = Math.max(0, totalDiasRango - totalAusencias);
-            const pctAsistencia  = totalDiasRango > 0 ? (diasAsistidos / totalDiasRango) * 100 : 0;
+            const diasAsistidos  = Math.max(0, diasRangoEmp - totalAusencias);
+            const pctAsistencia  = diasRangoEmp > 0 ? (diasAsistidos / diasRangoEmp) * 100 : 0;
 
             return {
                 empleado_id: emp.id,
@@ -8892,6 +8946,7 @@ async function cargarAbsentismo() {
                 nombre: `${emp.nombre} ${emp.apellido}`.trim(),
                 sucursal: emp.sucursal || '',
                 faltas,
+                dias_rango: diasRangoEmp,
                 vacaciones: cont.VACACION,
                 incapacidad: cont.INCAPACIDAD,
                 permiso: cont.PERMISO,
@@ -8950,7 +9005,8 @@ function renderKPIsAbsentismo() {
     const totalJustificados = filas.reduce((s, f) => s + f.vacaciones + f.incapacidad + f.permiso, 0);
     const empleadosConAus   = filas.filter(f => f.total_ausencias > 0).length;
     const totalEmpleados    = filas.length;
-    const totalDiasPosibles = totalEmpleados * totalDiasRango;
+    // Suma de días evaluables por empleado (los nuevos tienen menos días que el rango completo).
+    const totalDiasPosibles = filas.reduce((s, f) => s + (f.dias_rango ?? totalDiasRango), 0);
     const totalAusencias    = totalFaltas + totalJustificados;
     const pctAsistGlobal    = totalDiasPosibles > 0
         ? ((totalDiasPosibles - totalAusencias) / totalDiasPosibles) * 100

@@ -16,6 +16,34 @@ function fpMinutosDeFechaHora(fechaHoraStr) {
     return fpMinutosDe(horaPart);
 }
 
+// Fecha de hoy en zona horaria de Mazatlán como 'YYYY-MM-DD'.
+// Se usa como tope para no contar faltas en días que aún no llegan.
+// 'now' es inyectable para tests (default: ahora).
+function fpHoyMazatlan(now) {
+    const d = now || new Date();
+    // en-CA da formato YYYY-MM-DD; timeZone fija la fecha-calendario de Mazatlán.
+    return d.toLocaleDateString('en-CA', { timeZone: 'America/Mazatlan' });
+}
+
+// Normaliza una fecha a 'YYYY-MM-DD'. Acepta timestamp 'YYYY-MM-DD HH:mm:ss',
+// ISO con 'T', o ya recortado. Vacío/falsy -> null.
+function fpSoloFecha(valor) {
+    if (!valor) return null;
+    const s = String(valor);
+    return (s.includes('T') ? s.split('T')[0] : s.split(' ')[0]) || null;
+}
+
+// ¿La 'fecha' (YYYY-MM-DD) es evaluable como posible falta para este empleado?
+// Reglas: no después de hoy (jornada futura), no antes del ingreso (no existía).
+// 'fechaIngreso' es la fecha de ingreso real (BMS) ya resuelta; null -> sin tope inferior.
+// El día de hoy y el día de ingreso SÍ se evalúan (límites inclusivos).
+function fpFechaEvaluableParaFalta(fecha, fechaIngreso, hoy) {
+    if (hoy && fecha > hoy) return false;
+    const ingreso = fpSoloFecha(fechaIngreso);
+    if (ingreso && fecha < ingreso) return false;
+    return true;
+}
+
 // ¿Abrió el bloque 1 pero nunca el bloque 2?
 // Una entrada pertenece al bloque 1 si su hora <= hora_salida del bloque 1;
 // después de eso (incluido el hueco de comida) pertenece al bloque 2.

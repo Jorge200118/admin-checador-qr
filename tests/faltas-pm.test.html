@@ -51,6 +51,41 @@ window.addEventListener('load', () => {
   test('fpMinutosDeFechaHora con espacio', () => eq(fpMinutosDeFechaHora('2026-06-10 08:05:00.123'), 485));
   test('fpMinutosDeFechaHora con T', () => eq(fpMinutosDeFechaHora('2026-06-10T14:35:00'), 875));
 
+  // === fpSoloFecha ===
+  test('fpSoloFecha timestamp con espacio', () => eq(fpSoloFecha('2026-06-07 16:28:27.873'), '2026-06-07'));
+  test('fpSoloFecha ISO con T', () => eq(fpSoloFecha('2026-06-07T16:28:27'), '2026-06-07'));
+  test('fpSoloFecha ya recortada', () => eq(fpSoloFecha('2026-06-07'), '2026-06-07'));
+  test('fpSoloFecha vacío → null', () => { eq(fpSoloFecha(null), null); eq(fpSoloFecha(''), null); eq(fpSoloFecha(undefined), null); });
+
+  // === fpFechaEvaluableParaFalta ===
+  // Empleado con ingreso el 7; hoy es el 12 (caso real de Jorge).
+  const ING = '2026-06-07';
+  const HOY = '2026-06-12';
+  test('día anterior al ingreso (01) → NO evaluable', () =>
+    eq(fpFechaEvaluableParaFalta('2026-06-01', ING, HOY), false));
+  test('día anterior al ingreso (06) → NO evaluable', () =>
+    eq(fpFechaEvaluableParaFalta('2026-06-06', ING, HOY), false));
+  test('día EXACTO del ingreso (07) → SÍ evaluable (día de ingreso cuenta)', () =>
+    eq(fpFechaEvaluableParaFalta('2026-06-07', ING, HOY), true));
+  test('día intermedio dentro del periodo (10) → SÍ evaluable', () =>
+    eq(fpFechaEvaluableParaFalta('2026-06-10', ING, HOY), true));
+  test('día de HOY (12) → SÍ evaluable (hoy cuenta)', () =>
+    eq(fpFechaEvaluableParaFalta('2026-06-12', ING, HOY), true));
+  test('día futuro (13) → NO evaluable', () =>
+    eq(fpFechaEvaluableParaFalta('2026-06-13', ING, HOY), false));
+  test('día futuro (15) → NO evaluable', () =>
+    eq(fpFechaEvaluableParaFalta('2026-06-15', ING, HOY), false));
+  test('ingreso como timestamp BMS (con T) también recorta', () =>
+    eq(fpFechaEvaluableParaFalta('2026-06-06', '2026-06-07T00:00:00', HOY), false));
+  test('empleado sin fecha de ingreso → solo aplica tope de hoy', () => {
+    eq(fpFechaEvaluableParaFalta('2026-06-01', null, HOY), true);
+    eq(fpFechaEvaluableParaFalta('2026-06-13', null, HOY), false);
+  });
+  test('fpHoyMazatlan devuelve formato YYYY-MM-DD', () =>
+    eq(/^\d{4}-\d{2}-\d{2}$/.test(fpHoyMazatlan()), true));
+  test('fpHoyMazatlan con now inyectado', () =>
+    eq(/^\d{4}-\d{2}-\d{2}$/.test(fpHoyMazatlan(new Date('2026-06-12T20:00:00Z'))), true));
+
   out.innerHTML += `<h2>${pass} pasaron, ${fail} fallaron</h2>`;
 });
 </script>
