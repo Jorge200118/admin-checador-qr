@@ -342,6 +342,7 @@ const SupabaseAPI = {
                     horario_id: empleadoData.horario_id || null,
                     sucursal: empleadoData.sucursal || null,
                     puesto: empleadoData.puesto || null,
+                    telefono_whatsapp: empleadoData.telefono_whatsapp || null,
                     foto_perfil: fotoUrl,
                     activo: empleadoData.activo !== undefined ? empleadoData.activo : true,
                     trabaja_domingo: empleadoData.trabaja_domingo || false
@@ -388,6 +389,7 @@ const SupabaseAPI = {
                     horario_id: empleadoData.horario_id || null,
                     sucursal: empleadoData.sucursal || null,
                     puesto: empleadoData.puesto || null,
+                    telefono_whatsapp: empleadoData.telefono_whatsapp || null,
                     foto_perfil: fotoUrl,
                     activo: empleadoData.activo !== undefined ? empleadoData.activo : true,
                     trabaja_domingo: empleadoData.trabaja_domingo || false
