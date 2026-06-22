@@ -1243,7 +1243,7 @@
             <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px;">
                 <div class="stat-card">
                     <div class="stat-icon" style="background:rgba(239,68,68,.15)"><i class="fas fa-money-bill-wave" style="color:#ef4444"></i></div>
-                    <div class="stat-info"><h3 id="finiqTotal">–</h3><p>Total gastado (neto)</p></div>
+                    <div class="stat-info"><h3 id="finiqTotal">–</h3><p id="finiqTotalLabel">Total gastado (neto)</p></div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon" style="background:rgba(59,130,246,.15)"><i class="fas fa-file-invoice-dollar" style="color:#3b82f6"></i></div>
@@ -1270,6 +1270,22 @@
                     <select id="finiqPuesto" class="form-select" onchange="cargarFiniquitos()">
                         <option value="">Todos los puestos</option>
                     </select>
+                    <!-- Dropdown multi-concepto (percepciones) -->
+                    <div id="finiqConceptosWrap" style="position:relative;display:inline-block;">
+                        <button type="button" id="finiqConceptosBtn" class="form-select" onclick="toggleConceptosDropdown(event)"
+                            style="cursor:pointer;text-align:left;min-width:200px;background-image:none;">
+                            Todos los conceptos <i class="fas fa-chevron-down" style="font-size:10px;margin-left:6px;"></i>
+                        </button>
+                        <div id="finiqConceptosPanel" style="display:none;position:absolute;z-index:50;top:calc(100% + 4px);left:0;min-width:280px;max-height:320px;overflow-y:auto;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:8px;box-shadow:0 8px 24px rgba(0,0,0,.4);">
+                            <div style="display:flex;justify-content:space-between;gap:8px;padding:4px 6px 8px;border-bottom:1px solid #334155;margin-bottom:6px;">
+                                <button type="button" onclick="limpiarConceptos()" style="background:none;border:none;color:#60a5fa;cursor:pointer;font-size:12px;">Limpiar</button>
+                                <button type="button" onclick="aplicarConceptos()" style="background:#3b82f6;border:none;color:#fff;border-radius:6px;padding:3px 12px;cursor:pointer;font-size:12px;">Aplicar</button>
+                            </div>
+                            <div id="finiqConceptosLista" style="display:flex;flex-direction:column;gap:2px;">
+                                <div style="color:#64748b;font-size:12px;padding:6px;">Cargando...</div>
+                            </div>
+                        </div>
+                    </div>
                     <input type="text" id="searchFiniquitos" placeholder="Buscar por nombre o ID..." class="form-input" oninput="filtrarTablaFiniquitos()" style="min-width:220px;">
                 </div>
             </div>

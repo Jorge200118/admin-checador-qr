@@ -8598,6 +8598,9 @@ let _finiqSucursalDatos = [];
 // Estado de ordenamiento por tabla: { col, dir } (dir: 'asc' | 'desc')
 let _finiqSortDetalle  = { col: 'fecha', dir: 'desc' };
 let _finiqSortSucursal = { col: 'total_neto', dir: 'desc' };
+// Conceptos (percepciones) seleccionados para segmentar el gasto. Vacío = neto total.
+let _finiqConceptosSel = [];
+let _finiqConceptosCatalogo = [];
 
 // Default: 1-ene del año actual → hoy (solo la primera vez; respeta lo que el usuario ponga)
 function _initFechasFiniquitos() {
@@ -8639,6 +8642,7 @@ async function cargarFiniquitos() {
         if (fFin)     params.set('fechaFin',    document.getElementById('finiqFechaFin').value);
         if (sucursal) params.set('sucursal',    sucursal);
         if (puesto)   params.set('puesto',      puesto);
+        if (_finiqConceptosSel.length) params.set('conceptos', _finiqConceptosSel.join(','));
 
         const res  = await fetch(`${ADMIN_CONFIG.apiUrl}/empleados/finiquitos?${params}`);
         const json = await res.json();
@@ -8651,6 +8655,11 @@ async function cargarFiniquitos() {
         document.getElementById('finiqTotal').textContent    = _fmtMoneda(total);
         document.getElementById('finiqNum').textContent      = num;
         document.getElementById('finiqPromedio').textContent = num > 0 ? _fmtMoneda(total / num) : '–';
+        // El KPI total cambia de significado si se filtró por conceptos.
+        const lblTotal = document.getElementById('finiqTotalLabel');
+        if (lblTotal) lblTotal.textContent = _finiqConceptosSel.length
+            ? 'Total en conceptos elegidos'
+            : 'Total gastado (neto)';
 
         // Tabla por sucursal
         const porSuc = json.data.por_sucursal || [];
@@ -8691,6 +8700,10 @@ async function cargarFiniquitos() {
             });
         }
 
+        // Catálogo de conceptos (percepciones) para el dropdown de checkboxes.
+        _finiqConceptosCatalogo = json.data.conceptos || [];
+        _renderConceptosDropdown();
+
         // Detalle
         _finiquitosDatos = json.data.finiquitos || [];
         _renderTablaFiniquitos(_finiquitosDatos);
@@ -8705,6 +8718,79 @@ async function cargarFiniquitos() {
         document.getElementById('tbodyFiniquitosSucursal').innerHTML =
             '<tr><td colspan="3" style="text-align:center;color:#ef4444">Error</td></tr>';
     }
+}
+
+// ── Dropdown multi-concepto ────────────────────────────────────────────────
+function toggleConceptosDropdown(ev) {
+    if (ev) ev.stopPropagation();
+    const panel = document.getElementById('finiqConceptosPanel');
+    if (!panel) return;
+    const abierto = panel.style.display !== 'none';
+    panel.style.display = abierto ? 'none' : 'block';
+    // Cerrar al hacer click fuera (listener de una sola vez)
+    if (!abierto) {
+        setTimeout(() => document.addEventListener('click', _cerrarConceptosFuera), 0);
+    }
+}
+
+function _cerrarConceptosFuera(ev) {
+    const wrap = document.getElementById('finiqConceptosWrap');
+    if (wrap && !wrap.contains(ev.target)) {
+        const panel = document.getElementById('finiqConceptosPanel');
+        if (panel) panel.style.display = 'none';
+        document.removeEventListener('click', _cerrarConceptosFuera);
+    }
+}
+
+function _renderConceptosDropdown() {
+    const lista = document.getElementById('finiqConceptosLista');
+    if (!lista) return;
+    if (!_finiqConceptosCatalogo.length) {
+        lista.innerHTML = '<div style="color:#64748b;font-size:12px;padding:6px;">Sin conceptos</div>';
+        return;
+    }
+    lista.innerHTML = _finiqConceptosCatalogo.map(c => {
+        const marcado = _finiqConceptosSel.includes(c.codigo) ? 'checked' : '';
+        const total = Number(c.total_importe || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+        return `
+            <label style="display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;cursor:pointer;font-size:13px;color:#e2e8f0;">
+                <input type="checkbox" value="${c.codigo}" ${marcado} style="cursor:pointer;">
+                <span style="flex:1;">${c.nombre || c.codigo}</span>
+                <span style="color:#64748b;font-size:11px;">${total}</span>
+            </label>`;
+    }).join('');
+}
+
+function aplicarConceptos() {
+    const lista = document.getElementById('finiqConceptosLista');
+    if (lista) {
+        _finiqConceptosSel = Array.from(lista.querySelectorAll('input[type="checkbox"]:checked'))
+            .map(ch => ch.value);
+    }
+    _actualizarBotonConceptos();
+    const panel = document.getElementById('finiqConceptosPanel');
+    if (panel) panel.style.display = 'none';
+    document.removeEventListener('click', _cerrarConceptosFuera);
+    cargarFiniquitos();
+}
+
+function limpiarConceptos() {
+    _finiqConceptosSel = [];
+    const lista = document.getElementById('finiqConceptosLista');
+    if (lista) lista.querySelectorAll('input[type="checkbox"]').forEach(ch => ch.checked = false);
+    _actualizarBotonConceptos();
+    const panel = document.getElementById('finiqConceptosPanel');
+    if (panel) panel.style.display = 'none';
+    document.removeEventListener('click', _cerrarConceptosFuera);
+    cargarFiniquitos();
+}
+
+function _actualizarBotonConceptos() {
+    const btn = document.getElementById('finiqConceptosBtn');
+    if (!btn) return;
+    const n = _finiqConceptosSel.length;
+    const txt = n === 0 ? 'Todos los conceptos' : `${n} concepto${n > 1 ? 's' : ''} seleccionado${n > 1 ? 's' : ''}`;
+    btn.innerHTML = `${txt} <i class="fas fa-chevron-down" style="font-size:10px;margin-left:6px;"></i>`;
 }
 
 function _fmtFechaFiniq(f) {
@@ -8915,6 +9001,9 @@ window.filtrarTablaFiniquitos      = filtrarTablaFiniquitos;
 window.exportarFiniquitosExcel     = exportarFiniquitosExcel;
 window.ordenarFiniquitosDetalle    = ordenarFiniquitosDetalle;
 window.ordenarFiniquitosSucursal   = ordenarFiniquitosSucursal;
+window.toggleConceptosDropdown     = toggleConceptosDropdown;
+window.aplicarConceptos            = aplicarConceptos;
+window.limpiarConceptos            = limpiarConceptos;
 
 // ================================
 // SECCIÓN DE DISPOSITIVOS PWA
