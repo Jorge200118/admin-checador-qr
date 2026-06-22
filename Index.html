@@ -110,6 +110,12 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="#finiquitos" data-section="finiquitos">
+                        <i class="fas fa-hand-holding-usd"></i>
+                        <span>Finiquitos</span>
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="#rotacion" data-section="rotacion">
                         <i class="fas fa-people-arrows"></i>
                         <span>Rotación</span>
@@ -1215,6 +1221,92 @@
                             </thead>
                             <tbody id="tbodyCreditos">
                                 <tr><td colspan="9" style="text-align:center;color:#64748b">Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== SECCIÓN FINIQUITOS ==================== -->
+        <section id="finiquitos" class="content-section">
+            <div class="section-header">
+                <h2>Gasto en Finiquitos</h2>
+                <div class="header-actions-group">
+                    <button class="btn btn-primary" onclick="exportarFiniquitosExcel()">
+                        <i class="fas fa-file-excel"></i> Exportar Excel
+                    </button>
+                </div>
+            </div>
+
+            <!-- KPIs finiquitos -->
+            <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px;">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:rgba(239,68,68,.15)"><i class="fas fa-money-bill-wave" style="color:#ef4444"></i></div>
+                    <div class="stat-info"><h3 id="finiqTotal">–</h3><p>Total gastado (neto)</p></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:rgba(59,130,246,.15)"><i class="fas fa-file-invoice-dollar" style="color:#3b82f6"></i></div>
+                    <div class="stat-info"><h3 id="finiqNum">–</h3><p># de finiquitos</p></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:rgba(245,158,11,.15)"><i class="fas fa-balance-scale" style="color:#f59e0b"></i></div>
+                    <div class="stat-info"><h3 id="finiqPromedio">–</h3><p>Promedio por finiquito</p></div>
+                </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class="filters" style="margin-bottom:16px;">
+                <div class="filter-group" style="flex-wrap:wrap;gap:10px;align-items:center;">
+                    <label style="font-size:13px;color:#94a3b8">Desde
+                        <input type="date" id="finiqFechaInicio" class="form-input" onchange="cargarFiniquitos()">
+                    </label>
+                    <label style="font-size:13px;color:#94a3b8">Hasta
+                        <input type="date" id="finiqFechaFin" class="form-input" onchange="cargarFiniquitos()">
+                    </label>
+                    <select id="finiqSucursal" class="form-select" onchange="cargarFiniquitos()">
+                        <option value="">Todas las sucursales</option>
+                    </select>
+                    <input type="text" id="searchFiniquitos" placeholder="Buscar por nombre o ID..." class="form-input" oninput="filtrarTablaFiniquitos()" style="min-width:220px;">
+                </div>
+            </div>
+
+            <!-- Tabla por sucursal -->
+            <div class="card" style="margin-bottom:16px;">
+                <div class="card-body">
+                    <h3 style="margin:0 0 12px;font-size:15px;color:#e2e8f0">Por sucursal</h3>
+                    <div class="table-container">
+                        <table id="tablaFiniquitosSucursal">
+                            <thead>
+                                <tr><th>Sucursal</th><th># Finiquitos</th><th>Total Neto</th></tr>
+                            </thead>
+                            <tbody id="tbodyFiniquitosSucursal">
+                                <tr><td colspan="3" style="text-align:center;color:#64748b">Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla detalle -->
+            <div class="card">
+                <div class="card-body">
+                    <h3 style="margin:0 0 12px;font-size:15px;color:#e2e8f0">Detalle</h3>
+                    <div class="table-container">
+                        <table id="tablaFiniquitosDetalle">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nombre</th>
+                                    <th>Sucursal</th>
+                                    <th>Folio</th>
+                                    <th>Fecha</th>
+                                    <th>Días Trab.</th>
+                                    <th>Neto</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyFiniquitosDetalle">
+                                <tr><td colspan="7" style="text-align:center;color:#64748b">Cargando...</td></tr>
                             </tbody>
                         </table>
                     </div>
