@@ -8617,13 +8617,14 @@ function _fmtMoneda(n) {
 async function cargarFiniquitos() {
     try {
         document.getElementById('tbodyFiniquitosDetalle').innerHTML =
-            '<tr><td colspan="7" style="text-align:center;color:#64748b">Cargando...</td></tr>';
+            '<tr><td colspan="8" style="text-align:center;color:#64748b">Cargando...</td></tr>';
         document.getElementById('tbodyFiniquitosSucursal').innerHTML =
             '<tr><td colspan="3" style="text-align:center;color:#64748b">Cargando...</td></tr>';
 
         const fInicio  = document.getElementById('finiqFechaInicio')?.value || '';
         const fFin     = document.getElementById('finiqFechaFin')?.value    || '';
         const sucursal = document.getElementById('finiqSucursal')?.value    || '';
+        const puesto   = document.getElementById('finiqPuesto')?.value      || '';
 
         if (fInicio && fFin && fInicio > fFin) {
             document.getElementById('finiqFechaFin').value = fInicio;
@@ -8633,6 +8634,7 @@ async function cargarFiniquitos() {
         if (fInicio)  params.set('fechaInicio', fInicio);
         if (fFin)     params.set('fechaFin',    document.getElementById('finiqFechaFin').value);
         if (sucursal) params.set('sucursal',    sucursal);
+        if (puesto)   params.set('puesto',      puesto);
 
         const res  = await fetch(`${ADMIN_CONFIG.apiUrl}/empleados/finiquitos?${params}`);
         const json = await res.json();
@@ -8675,6 +8677,23 @@ async function cargarFiniquitos() {
             });
         }
 
+        // Poblar selector de puestos conservando la selección actual.
+        // El backend devuelve el catálogo de puestos respetando fecha+sucursal pero
+        // NO el filtro de puesto, así que el selector sigue completo al elegir uno.
+        const selPue = document.getElementById('finiqPuesto');
+        const puestos = json.data.puestos || [];
+        if (selPue && puestos.length) {
+            const actual = selPue.value;
+            selPue.innerHTML = '<option value="">Todos los puestos</option>';
+            puestos.forEach(p => {
+                if (!p.puesto) return;
+                const opt = document.createElement('option');
+                opt.value = opt.textContent = p.puesto;
+                if (p.puesto === actual) opt.selected = true;
+                selPue.appendChild(opt);
+            });
+        }
+
         // Detalle
         _finiquitosDatos = json.data.finiquitos || [];
         _renderTablaFiniquitos(_finiquitosDatos);
@@ -8685,7 +8704,7 @@ async function cargarFiniquitos() {
         document.getElementById('finiqNum').textContent      = '–';
         document.getElementById('finiqPromedio').textContent = '–';
         document.getElementById('tbodyFiniquitosDetalle').innerHTML =
-            '<tr><td colspan="7" style="text-align:center;color:#ef4444">Error al cargar datos</td></tr>';
+            '<tr><td colspan="8" style="text-align:center;color:#ef4444">Error al cargar datos</td></tr>';
         document.getElementById('tbodyFiniquitosSucursal').innerHTML =
             '<tr><td colspan="3" style="text-align:center;color:#ef4444">Error</td></tr>';
     }
@@ -8698,11 +8717,30 @@ function _fmtFechaFiniq(f) {
     return local.toLocaleDateString('es-MX');
 }
 
+// Antigüedad entre ingreso y baja como "Xa Ym Zd". Devuelve '–' si faltan datos
+// o si las fechas son inconsistentes (fin < ingreso). Cálculo calendario real
+// (resta de año/mes/día con préstamo), no aproximación por días/365.
+function _antiguedad(ingreso, fin) {
+    if (!ingreso || !fin) return '–';
+    const a = new Date(ingreso), b = new Date(fin);
+    if (isNaN(a) || isNaN(b) || b < a) return '–';
+    let años  = b.getFullYear() - a.getFullYear();
+    let meses = b.getMonth() - a.getMonth();
+    let dias  = b.getDate() - a.getDate();
+    if (dias < 0) {
+        meses -= 1;
+        // días del mes anterior al de fin
+        dias += new Date(b.getFullYear(), b.getMonth(), 0).getDate();
+    }
+    if (meses < 0) { años -= 1; meses += 12; }
+    return `${años}a ${meses}m ${dias}d`;
+}
+
 function _renderTablaFiniquitos(filas) {
     const tbody = document.getElementById('tbodyFiniquitosDetalle');
     if (!tbody) return;
     if (!filas || !filas.length) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#64748b">Sin resultados</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#64748b">Sin resultados</td></tr>';
         return;
     }
     tbody.innerHTML = filas.map(f => `
@@ -8710,9 +8748,10 @@ function _renderTablaFiniquitos(filas) {
             <td style="font-family:monospace;font-size:12px">${f.codigo || '–'}</td>
             <td>${f.nombre || '–'}</td>
             <td style="font-size:12px;color:#94a3b8">${f.sucursal || '–'}</td>
+            <td style="font-size:12px;color:#94a3b8">${f.puesto || '–'}</td>
             <td style="font-family:monospace;font-size:12px">${f.folio || '–'}</td>
             <td style="font-size:12px">${_fmtFechaFiniq(f.fecha)}</td>
-            <td style="font-size:12px">${f.dias_trabajados != null ? Number(f.dias_trabajados).toLocaleString('es-MX') : '–'}</td>
+            <td style="font-size:12px">${_antiguedad(f.fecha_ingreso, f.fecha_baja_efectiva)}</td>
             <td style="font-weight:600;color:#10b981">${_fmtMoneda(f.neto)}</td>
         </tr>`).join('');
 }
@@ -8733,9 +8772,12 @@ function exportarFiniquitosExcel() {
         'ID':          f.codigo,
         'Nombre':      f.nombre,
         'Sucursal':    f.sucursal,
+        'Puesto':      f.puesto,
         'Folio':       f.folio,
         'Fecha':       _fmtFechaFiniq(f.fecha),
-        'Días Trab.':  f.dias_trabajados,
+        'Ingreso':     _fmtFechaFiniq(f.fecha_ingreso),
+        'Baja':        _fmtFechaFiniq(f.fecha_baja_efectiva),
+        'Antigüedad':  _antiguedad(f.fecha_ingreso, f.fecha_baja_efectiva),
         'Neto':        f.neto
     }));
     const wb = XLSX.utils.book_new();

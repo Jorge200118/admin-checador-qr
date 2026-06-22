@@ -1267,6 +1267,9 @@
                     <select id="finiqSucursal" class="form-select" onchange="cargarFiniquitos()">
                         <option value="">Todas las sucursales</option>
                     </select>
+                    <select id="finiqPuesto" class="form-select" onchange="cargarFiniquitos()">
+                        <option value="">Todos los puestos</option>
+                    </select>
                     <input type="text" id="searchFiniquitos" placeholder="Buscar por nombre o ID..." class="form-input" oninput="filtrarTablaFiniquitos()" style="min-width:220px;">
                 </div>
             </div>
@@ -1299,14 +1302,15 @@
                                     <th>ID</th>
                                     <th>Nombre</th>
                                     <th>Sucursal</th>
+                                    <th>Puesto</th>
                                     <th>Folio</th>
                                     <th>Fecha</th>
-                                    <th>Días Trab.</th>
+                                    <th>Antigüedad</th>
                                     <th>Neto</th>
                                 </tr>
                             </thead>
                             <tbody id="tbodyFiniquitosDetalle">
-                                <tr><td colspan="7" style="text-align:center;color:#64748b">Cargando...</td></tr>
+                                <tr><td colspan="8" style="text-align:center;color:#64748b">Cargando...</td></tr>
                             </tbody>
                         </table>
                     </div>
