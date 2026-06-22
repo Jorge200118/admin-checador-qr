@@ -8594,6 +8594,10 @@ function exportarCreditosExcel() {
 // SECCIÓN FINIQUITOS (BMS)
 // ================================
 let _finiquitosDatos = [];
+let _finiqSucursalDatos = [];
+// Estado de ordenamiento por tabla: { col, dir } (dir: 'asc' | 'desc')
+let _finiqSortDetalle  = { col: 'fecha', dir: 'desc' };
+let _finiqSortSucursal = { col: 'total_neto', dir: 'desc' };
 
 // Default: 1-ene del año actual → hoy (solo la primera vez; respeta lo que el usuario ponga)
 function _initFechasFiniquitos() {
@@ -8649,16 +8653,9 @@ async function cargarFiniquitos() {
         document.getElementById('finiqPromedio').textContent = num > 0 ? _fmtMoneda(total / num) : '–';
 
         // Tabla por sucursal
-        const tbodySuc = document.getElementById('tbodyFiniquitosSucursal');
         const porSuc = json.data.por_sucursal || [];
-        tbodySuc.innerHTML = porSuc.length
-            ? porSuc.map(s => `
-                <tr>
-                    <td>${s.sucursal || '–'}</td>
-                    <td>${s.num_finiquitos}</td>
-                    <td>${_fmtMoneda(s.total_neto)}</td>
-                </tr>`).join('')
-            : '<tr><td colspan="3" style="text-align:center;color:#64748b">Sin resultados</td></tr>';
+        _finiqSucursalDatos = porSuc;
+        _renderTablaSucursal(porSuc);
 
         // Poblar selector de sucursales conservando la selección actual.
         // Solo se repuebla cuando NO hay filtro de sucursal activo (la respuesta
@@ -8736,14 +8733,90 @@ function _antiguedad(ingreso, fin) {
     return `${años}a ${meses}m ${dias}d`;
 }
 
+// Antigüedad total en días (para ordenar numéricamente). -1 si faltan datos.
+function _antiguedadDias(ingreso, fin) {
+    if (!ingreso || !fin) return -1;
+    const a = new Date(ingreso), b = new Date(fin);
+    if (isNaN(a) || isNaN(b) || b < a) return -1;
+    return Math.floor((b - a) / 86400000);
+}
+
+// Comparador genérico: numérico si ambos son números, si no texto (locale es).
+function _cmpFiniq(va, vb, dir) {
+    const na = typeof va === 'number', nb = typeof vb === 'number';
+    let r;
+    if (na && nb) {
+        r = va - vb;
+    } else {
+        r = String(va ?? '').localeCompare(String(vb ?? ''), 'es', { numeric: true, sensitivity: 'base' });
+    }
+    return dir === 'asc' ? r : -r;
+}
+
+// Indicador ▲/▼ junto al encabezado activo.
+function _flechaOrden(estado, col) {
+    if (estado.col !== col) return '';
+    return estado.dir === 'asc' ? ' ▲' : ' ▼';
+}
+
+// Click en encabezado: si es la misma columna alterna dir; si es otra, asc.
+function ordenarFiniquitosDetalle(col) {
+    if (_finiqSortDetalle.col === col) {
+        _finiqSortDetalle.dir = _finiqSortDetalle.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+        _finiqSortDetalle = { col, dir: 'asc' };
+    }
+    // Re-render respetando el filtro de búsqueda activo.
+    filtrarTablaFiniquitos();
+}
+
+function ordenarFiniquitosSucursal(col) {
+    if (_finiqSortSucursal.col === col) {
+        _finiqSortSucursal.dir = _finiqSortSucursal.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+        _finiqSortSucursal = { col, dir: 'asc' };
+    }
+    _renderTablaSucursal(_finiqSucursalDatos);
+}
+
 function _renderTablaFiniquitos(filas) {
     const tbody = document.getElementById('tbodyFiniquitosDetalle');
+    const thead = document.getElementById('theadFiniquitosDetalle');
     if (!tbody) return;
+
+    // Encabezados clickeables con indicador de orden
+    if (thead) {
+        const s = _finiqSortDetalle;
+        const cols = [
+            ['codigo', 'ID'], ['nombre', 'Nombre'], ['sucursal', 'Sucursal'],
+            ['puesto', 'Puesto'], ['folio', 'Folio'], ['fecha', 'Fecha'],
+            ['antiguedad', 'Antigüedad'], ['neto', 'Neto']
+        ];
+        thead.innerHTML = '<tr>' + cols.map(([c, label]) =>
+            `<th style="cursor:pointer;user-select:none" onclick="ordenarFiniquitosDetalle('${c}')">${label}${_flechaOrden(s, c)}</th>`
+        ).join('') + '</tr>';
+    }
+
     if (!filas || !filas.length) {
         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#64748b">Sin resultados</td></tr>';
         return;
     }
-    tbody.innerHTML = filas.map(f => `
+
+    // Ordenar copia según estado
+    const s = _finiqSortDetalle;
+    const orden = filas.slice().sort((a, b) => {
+        let va, vb;
+        switch (s.col) {
+            case 'neto':       va = Number(a.neto || 0);            vb = Number(b.neto || 0); break;
+            case 'fecha':      va = new Date(a.fecha).getTime() || 0; vb = new Date(b.fecha).getTime() || 0; break;
+            case 'antiguedad': va = _antiguedadDias(a.fecha_ingreso, a.fecha_baja_efectiva);
+                               vb = _antiguedadDias(b.fecha_ingreso, b.fecha_baja_efectiva); break;
+            default:           va = a[s.col]; vb = b[s.col];
+        }
+        return _cmpFiniq(va, vb, s.dir);
+    });
+
+    tbody.innerHTML = orden.map(f => `
         <tr>
             <td style="font-family:monospace;font-size:12px">${f.codigo || '–'}</td>
             <td>${f.nombre || '–'}</td>
@@ -8753,6 +8826,43 @@ function _renderTablaFiniquitos(filas) {
             <td style="font-size:12px">${_fmtFechaFiniq(f.fecha)}</td>
             <td style="font-size:12px">${_antiguedad(f.fecha_ingreso, f.fecha_baja_efectiva)}</td>
             <td style="font-weight:600;color:#10b981">${_fmtMoneda(f.neto)}</td>
+        </tr>`).join('');
+}
+
+function _renderTablaSucursal(filas) {
+    const tbody = document.getElementById('tbodyFiniquitosSucursal');
+    const thead = document.getElementById('theadFiniquitosSucursal');
+    if (!tbody) return;
+
+    if (thead) {
+        const s = _finiqSortSucursal;
+        const cols = [['sucursal', 'Sucursal'], ['num_finiquitos', '# Finiquitos'], ['total_neto', 'Total Neto']];
+        thead.innerHTML = '<tr>' + cols.map(([c, label]) =>
+            `<th style="cursor:pointer;user-select:none" onclick="ordenarFiniquitosSucursal('${c}')">${label}${_flechaOrden(s, c)}</th>`
+        ).join('') + '</tr>';
+    }
+
+    if (!filas || !filas.length) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#64748b">Sin resultados</td></tr>';
+        return;
+    }
+
+    const s = _finiqSortSucursal;
+    const orden = filas.slice().sort((a, b) => {
+        let va, vb;
+        switch (s.col) {
+            case 'num_finiquitos': va = Number(a.num_finiquitos || 0); vb = Number(b.num_finiquitos || 0); break;
+            case 'total_neto':     va = Number(a.total_neto || 0);     vb = Number(b.total_neto || 0); break;
+            default:               va = a.sucursal; vb = b.sucursal;
+        }
+        return _cmpFiniq(va, vb, s.dir);
+    });
+
+    tbody.innerHTML = orden.map(s2 => `
+        <tr>
+            <td>${s2.sucursal || '–'}</td>
+            <td>${s2.num_finiquitos}</td>
+            <td>${_fmtMoneda(s2.total_neto)}</td>
         </tr>`).join('');
 }
 
@@ -8800,9 +8910,11 @@ window._toggleSucursalAnual = _toggleSucursalAnual;
 window.exportarCreditosExcel     = exportarCreditosExcel;
 window.filtrarTablaCreditos      = filtrarTablaCreditos;
 window.cargarCreditos            = cargarCreditos;
-window.cargarFiniquitos          = cargarFiniquitos;
-window.filtrarTablaFiniquitos    = filtrarTablaFiniquitos;
-window.exportarFiniquitosExcel   = exportarFiniquitosExcel;
+window.cargarFiniquitos            = cargarFiniquitos;
+window.filtrarTablaFiniquitos      = filtrarTablaFiniquitos;
+window.exportarFiniquitosExcel     = exportarFiniquitosExcel;
+window.ordenarFiniquitosDetalle    = ordenarFiniquitosDetalle;
+window.ordenarFiniquitosSucursal   = ordenarFiniquitosSucursal;
 
 // ================================
 // SECCIÓN DE DISPOSITIVOS PWA
