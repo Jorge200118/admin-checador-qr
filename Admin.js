@@ -597,6 +597,10 @@ async function loadSectionData(section) {
         case 'creditos':
             cargarCreditos();
             break;
+        case 'finiquitos':
+            _initFechasFiniquitos();
+            cargarFiniquitos();
+            break;
         case 'sucursales':
             cargarSucursales();
             break;
@@ -8586,6 +8590,152 @@ function exportarCreditosExcel() {
     XLSX.writeFile(wb, `Creditos_${new Date().toLocaleDateString('es-MX').replace(/\//g,'-')}.xlsx`);
 }
 
+// ================================
+// SECCIÓN FINIQUITOS (BMS)
+// ================================
+let _finiquitosDatos = [];
+
+// Default: 1-ene del año actual → hoy (solo la primera vez; respeta lo que el usuario ponga)
+function _initFechasFiniquitos() {
+    const ini = document.getElementById('finiqFechaInicio');
+    const fin = document.getElementById('finiqFechaFin');
+    if (!ini || !fin) return;
+    if (ini.value && fin.value) return; // ya inicializado
+    const hoy = new Date();
+    const y = hoy.getFullYear();
+    const m = String(hoy.getMonth() + 1).padStart(2, '0');
+    const d = String(hoy.getDate()).padStart(2, '0');
+    ini.value = `${y}-01-01`;
+    fin.value = `${y}-${m}-${d}`;
+}
+
+function _fmtMoneda(n) {
+    if (n == null) return '–';
+    return Number(n).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+}
+
+async function cargarFiniquitos() {
+    try {
+        document.getElementById('tbodyFiniquitosDetalle').innerHTML =
+            '<tr><td colspan="7" style="text-align:center;color:#64748b">Cargando...</td></tr>';
+        document.getElementById('tbodyFiniquitosSucursal').innerHTML =
+            '<tr><td colspan="3" style="text-align:center;color:#64748b">Cargando...</td></tr>';
+
+        const fInicio  = document.getElementById('finiqFechaInicio')?.value || '';
+        const fFin     = document.getElementById('finiqFechaFin')?.value    || '';
+        const sucursal = document.getElementById('finiqSucursal')?.value    || '';
+
+        if (fInicio && fFin && fInicio > fFin) {
+            document.getElementById('finiqFechaFin').value = fInicio;
+        }
+
+        const params = new URLSearchParams();
+        if (fInicio)  params.set('fechaInicio', fInicio);
+        if (fFin)     params.set('fechaFin',    document.getElementById('finiqFechaFin').value);
+        if (sucursal) params.set('sucursal',    sucursal);
+
+        const res  = await fetch(`${ADMIN_CONFIG.apiUrl}/empleados/finiquitos?${params}`);
+        const json = await res.json();
+        if (!json.success) throw new Error(json.message);
+
+        // KPIs
+        const r = json.data.resumen;
+        const total = Number(r.total_neto || 0);
+        const num   = Number(r.num_finiquitos || 0);
+        document.getElementById('finiqTotal').textContent    = _fmtMoneda(total);
+        document.getElementById('finiqNum').textContent      = num;
+        document.getElementById('finiqPromedio').textContent = num > 0 ? _fmtMoneda(total / num) : '–';
+
+        // Tabla por sucursal
+        const tbodySuc = document.getElementById('tbodyFiniquitosSucursal');
+        const porSuc = json.data.por_sucursal || [];
+        tbodySuc.innerHTML = porSuc.length
+            ? porSuc.map(s => `
+                <tr>
+                    <td>${s.sucursal || '–'}</td>
+                    <td>${s.num_finiquitos}</td>
+                    <td>${_fmtMoneda(s.total_neto)}</td>
+                </tr>`).join('')
+            : '<tr><td colspan="3" style="text-align:center;color:#64748b">Sin resultados</td></tr>';
+
+        // Poblar selector de sucursales (una vez, conservando selección)
+        const selSuc = document.getElementById('finiqSucursal');
+        if (selSuc && selSuc.options.length <= 1 && porSuc.length) {
+            const actual = selSuc.value;
+            porSuc.forEach(s => {
+                if (!s.sucursal) return;
+                const opt = document.createElement('option');
+                opt.value = opt.textContent = s.sucursal;
+                if (s.sucursal === actual) opt.selected = true;
+                selSuc.appendChild(opt);
+            });
+        }
+
+        // Detalle
+        _finiquitosDatos = json.data.finiquitos || [];
+        _renderTablaFiniquitos(_finiquitosDatos);
+
+    } catch (err) {
+        console.error('cargarFiniquitos:', err);
+        document.getElementById('tbodyFiniquitosDetalle').innerHTML =
+            '<tr><td colspan="7" style="text-align:center;color:#ef4444">Error al cargar datos</td></tr>';
+        document.getElementById('tbodyFiniquitosSucursal').innerHTML =
+            '<tr><td colspan="3" style="text-align:center;color:#ef4444">Error</td></tr>';
+    }
+}
+
+function _fmtFechaFiniq(f) {
+    if (!f) return '–';
+    const d = new Date(f);
+    const local = new Date(d.getTime() + d.getTimezoneOffset() * 60000);
+    return local.toLocaleDateString('es-MX');
+}
+
+function _renderTablaFiniquitos(filas) {
+    const tbody = document.getElementById('tbodyFiniquitosDetalle');
+    if (!tbody) return;
+    if (!filas || !filas.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#64748b">Sin resultados</td></tr>';
+        return;
+    }
+    tbody.innerHTML = filas.map(f => `
+        <tr>
+            <td style="font-family:monospace;font-size:12px">${f.codigo || '–'}</td>
+            <td>${f.nombre || '–'}</td>
+            <td style="font-size:12px;color:#94a3b8">${f.sucursal || '–'}</td>
+            <td style="font-family:monospace;font-size:12px">${f.folio || '–'}</td>
+            <td style="font-size:12px">${_fmtFechaFiniq(f.fecha)}</td>
+            <td style="font-size:12px">${f.dias_trabajados != null ? Number(f.dias_trabajados).toLocaleString('es-MX') : '–'}</td>
+            <td style="font-weight:600;color:#10b981">${_fmtMoneda(f.neto)}</td>
+        </tr>`).join('');
+}
+
+function filtrarTablaFiniquitos() {
+    const q = (document.getElementById('searchFiniquitos')?.value || '').toLowerCase().trim();
+    if (!q) { _renderTablaFiniquitos(_finiquitosDatos); return; }
+    const filtrados = _finiquitosDatos.filter(f =>
+        (f.nombre || '').toLowerCase().includes(q) ||
+        (f.codigo || '').toLowerCase().includes(q)
+    );
+    _renderTablaFiniquitos(filtrados);
+}
+
+function exportarFiniquitosExcel() {
+    if (!_finiquitosDatos.length) return;
+    const datos = _finiquitosDatos.map(f => ({
+        'ID':          f.codigo,
+        'Nombre':      f.nombre,
+        'Sucursal':    f.sucursal,
+        'Folio':       f.folio,
+        'Fecha':       _fmtFechaFiniq(f.fecha),
+        'Días Trab.':  f.dias_trabajados,
+        'Neto':        f.neto
+    }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(datos), 'Finiquitos');
+    XLSX.writeFile(wb, `Finiquitos_${new Date().toLocaleDateString('es-MX').replace(/\//g,'-')}.xlsx`);
+}
+
 // Exponer al scope global (llamadas desde HTML onclick)
 window.exportarEstadisticasExcel = exportarEstadisticasExcel;
 window.cargarRotacionPuesto = cargarRotacionPuesto;
@@ -8601,6 +8751,9 @@ window._toggleSucursalAnual = _toggleSucursalAnual;
 window.exportarCreditosExcel     = exportarCreditosExcel;
 window.filtrarTablaCreditos      = filtrarTablaCreditos;
 window.cargarCreditos            = cargarCreditos;
+window.cargarFiniquitos          = cargarFiniquitos;
+window.filtrarTablaFiniquitos    = filtrarTablaFiniquitos;
+window.exportarFiniquitosExcel   = exportarFiniquitosExcel;
 
 // ================================
 // SECCIÓN DE DISPOSITIVOS PWA
