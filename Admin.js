@@ -8658,10 +8658,14 @@ async function cargarFiniquitos() {
                 </tr>`).join('')
             : '<tr><td colspan="3" style="text-align:center;color:#64748b">Sin resultados</td></tr>';
 
-        // Poblar selector de sucursales (una vez, conservando selección)
+        // Poblar selector de sucursales conservando la selección actual.
+        // Solo se repuebla cuando NO hay filtro de sucursal activo (la respuesta
+        // "Todas" trae el listado completo); al filtrar por una sucursal, por_sucursal
+        // se reduce a una sola y no debe vaciar el resto de opciones.
         const selSuc = document.getElementById('finiqSucursal');
-        if (selSuc && selSuc.options.length <= 1 && porSuc.length) {
+        if (selSuc && !sucursal && porSuc.length) {
             const actual = selSuc.value;
+            selSuc.innerHTML = '<option value="">Todas las sucursales</option>';
             porSuc.forEach(s => {
                 if (!s.sucursal) return;
                 const opt = document.createElement('option');
@@ -8677,6 +8681,9 @@ async function cargarFiniquitos() {
 
     } catch (err) {
         console.error('cargarFiniquitos:', err);
+        document.getElementById('finiqTotal').textContent    = '–';
+        document.getElementById('finiqNum').textContent      = '–';
+        document.getElementById('finiqPromedio').textContent = '–';
         document.getElementById('tbodyFiniquitosDetalle').innerHTML =
             '<tr><td colspan="7" style="text-align:center;color:#ef4444">Error al cargar datos</td></tr>';
         document.getElementById('tbodyFiniquitosSucursal').innerHTML =
