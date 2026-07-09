@@ -97,7 +97,7 @@ def cargar_checador():
     """Empleados del checador. Devuelve:
        by_code: {codigo_normalizado -> emp}, by_name: {nombre_norm -> [emp,...]}."""
     emps = supabase_get('empleados', {
-        'select': 'id,codigo_empleado,nombre,apellido,horario_id,activo'
+        'select': 'id,codigo_empleado,nombre,apellido,horario_id,activo,sucursal,puesto'
     })
     by_code, by_name = {}, {}
     for e in emps:
