@@ -6252,9 +6252,20 @@ async function exportarRegistros(tipo) {
         const fechaFin = document.getElementById('fechaFin')?.value ||
                          new Date().toISOString().split('T')[0];
 
-        // Obtener registros desde Supabase con filtro de sucursal
+        // Leer los MISMOS filtros que la tabla de registros para respetar
+        // la selección de persona / sucursal / tipo / puesto en el UI
+        const empleadoId = document.getElementById('filterEmpleado')?.value;
+        const tipo = document.getElementById('filterTipo')?.value;
+        const sucursal = document.getElementById('filterSucursal')?.value;
+        const puesto = document.getElementById('filterPuesto')?.value;
+
         const filtros = {
-            sucursalUsuario: window.currentUserSucursal
+            sucursalUsuario: window.currentUserSucursal, // SIEMPRE filtrar por sucursal del usuario (null si superadmin)
+            empleadoId: empleadoId || null,
+            tipo: tipo || null,
+            // Solo aplicar filtro de sucursal adicional si es superadmin
+            sucursal: (window.isSuperAdmin && sucursal) ? sucursal : null,
+            puesto: puesto || null
         };
         const result = await SupabaseAPI.getRegistrosByFecha(fechaInicio, fechaFin, filtros);
 
@@ -6303,20 +6314,8 @@ async function exportarRegistros(tipo) {
             }
         });
 
-        // Generar CSV
-        let csvContent = '\ufeff'; // BOM para UTF-8
-
-        // Encabezado
-        csvContent += 'REPORTE DE ASISTENCIAS CON HORAS TRABAJADAS\n';
-        csvContent += `Período: ${fechaInicio} al ${fechaFin}\n`;
-        csvContent += `Total empleados-días: ${Object.keys(registrosPorEmpleadoFecha).length}\n`;
-        csvContent += `Generado: ${new Date().toLocaleString('es-MX')}\n\n`;
-
-        // Columnas
-        csvContent += 'Fecha,Código,Empleado,Sucursal,Puesto,Primera Entrada,Última Salida,Horas Trabajadas\n';
-
-        // Datos agrupados
-        Object.values(registrosPorEmpleadoFecha).forEach(grupo => {
+        // Construir filas para el Excel
+        const filas = Object.values(registrosPorEmpleadoFecha).map(grupo => {
             // Ordenar entradas y salidas
             grupo.entradas.sort((a, b) => a - b);
             grupo.salidas.sort((a, b) => a - b);
@@ -6339,8 +6338,7 @@ async function exportarRegistros(tipo) {
                 if (salida > entrada) {
                     const diffMs = salida - entrada;
                     const diffMinutos = Math.floor(diffMs / (1000 * 60));
-                    const horasDecimal = (diffMinutos / 60).toFixed(1);
-                    horasTrabajadas = horasDecimal;
+                    horasTrabajadas = (diffMinutos / 60).toFixed(1);
                 } else {
                     // Si la salida es antes de la entrada, hay un error en los datos
                     horasTrabajadas = 'Error';
@@ -6350,30 +6348,25 @@ async function exportarRegistros(tipo) {
                 horasTrabajadas = 'En turno';
             }
 
-            csvContent += `"${grupo.fecha}",`;
-            csvContent += `"${grupo.empleado_codigo || 'N/A'}",`;
-            csvContent += `"${grupo.empleado_nombre || 'N/A'}",`;
-            csvContent += `"${grupo.sucursal || 'N/A'}",`;
-            csvContent += `"${grupo.puesto || 'N/A'}",`;
-            csvContent += `"${primeraEntrada}",`;
-            csvContent += `"${ultimaSalida}",`;
-            csvContent += `"${horasTrabajadas}"\n`;
+            return {
+                'Fecha': grupo.fecha,
+                'Código': grupo.empleado_codigo || 'N/A',
+                'Empleado': grupo.empleado_nombre || 'N/A',
+                'Sucursal': grupo.sucursal || 'N/A',
+                'Puesto': grupo.puesto || 'N/A',
+                'Primera Entrada': primeraEntrada,
+                'Última Salida': ultimaSalida,
+                'Horas Trabajadas': horasTrabajadas
+            };
         });
 
-        // Crear archivo y descargar
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `Reporte_Asistencias_${fechaInicio}_${fechaFin}.csv`;
-        link.style.display = 'none';
+        // Generar archivo XLSX
+        const ws = XLSX.utils.json_to_sheet(filas);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Asistencias');
+        XLSX.writeFile(wb, `Reporte_Asistencias_${fechaInicio}_${fechaFin}.xlsx`);
 
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-
-        showAlert('Éxito', `Excel descargado: ${registros.length} registros`, 'success');
+        showAlert('Éxito', `Excel descargado: ${filas.length} empleados-días`, 'success');
 
     } catch (error) {
         showAlert('Error', 'Error generando archivo Excel: ' + error.message, 'error');
