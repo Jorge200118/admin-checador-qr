@@ -362,19 +362,6 @@
                     Iniciar Sesión
                 </button>
             </form>
-
-            <div class="divider">
-                <span>O accede a</span>
-            </div>
-
-            <div class="alternative-login">
-                <button class="btn-alt" onclick="goToTabletApp()">
-                    <i class="fas fa-tablet-alt"></i> App Tablet
-                </button>
-                <button class="btn-alt" onclick="goToAdminPanel()">
-                    <i class="fas fa-user-shield"></i> Panel Admin
-                </button>
-            </div>
         </div>
 
         <div class="login-footer">
@@ -437,8 +424,10 @@
 
                     if (rememberMe) {
                         localStorage.setItem('session_sucursal', JSON.stringify(sessionData));
+                        localStorage.setItem('remembered_login', JSON.stringify({ sucursal, username }));
                     } else {
                         sessionStorage.setItem('session_sucursal', JSON.stringify(sessionData));
+                        localStorage.removeItem('remembered_login');
                     }
 
                     // Update last access
@@ -470,6 +459,19 @@
         function goToAdminPanel() {
             window.location.href = 'Index.html';
         }
+
+        // Prefill remembered sucursal/usuario
+        window.addEventListener('DOMContentLoaded', () => {
+            const remembered = localStorage.getItem('remembered_login');
+            if (remembered) {
+                try {
+                    const { sucursal, username } = JSON.parse(remembered);
+                    if (sucursal) document.getElementById('sucursal').value = sucursal;
+                    if (username) document.getElementById('username').value = username;
+                    document.getElementById('rememberMe').checked = true;
+                } catch (e) { /* ignore malformed data */ }
+            }
+        });
 
         // Check if already logged in
         window.addEventListener('DOMContentLoaded', () => {
