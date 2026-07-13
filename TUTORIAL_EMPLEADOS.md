@@ -185,6 +185,6 @@ El tutorial está optimizado para diferentes tamaños de pantalla:
 
 ---
 
-**Desarrollado para:** Sistema Checador QR V2
+**Desarrollado para:** RHACHub
 **Fecha:** Febrero 2026
 **Estado:** ✅ Implementado y Funcional
