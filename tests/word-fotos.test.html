@@ -84,6 +84,47 @@ window.addEventListener('load', () => {
   test('lista vacía → sin grupos', () => eq(wfAgruparRegistros([]), []));
   test('null → sin grupos', () => eq(wfAgruparRegistros(null), []));
 
+  // === Piezas de XML ===
+  test('wfXmlRun escapa el texto', () =>
+    eq(wfXmlRun('A & B', {}).includes('A &amp; B'), true));
+  test('wfXmlRun tamaño en medios puntos (15pt → 30)', () =>
+    eq(wfXmlRun('x', { sz: 15 }).includes('<w:sz w:val="30"/>'), true));
+  test('wfXmlRun relleno de etiqueta', () =>
+    eq(wfXmlRun('ENTRADA', { fill: WF_VERDE }).includes('w:fill="28A745"'), true));
+  test('wfXmlParrafo con relleno', () =>
+    eq(wfXmlParrafo('<w:r/>', { fill: WF_TEAL }).includes('w:fill="17A2B8"'), true));
+  test('wfXmlImagen usa EMU y el rId', () => {
+    const xml = wfXmlImagen('rId5', 11, 8.25, 3);
+    eq(xml.includes('r:embed="rId5"'), true);
+    eq(xml.includes('cx="3960000"'), true);   // 11 cm
+    eq(xml.includes('cy="2970000"'), true);   // 8.25 cm
+  });
+
+  // === Documento completo ===
+  const DOC = wfConstruirDocumentXml(
+    wfAgruparRegistros(REGS),
+    { 'a1.jpg': { ancho: 1280, alto: 960 }, 'a2.jpg': { ancho: 960, alto: 1280 } },
+    { titulo: 'Registros de Asistencia con Foto', periodo: '07/03/2026' }
+  );
+  test('el documento declara los espacios de nombres', () =>
+    eq(DOC.xml.includes('xmlns:pic='), true));
+  test('una imagen por foto disponible', () => eq(DOC.imagenes.length, 2));
+  test('las fotos sin datos salen como no disponibles', () =>
+    eq(DOC.xml.includes('Foto no disponible'), true));
+  test('incluye el nombre y el código del empleado', () => {
+    eq(DOC.xml.includes('Ana Lopez'), true);
+    eq(DOC.xml.includes('A002'), true);
+  });
+  test('incluye la hora sin convertir', () => eq(DOC.xml.includes('8:24:02 AM'), true));
+  test('incluye la etiqueta de ENTRADA y de SALIDA', () => {
+    eq(DOC.xml.includes('ENTRADA'), true);
+    eq(DOC.xml.includes('SALIDA'), true);
+  });
+  test('un salto de página por grupo', () =>
+    eq((DOC.xml.match(/w:type="page"/g) || []).length, 4));
+  test('cierra el documento con sectPr', () =>
+    eq(DOC.xml.trim().endsWith('</w:document>'), true));
+
   out.innerHTML += `<h2>${fail === 0 ? '✅' : '❌'} ${pass} pasaron, ${fail} fallaron</h2>`;
 });
 </script>
