@@ -21,8 +21,11 @@ LITERALES_PROHIBIDOS = [
 ]
 
 def texto_documento():
+    # Une TODAS las partes word/*.xml (document, headers, footers) para no ser
+    # ciego a fugas en encabezados/pies (ver hallazgo C1).
     with zipfile.ZipFile(PLANTILLA) as z:
-        return z.read("word/document.xml").decode("utf-8")
+        partes = [n for n in z.namelist() if n.startswith("word/") and n.endswith(".xml")]
+        return "\n".join(z.read(n).decode("utf-8") for n in partes)
 
 def main():
     if not os.path.exists(PLANTILLA):

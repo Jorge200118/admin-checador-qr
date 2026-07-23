@@ -10,7 +10,13 @@
     letra: "Nueve Mil Cuatrocientos Cincuenta y uno pesos 20/100 M.N."
   };
   const NACIONALIDAD = "Mexicana";
-  const ADMIN_API = 'https://aceros-cabos-proveedores.ngrok.app/api';
+  const ADMIN_API_FALLBACK = 'https://aceros-cabos-proveedores.ngrok.app/api';
+
+  // Reutiliza la misma URL que Admin.js (ADMIN_CONFIG.apiUrl); cae al fallback si aún no cargó.
+  function apiBase() {
+    return (typeof ADMIN_CONFIG !== 'undefined' && ADMIN_CONFIG && ADMIN_CONFIG.apiUrl)
+      ? ADMIN_CONFIG.apiUrl : ADMIN_API_FALLBACK;
+  }
 
   const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio",
                  "agosto","septiembre","octubre","noviembre","diciembre"];
@@ -70,16 +76,27 @@
   }
 
   function sumarMeses(d, meses) {
+    // Suma meses fijando el día al final para evitar el desbordamiento de mes
+    // (p. ej. 31 dic + 2 meses no debe caer en marzo).
     const r = new Date(d.getTime());
+    const dia = r.getDate();
+    r.setDate(1);
     r.setMonth(r.getMonth() + meses);
+    const ultimoDia = new Date(r.getFullYear(), r.getMonth() + 1, 0).getDate();
+    r.setDate(Math.min(dia, ultimoDia));
     return r;
+  }
+
+  // Valor presente y no vacío (acepta el número 0, rechaza "" / null / undefined).
+  function tiene(v) {
+    return v !== undefined && v !== null && String(v).trim() !== '';
   }
 
   function construirDomicilio(d) {
     const partes = [
-      d.Calle, d.NumExterior ? `#${d.NumExterior}` : null,
-      d.NumInterior ? `Int. ${d.NumInterior}` : null,
-      d.Colonia, d.CodigoPostal ? `C.P. ${d.CodigoPostal}` : null, d.Municipio
+      d.Calle, tiene(d.NumExterior) ? `#${d.NumExterior}` : null,
+      tiene(d.NumInterior) ? `Int. ${d.NumInterior}` : null,
+      d.Colonia, tiene(d.CodigoPostal) ? `C.P. ${d.CodigoPostal}` : null, d.Municipio
     ].filter(Boolean);
     return partes.join(", ");
   }
@@ -91,18 +108,24 @@
     if (!exp) return { datos: null, faltantes: ["No se encontró el expediente del empleado"] };
 
     const keyPuesto = normalizarPuesto(puesto || exp.Puesto);
-    const keySuc = (sucursal || "").toString().trim().toUpperCase();
+    const keySuc = normalizarPuesto(sucursal);   // mayúsculas + sin acentos, conserva espacios
+    const nombre_completo = (exp.NombreCompleto ||
+      [exp.Nombre, exp.ApellidoPaterno, exp.ApellidoMaterno].filter(Boolean).join(" ")).trim();
 
+    if (!nombre_completo) faltantes.push("Falta el nombre del empleado en el expediente");
     if (!ACTIVIDADES_POR_PUESTO[keyPuesto])
       faltantes.push(`Falta configurar el Anexo "A" para el puesto: ${puesto || exp.Puesto || "(sin puesto)"}`);
     if (!SUCURSAL_CATALOGO[keySuc])
       faltantes.push(`Sucursal sin dirección configurada: ${sucursal || "(sin sucursal)"}`);
-    if (!exp.FechaIngreso) faltantes.push("Falta la fecha de ingreso en el expediente");
-    if (!exp.RFC)          faltantes.push("Falta el RFC en el expediente");
-    if (!exp.CURP)         faltantes.push("Falta la CURP en el expediente");
-    if (!exp.NumeroIMSS)   faltantes.push("Falta el NSS (registro IMSS) en el expediente");
-    const domicilio = construirDomicilio(exp);
-    if (!domicilio)        faltantes.push("Falta el domicilio en el expediente");
+    if (!exp.FechaIngreso)    faltantes.push("Falta la fecha de ingreso en el expediente");
+    if (!exp.FechaNacimiento) faltantes.push("Falta la fecha de nacimiento en el expediente");
+    if (!exp.RFC)             faltantes.push("Falta el RFC en el expediente");
+    if (!exp.CURP)            faltantes.push("Falta la CURP en el expediente");
+    if (!exp.NumeroIMSS)      faltantes.push("Falta el NSS (registro IMSS) en el expediente");
+    if (!tiene(exp.Calle))        faltantes.push("Falta la calle del domicilio en el expediente");
+    if (!tiene(exp.Colonia))      faltantes.push("Falta la colonia del domicilio en el expediente");
+    if (!tiene(exp.CodigoPostal)) faltantes.push("Falta el código postal del domicilio en el expediente");
+    if (!tiene(exp.Municipio))    faltantes.push("Falta el municipio del domicilio en el expediente");
 
     if (faltantes.length) return { datos: null, faltantes };
 
@@ -111,15 +134,14 @@
     const suc = SUCURSAL_CATALOGO[keySuc];
 
     const datos = {
-      nombre_completo: exp.NombreCompleto ||
-        [exp.Nombre, exp.ApellidoPaterno, exp.ApellidoMaterno].filter(Boolean).join(" "),
+      nombre_completo: nombre_completo,
       edad: calcularEdad(exp.FechaNacimiento, ingreso),
       estado_civil: exp.EstadoCivil || "",
       nacionalidad: NACIONALIDAD,
       nss: String(exp.NumeroIMSS),
       curp: exp.CURP,
       rfc: exp.RFC,
-      domicilio: domicilio,
+      domicilio: construirDomicilio(exp),
       fecha_ingreso: fechaLarga(ingreso),
       fecha_fin_prueba: fechaLarga(finPrueba),
       salario_monto: SALARIO.monto,
@@ -127,7 +149,6 @@
       sitio_trabajo: suc.direccion,
       ciudad_firma: suc.ciudad,
       puesto: (puesto || exp.Puesto || "").toString().trim(),
-      folio: "",
       actividades: ACTIVIDADES_POR_PUESTO[keyPuesto].slice()
     };
     return { datos, faltantes: [] };
@@ -155,11 +176,16 @@
 
   // Renderiza el .docx a partir de la plantilla + datos. Devuelve Blob.
   async function renderizarContrato(datos) {
+    const PizZipCtor = (typeof window !== 'undefined') && window.PizZip;
+    const DocxtemplaterCtor = (typeof window !== 'undefined') && window.docxtemplater
+      && (window.docxtemplater.default || window.docxtemplater);
+    if (!PizZipCtor || !DocxtemplaterCtor)
+      throw new Error('Faltan librerías (PizZip/docxtemplater) para generar el contrato');
     const resp = await fetch('plantilla-contrato.docx');
     if (!resp.ok) throw new Error('No se pudo descargar la plantilla');
     const buf = await resp.arrayBuffer();
-    const zip = new PizZip(buf);
-    const doc = new window.docxtemplater(zip, {
+    const zip = new PizZipCtor(buf);
+    const doc = new DocxtemplaterCtor(zip, {
       paragraphLoop: true, linebreaks: true,
       delimiters: { start: '{', end: '}' }
     });
@@ -174,7 +200,7 @@
   async function generarContratoAlta(codigoEmpleado, opts) {
     opts = opts || {};
     try {
-      const res = await fetch(`${ADMIN_API}/empleados/expediente/${encodeURIComponent(codigoEmpleado)}`);
+      const res = await fetch(`${apiBase()}/empleados/expediente/${encodeURIComponent(codigoEmpleado)}`);
       const json = await res.json().catch(() => ({}));
       const exp = json && json.success ? json.data : null;
 

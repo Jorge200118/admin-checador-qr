@@ -103,9 +103,22 @@ def reemplazar_en_parrafo(p, literal, token):
         cambios += 1
     return cambios
 
+def iter_roots(doc):
+    """Raíces XML a procesar: cuerpo + headers/footers (donde también hay datos)."""
+    roots = [doc.element.body]
+    for rel in doc.part.rels.values():
+        if rel.is_external:
+            continue
+        rt = rel.reltype
+        if rt.endswith('/header') or rt.endswith('/footer'):
+            roots.append(rel.target_part.element)
+    return roots
+
 def iter_parrafos(doc):
-    """Todos los <w:p> del documento (cuerpo, tablas y textboxes)."""
-    return doc.element.body.iter(qn('w:p'))
+    """Todos los <w:p> del documento: cuerpo, tablas, textboxes, headers y footers."""
+    for root in iter_roots(doc):
+        for p in root.iter(qn('w:p')):
+            yield p
 
 def convertir_actividades(doc):
     """Convierte los 7 párrafos de actividades en un bucle de párrafo docxtemplater:
@@ -141,15 +154,18 @@ def convertir_actividades(doc):
         el.getparent().remove(el)
 
 def blanquear_folios(ruta_docx):
-    """Reemplaza los folios (en textboxes) por vacío, a nivel de document.xml crudo."""
+    """Reemplaza los folios (en textboxes) por vacío, a nivel de XML crudo en todas
+    las partes word/*.xml (document, headers, footers)."""
     tmp = ruta_docx + ".tmp"
     with zipfile.ZipFile(ruta_docx, 'r') as zin:
         names = zin.namelist()
         data = {n: zin.read(n) for n in names}
-    xml = data['word/document.xml'].decode('utf-8')
-    for f in FOLIOS:
-        xml = xml.replace(f, "")
-    data['word/document.xml'] = xml.encode('utf-8')
+    for n in names:
+        if n.startswith('word/') and n.endswith('.xml'):
+            xml = data[n].decode('utf-8')
+            for f in FOLIOS:
+                xml = xml.replace(f, "")
+            data[n] = xml.encode('utf-8')
     with zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED) as zout:
         for n in names:
             zout.writestr(n, data[n])

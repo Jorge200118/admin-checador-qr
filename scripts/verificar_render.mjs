@@ -15,7 +15,7 @@ const datos = {
   fecha_ingreso: "1 de marzo del 2026", fecha_fin_prueba: "1 de mayo del 2026",
   salario_monto: "9,451.20", salario_letra: "Nueve Mil ... 20/100 M.N.",
   sitio_trabajo: "Fray Marcos de Niza No. 100, Col. San Rafael, Culiacán, Sinaloa",
-  ciudad_firma: "Culiacán, Sinaloa", puesto: "Cajera", folio: "",
+  ciudad_firma: "Culiacán, Sinaloa", puesto: "Cajera",
   actividades: ["Actividad uno de prueba", "Actividad dos de prueba", "Actividad tres de prueba"]
 };
 
@@ -25,16 +25,32 @@ doc.render(datos);                              // lanza si hay tags mal formado
 const out = doc.getZip().generate({ type: 'nodebuffer' });
 fs.writeFileSync(path.join(__dirname, 'salida-render.docx'), out);
 
-// extraer texto del document.xml de salida
-const xml = new PizZip(out).file('word/document.xml').asText();
-const plano = xml.replace(/<[^>]+>/g, '');
+const outZip = new PizZip(out);
+const sinTags = (s) => s.replace(/<[^>]+>/g, '');
+// TODAS las partes word/*.xml (document + headers + footers) — no ser ciego al header (C1)
+const partes = Object.keys(outZip.files).filter(n => n.startsWith('word/') && n.endsWith('.xml'));
+const docXml = outZip.file('word/document.xml').asText();
+const planoTodo = sinTags(partes.map(n => outZip.file(n).asText()).join('\n'));
+
 for (const val of ["Juan Pérez López", "PELJ900510HSLRPN01", "PELJ900510AB1",
                     "11223344556", "1 de marzo del 2026", "1 de mayo del 2026",
                     "Fray Marcos de Niza", "Actividad uno de prueba", "Actividad tres de prueba"]) {
-  assert.ok(plano.includes(val), `falta en la salida: ${val}`);
+  assert.ok(planoTodo.includes(val), `falta en la salida: ${val}`);
 }
-// Datos de Isis que NUNCA deben aparecer (nota: "Cajera" SÍ puede, es el puesto de prueba)
-for (const bad of ["Evaristo", "35200633903", "PADRE NICOLAS", "isla guyana"]) {
-  assert.ok(!plano.includes(bad), `no debe aparecer: ${bad}`);
+// Datos de Isis que NUNCA deben aparecer EN NINGUNA PARTE, incluido el encabezado
+for (const bad of ["Evaristo", "Valeria", "Ramírez", "35200633903", "PADRE NICOLAS", "isla guyana"]) {
+  assert.ok(!planoTodo.includes(bad), `no debe aparecer en ninguna parte: ${bad}`);
 }
+// El nombre del empleado debe llegar al encabezado (donde estaba la fuga)
+const headerParts = partes.filter(n => /header\d*\.xml$/.test(n));
+assert.ok(headerParts.length > 0, "el documento debe tener encabezado");
+const headerPlano = sinTags(headerParts.map(n => outZip.file(n).asText()).join('\n'));
+assert.ok(headerPlano.includes("Juan Pérez López"), "el nombre del empleado debe estar en el encabezado");
+
+// Estructura: las 3 actividades deben ser 3 párrafos con viñeta (numPr) separados
+const segsP = docXml.split(/<w:p[ >]/);
+const itemsBullet = segsP.filter(s => s.includes('Actividad ') && s.includes('<w:numPr'));
+assert.strictEqual(itemsBullet.length, 3,
+  `esperados 3 párrafos de actividad con viñeta, hay ${itemsBullet.length}`);
+
 console.log("OK: render (salida-render.docx generado, revisar visualmente)");
