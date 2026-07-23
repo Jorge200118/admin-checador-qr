@@ -25,10 +25,17 @@ assert.strictEqual(r.datos.salario_monto, "9,451.20");
 assert.strictEqual(r.datos.actividades.length, 7);
 assert.match(r.datos.domicilio, /Av\. Siempre Viva, #742, Centro, C\.P\. 80000, Culiacán/);
 
-// Puesto sin Anexo -> faltante, sin datos
-let r2 = C.construirDatosContrato(expB, "CULIACAN", "CHOFER");
+// Puesto sin Anexo configurado -> faltante, sin datos
+let r2 = C.construirDatosContrato(expB, "CULIACAN", "ALMACEN");
 assert.strictEqual(r2.datos, null);
 assert.ok(r2.faltantes.some(f => f.includes("Anexo")), "debe faltar Anexo del puesto");
+
+// Chofer SI está configurado -> genera, con sus 8 actividades
+let rc = C.construirDatosContrato(expB, "CULIACAN", "Chofer");
+assert.deepStrictEqual(rc.faltantes, [], "Chofer debe estar configurado");
+assert.strictEqual(rc.datos.actividades.length, 8);
+assert.match(rc.datos.actividades[0], /Descargar los camiones/);
+assert.strictEqual(rc.datos.puesto, "Chofer");
 
 // Sin expediente
 let r3 = C.construirDatosContrato(null, "CULIACAN", "Cajera");

@@ -43,6 +43,16 @@
       "Revisar la facturación en tránsito diariamente",
       "De ser necesario, serán capacitados para su puesto en la Ciudad de Los Mochis, Sinaloa. El tiempo requerido, así lo indique la Comisión Mixta de Productividad.",
       "Tener la disposición de realizar todas las actividades anteriormente descritas, dentro de su Anexo \"A\""
+    ],
+    "CHOFER": [
+      "Descargar los camiones que llegan con mercancía de parte de los proveedores.",
+      "Atender al cliente que viene por su material, y ayudarlo a encontrar lo que busca.",
+      "Realizar corte de materiales como son placas, soleras, según sea el caso.",
+      "Mantener los materiales bien acomodados en el lugar que le corresponda y en las mejores condiciones posibles",
+      "Atender a clientes",
+      "Cargar material en las camionetas, y/o camiones para su oportuna entrega al cliente.",
+      "Realizar labores de limpieza",
+      "Obedecer a las instrucciones del jefe inmediato"
     ]
     // Pendientes: se agregan conforme el usuario entregue un ejemplo por puesto.
   };
