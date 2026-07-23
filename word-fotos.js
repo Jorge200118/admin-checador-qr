@@ -376,3 +376,111 @@ async function wfDescargarFotos(rutas, alAvanzar) {
 
     return { fotos: fotos, buffers: buffers, fallidas: fallidas };
 }
+
+// --- Orquestador (punto de entrada desde el botón) ---
+
+const WF_LIMITE_AVISO = 400;   // arriba de esto se pide confirmación
+const WF_MB_POR_FOTO  = 0.14;  // medido: 133 fotos ≈ 17 MB
+
+function wfFechaBonita(fecha) {
+    const meses = ['enero','febrero','marzo','abril','mayo','junio','julio',
+                   'agosto','septiembre','octubre','noviembre','diciembre'];
+    const p = String(fecha).split('-');
+    if (p.length !== 3) return fecha;
+    return `${parseInt(p[2], 10)} de ${meses[parseInt(p[1], 10) - 1]} de ${p[0]}`;
+}
+
+async function exportarWordFotos() {
+    try {
+        // 1. Mismos filtros que exportarRegistros() (Admin.js:6244)
+        const fechaInicio = document.getElementById('fechaInicio')?.value;
+        const fechaFin = document.getElementById('fechaFin')?.value;
+        if (!fechaInicio || !fechaFin) {
+            showAlert('Falta el período', 'Selecciona un período antes de exportar.', 'warning');
+            return;
+        }
+        const empleadoId = document.getElementById('filterEmpleado')?.value;
+        const tipo = document.getElementById('filterTipo')?.value;
+        const sucursal = document.getElementById('filterSucursal')?.value;
+        const puesto = document.getElementById('filterPuesto')?.value;
+
+        const filtros = {
+            sucursalUsuario: window.currentUserSucursal,
+            empleadoId: empleadoId || null,
+            tipo: tipo || null,
+            sucursal: (window.isSuperAdmin && sucursal) ? sucursal : null,
+            puesto: puesto || null
+        };
+
+        showLoading('Consultando registros...');
+        const result = await SupabaseAPI.getRegistrosByFecha(fechaInicio, fechaFin, filtros);
+        if (!result.success) throw new Error(result.message || 'Error obteniendo registros');
+
+        // 2. Agrupar (descarta los que no tienen foto)
+        const grupos = wfAgruparRegistros(result.data || []);
+        const totalFotos = grupos.reduce((n, g) => n + g.registros.length, 0);
+
+        if (!totalFotos) {
+            hideLoading();
+            showAlert('Sin fotos', 'No hay registros con foto en el período seleccionado.', 'info');
+            return;
+        }
+
+        // 3. Guardia de volumen
+        if (totalFotos > WF_LIMITE_AVISO) {
+            hideLoading();
+            const mb = Math.round(totalFotos * WF_MB_POR_FOTO);
+            const seguir = confirm(
+                `Vas a generar un Word con ${totalFotos} fotos de ${grupos.length} páginas `
+                + `(aprox. ${mb} MB).\n\nPuede tardar varios minutos y dejar el navegador `
+                + `ocupado.\n\n¿Continuar?`);
+            if (!seguir) return;
+            showLoading('Preparando...');
+        }
+
+        // 4. Bajar las fotos con progreso
+        const rutas = Array.from(new Set(
+            grupos.flatMap(g => g.registros.map(r => r.foto_registro))));
+        const { fotos, buffers, fallidas } = await wfDescargarFotos(rutas, (hechas, total) => {
+            showLoading(`Descargando fotos ${hechas} / ${total}...`);
+        });
+
+        // 5. Armar el documento
+        showLoading('Armando el documento...');
+        const periodo = fechaInicio === fechaFin
+            ? wfFechaBonita(fechaInicio)
+            : `${wfFechaBonita(fechaInicio)} al ${wfFechaBonita(fechaFin)}`;
+        const porSucursal = {};
+        grupos.forEach(g => { porSucursal[g.sucursal] = (porSucursal[g.sucursal] || 0) + 1; });
+        const resumen = Object.keys(porSucursal).sort()
+            .map(s => `${s}: ${porSucursal[s]}`).join('  •  ');
+
+        // Todo en un renglón: un '\n' dentro de <w:t> NO produce salto en Word,
+        // se ignora y el texto sale pegado.
+        const doc = wfConstruirDocumentXml(grupos, fotos, {
+            titulo: 'Registros de Asistencia con Foto',
+            periodo: periodo,
+            resumen: `${grupos.length} páginas  ·  ${totalFotos} registros  —  ${resumen}`
+        });
+
+        const blob = wfArmarDocxBlob(doc.xml, doc.imagenes, buffers);
+
+        // 6. Descargar
+        const suf = (window.isSuperAdmin && sucursal) ? `_${String(sucursal).replace(/\s+/g, '-')}` : '';
+        const rango = fechaInicio === fechaFin ? fechaInicio : `${fechaInicio}_a_${fechaFin}`;
+        wfDescargarBlob(blob, `Registros_fotos_${rango}${suf}.docx`);
+
+        hideLoading();
+        showAlert('Word generado',
+            `${grupos.length} páginas con ${totalFotos - fallidas} fotos.`
+            + (fallidas ? ` ${fallidas} foto(s) no se pudieron descargar.` : ''),
+            'success');
+
+    } catch (e) {
+        hideLoading();
+        console.error('[word-fotos]', e);
+        showAlert('Error', 'No se pudo generar el Word: ' + e.message, 'error');
+    }
+}
+
+window.exportarWordFotos = exportarWordFotos;
