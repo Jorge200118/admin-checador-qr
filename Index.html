@@ -497,6 +497,9 @@
                     <button class="btn-icon" title="Exportar PDF" onclick="exportarRegistros('pdf')">
                         <i class="fas fa-file-pdf"></i>
                     </button>
+                    <button class="btn-icon" title="Exportar Word con fotos" onclick="exportarWordFotos()">
+                        <i class="fas fa-file-word"></i>
+                    </button>
                     <button class="btn-icon" title="Actualizar" onclick="reloadRegistros()">
                         <i class="fas fa-sync-alt"></i>
                     </button>
@@ -1918,12 +1921,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.8/dist/pizzip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
     <script src="vacaciones-lft.js"></script>
     <script src="vacaciones-saldo.js"></script>
     <script src="vacaciones-ui.js"></script>
     <script src="faltas-pm.js"></script>
+    <script src="word-fotos.js"></script>
     <script src="Admin.js"></script>
 <!-- MODAL DE TUTORIAL PARA NUEVO EMPLEADO -->
 <div id="modalTutorialEmpleado" class="modal">
