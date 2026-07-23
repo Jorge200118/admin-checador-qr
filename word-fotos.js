@@ -301,3 +301,78 @@ function wfDescargarBlob(blob, nombreArchivo) {
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
+
+// --- Fotos ---
+
+// Construye la URL pública de la foto (mismo criterio que getSupabaseFotoUrl
+// en Admin.js:177, pero sin depender de Admin.js).
+function wfUrlFoto(fotoPath) {
+    if (!fotoPath) return null;
+    if (fotoPath.startsWith('http://') || fotoPath.startsWith('https://')) return fotoPath;
+    const base = (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL)
+        || 'https://uqncsqstpcynjxnjhrqu.supabase.co';
+    const limpio = fotoPath.startsWith('/uploads/fotos/')
+        ? fotoPath.replace('/uploads/fotos/', '') : fotoPath;
+    return `${base}/storage/v1/object/public/registros-fotos/${limpio}`;
+}
+
+// Baja una foto, la endereza y la comprime.
+// El canvas es necesario porque Word NO respeta la orientación EXIF que el
+// navegador sí aplica en las etiquetas <img>: sin esto, las fotos tomadas en
+// vertical salen acostadas. De paso baja el peso del archivo final.
+// Devuelve { buffer, ancho, alto } o null si falla.
+async function wfProcesarFoto(url) {
+    try {
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const blob = await resp.blob();
+
+        const bitmap = await createImageBitmap(blob, { imageOrientation: 'from-image' });
+        const MAX = 1280;
+        const escala = Math.min(1, MAX / Math.max(bitmap.width, bitmap.height));
+        const ancho = Math.max(1, Math.round(bitmap.width * escala));
+        const alto = Math.max(1, Math.round(bitmap.height * escala));
+
+        const canvas = document.createElement('canvas');
+        canvas.width = ancho;
+        canvas.height = alto;
+        canvas.getContext('2d').drawImage(bitmap, 0, 0, ancho, alto);
+        bitmap.close();
+
+        const jpeg = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.82));
+        if (!jpeg) throw new Error('no se pudo comprimir');
+
+        return { buffer: await jpeg.arrayBuffer(), ancho: ancho, alto: alto };
+    } catch (e) {
+        console.warn('[word-fotos] foto no disponible:', url, e.message);
+        return null;
+    }
+}
+
+// Baja todas las fotos en lotes, informando el avance.
+// Devuelve { fotos: { fotoPath: {ancho,alto} }, buffers: { fotoPath: ArrayBuffer }, fallidas }.
+async function wfDescargarFotos(rutas, alAvanzar) {
+    const fotos = {};
+    const buffers = {};
+    let fallidas = 0;
+    let hechas = 0;
+    const LOTE = 6;
+
+    for (let i = 0; i < rutas.length; i += LOTE) {
+        const lote = rutas.slice(i, i + LOTE);
+        const resultados = await Promise.all(lote.map(ruta => wfProcesarFoto(wfUrlFoto(ruta))));
+        resultados.forEach((res, j) => {
+            const ruta = lote[j];
+            if (res) {
+                fotos[ruta] = { ancho: res.ancho, alto: res.alto };
+                buffers[ruta] = res.buffer;
+            } else {
+                fallidas++;
+            }
+            hechas++;
+        });
+        if (typeof alAvanzar === 'function') alAvanzar(hechas, rutas.length);
+    }
+
+    return { fotos: fotos, buffers: buffers, fallidas: fallidas };
+}
