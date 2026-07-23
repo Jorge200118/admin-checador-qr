@@ -2737,6 +2737,11 @@ async function guardarEmpleado() {
             closeModal('modalEmpleado');
             await loadEmployees();
 
+            // Generar y descargar el contrato SOLO en altas nuevas (no bloquea el alta)
+            if (!isEditing && typeof window.generarContratoAlta === 'function') {
+                window.generarContratoAlta(codigo, { sucursal, puesto });
+            }
+
             form.reset();
             clearPhotoPreview();
             adminState.selectedEmployee = null;
