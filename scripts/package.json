@@ -1,0 +1,9 @@
+{
+  "name": "contrato-scripts",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "docxtemplater": "^3.50.0",
+    "pizzip": "^3.1.8"
+  }
+}
