@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Word fotos tests</title>
+<style>body{font-family:monospace;padding:20px}.ok{color:#16a34a}.fail{color:#dc2626}h2{margin-top:24px}</style>
+</head><body>
+<h1>Exportar Word con fotos — pruebas</h1>
+<div id="out"></div>
+<script src="../word-fotos.js"></script>
+<script>
+const out = document.getElementById('out');
+let pass = 0, fail = 0;
+function test(name, fn) {
+  try { fn(); out.innerHTML += `<div class="ok">✓ ${name}</div>`; pass++; }
+  catch (e) { out.innerHTML += `<div class="fail">✗ ${name}: ${e.message}</div>`; fail++; }
+}
+function eq(a, b, msg='') {
+  const A = JSON.stringify(a), B = JSON.stringify(b);
+  if (A !== B) throw new Error(`${msg} expected ${B} got ${A}`);
+}
+window.addEventListener('load', () => {
+
+  // === wfSoloFecha ===
+  test('wfSoloFecha con T', () => eq(wfSoloFecha('2026-03-07T08:24:02.123'), '2026-03-07'));
+  test('wfSoloFecha con espacio', () => eq(wfSoloFecha('2026-03-07 08:24:02.123'), '2026-03-07'));
+  test('wfSoloFecha vacío → null', () => { eq(wfSoloFecha(null), null); eq(wfSoloFecha(''), null); });
+
+  // === wfHora12 (valores reales de Arturo Ureña / A002, verificados contra el modal) ===
+  test('wfHora12 entrada 8:24', () => eq(wfHora12('2026-03-07T08:24:02.123'), '8:24:02 AM'));
+  test('wfHora12 salida 13:18', () => eq(wfHora12('2026-03-07T13:18:35'), '1:18:35 PM'));
+  test('wfHora12 con espacio', () => eq(wfHora12('2026-03-07 13:18:35'), '1:18:35 PM'));
+  // Este es el caso que delata el corrimiento de zona horaria: si la función
+  // usara new Date(), en una PC en otra zona esta hora se iría a otro día.
+  test('wfHora12 medianoche → 12 AM (sin corrimiento de zona)', () =>
+    eq(wfHora12('2026-03-07T00:03:58'), '12:03:58 AM'));
+  test('wfHora12 mediodía → 12 PM', () => eq(wfHora12('2026-03-07T12:00:00'), '12:00:00 PM'));
+  test('wfHora12 vacío → cadena vacía', () => eq(wfHora12(null), ''));
+
+  // === wfEscapeXml ===
+  test('wfEscapeXml ampersand', () => eq(wfEscapeXml('Juan & Pedro'), 'Juan &amp; Pedro'));
+  test('wfEscapeXml menor/mayor', () => eq(wfEscapeXml('<b>'), '&lt;b&gt;'));
+  test('wfEscapeXml comillas', () => eq(wfEscapeXml('a"b\'c'), 'a&quot;b&apos;c'));
+  test('wfEscapeXml null → vacío', () => eq(wfEscapeXml(null), ''));
+
+  // === wfAnchoImagenCm (máx 11 cm de ancho, 9 cm de alto) ===
+  test('horizontal 1280x960 → tope de ancho', () => eq(wfAnchoImagenCm(1280, 960), 11));
+  test('vertical 960x1280 → limitado por alto', () => eq(wfAnchoImagenCm(960, 1280), 6.75));
+  test('cuadrada 1000x1000 → limitada por alto', () => eq(wfAnchoImagenCm(1000, 1000), 9));
+
+  // === wfCmAEmu (1 cm = 360000 EMU) ===
+  test('wfCmAEmu 1 cm', () => eq(wfCmAEmu(1), 360000));
+  test('wfCmAEmu 6.75 cm', () => eq(wfCmAEmu(6.75), 2430000));
+
+  out.innerHTML += `<h2>${fail === 0 ? '✅' : '❌'} ${pass} pasaron, ${fail} fallaron</h2>`;
+});
+</script>
+</body></html>
