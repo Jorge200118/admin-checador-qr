@@ -49,6 +49,41 @@ window.addEventListener('load', () => {
   test('wfCmAEmu 1 cm', () => eq(wfCmAEmu(1), 360000));
   test('wfCmAEmu 6.75 cm', () => eq(wfCmAEmu(6.75), 2430000));
 
+  // === wfAgruparRegistros ===
+  const REGS = [
+    { empleado_id: 2, empleado_nombre: 'Beto Ruiz', empleado_codigo: 'B001', sucursal: 'MATRIZ',
+      fecha_hora: '2026-03-07T09:00:00', tipo_registro: 'ENTRADA', tablet_id: 'TABLET_02', foto_registro: 'b1.jpg' },
+    { empleado_id: 1, empleado_nombre: 'Ana Lopez', empleado_codigo: 'A002', sucursal: 'MATRIZ',
+      fecha_hora: '2026-03-07T13:18:35', tipo_registro: 'SALIDA', tablet_id: 'TABLET_01', foto_registro: 'a2.jpg' },
+    { empleado_id: 1, empleado_nombre: 'Ana Lopez', empleado_codigo: 'A002', sucursal: 'MATRIZ',
+      fecha_hora: '2026-03-07T08:24:02', tipo_registro: 'ENTRADA', tablet_id: 'TABLET_01', foto_registro: 'a1.jpg' },
+    { empleado_id: 1, empleado_nombre: 'Ana Lopez', empleado_codigo: 'A002', sucursal: 'MATRIZ',
+      fecha_hora: '2026-03-08T08:10:00', tipo_registro: 'ENTRADA', tablet_id: 'TABLET_01', foto_registro: 'a3.jpg' },
+    { empleado_id: 3, empleado_nombre: 'Carla Diaz', empleado_codigo: 'C001', sucursal: 'CABOS',
+      fecha_hora: '2026-03-07T08:00:00', tipo_registro: 'ENTRADA', tablet_id: 'TABLET_09', foto_registro: 'c1.jpg' },
+    { empleado_id: 4, empleado_nombre: 'Sin Foto', empleado_codigo: 'D001', sucursal: 'MATRIZ',
+      fecha_hora: '2026-03-07T08:00:00', tipo_registro: 'ENTRADA', tablet_id: 'TABLET_01', foto_registro: null }
+  ];
+  const G = wfAgruparRegistros(REGS);
+
+  test('descarta registros sin foto', () =>
+    eq(G.every(g => g.codigo !== 'D001'), true));
+  test('un grupo por empleado + día (Ana tiene 2 días)', () => eq(G.length, 4));
+  test('orden: sucursal, luego nombre, luego fecha', () =>
+    eq(G.map(g => `${g.sucursal}|${g.codigo}|${g.fecha}`),
+       ['CABOS|C001|2026-03-07', 'MATRIZ|A002|2026-03-07', 'MATRIZ|A002|2026-03-08', 'MATRIZ|B001|2026-03-07']));
+  test('los registros del grupo van ordenados por hora', () => {
+    const ana = G.find(g => g.codigo === 'A002' && g.fecha === '2026-03-07');
+    eq(ana.registros.map(r => r.tipo_registro), ['ENTRADA', 'SALIDA']);
+  });
+  test('el grupo trae nombre y conteo', () => {
+    const ana = G.find(g => g.codigo === 'A002' && g.fecha === '2026-03-07');
+    eq(ana.nombre, 'Ana Lopez');
+    eq(ana.registros.length, 2);
+  });
+  test('lista vacía → sin grupos', () => eq(wfAgruparRegistros([]), []));
+  test('null → sin grupos', () => eq(wfAgruparRegistros(null), []));
+
   out.innerHTML += `<h2>${fail === 0 ? '✅' : '❌'} ${pass} pasaron, ${fail} fallaron</h2>`;
 });
 </script>

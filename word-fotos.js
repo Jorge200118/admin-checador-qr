@@ -64,3 +64,40 @@ function wfAnchoImagenCm(anchoPx, altoPx, maxAncho, maxAlto) {
 function wfCmAEmu(cm) {
     return Math.round(cm * 360000);
 }
+
+// Agrupa por empleado + día (una página del Word por grupo), igual que el
+// modal, que siempre es de una persona en una fecha.
+// Descarta los registros sin foto. Devuelve [] si no hay nada.
+function wfAgruparRegistros(registros) {
+    if (!registros || !registros.length) return [];
+    const mapa = new Map();
+
+    registros.forEach(r => {
+        if (!r || !r.foto_registro) return;
+        const fecha = wfSoloFecha(r.fecha_hora);
+        if (!fecha) return;
+        const clave = `${r.empleado_id}|${fecha}`;
+        if (!mapa.has(clave)) {
+            mapa.set(clave, {
+                empleadoId: r.empleado_id,
+                nombre: r.empleado_nombre || 'Sin nombre',
+                codigo: r.empleado_codigo || 's/código',
+                sucursal: r.sucursal || 'SIN SUCURSAL',
+                fecha: fecha,
+                registros: []
+            });
+        }
+        mapa.get(clave).registros.push(r);
+    });
+
+    const grupos = Array.from(mapa.values());
+    grupos.forEach(g => g.registros.sort((a, b) =>
+        String(a.fecha_hora).localeCompare(String(b.fecha_hora))));
+
+    grupos.sort((a, b) =>
+        a.sucursal.localeCompare(b.sucursal) ||
+        a.nombre.localeCompare(b.nombre) ||
+        a.fecha.localeCompare(b.fecha));
+
+    return grupos;
+}
