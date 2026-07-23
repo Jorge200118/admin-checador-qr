@@ -238,3 +238,66 @@ function wfConstruirDocumentXml(grupos, fotos, meta) {
 
     return { xml: xml, imagenes: imagenes };
 }
+
+// --- Empaquetado del .docx ---
+
+// Arma el .docx completo y lo devuelve como Blob.
+// 'imagenes' viene de wfConstruirDocumentXml; 'buffers' es { url: ArrayBuffer }.
+function wfArmarDocxBlob(documentXml, imagenes, buffers) {
+    const PizZipCtor = (typeof window !== 'undefined') && window.PizZip;
+    if (!PizZipCtor) throw new Error('Falta la librería PizZip. Recarga la página e intenta de nuevo.');
+
+    const zip = new PizZipCtor();
+
+    zip.file('[Content_Types].xml',
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+        + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+        + '<Default Extension="xml" ContentType="application/xml"/>'
+        + '<Default Extension="jpeg" ContentType="image/jpeg"/>'
+        + '<Override PartName="/word/document.xml"'
+        + ' ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
+        + '</Types>');
+
+    zip.folder('_rels').file('.rels',
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        + '<Relationship Id="rId1"'
+        + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"'
+        + ' Target="word/document.xml"/></Relationships>');
+
+    const word = zip.folder('word');
+    word.file('document.xml', documentXml);
+
+    const rels = imagenes.map(img =>
+        `<Relationship Id="${img.rId}"`
+        + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"'
+        + ` Target="media/${img.archivo}"/>`).join('');
+    word.folder('_rels').file('document.xml.rels',
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        + rels + '</Relationships>');
+
+    const media = word.folder('media');
+    imagenes.forEach(img => {
+        media.file(img.archivo, buffers[img.url], { binary: true });
+    });
+
+    return zip.generate({
+        type: 'blob',
+        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        compression: 'DEFLATE'
+    });
+}
+
+// Dispara la descarga en el navegador (mismo patrón que contrato-generador.js:162).
+function wfDescargarBlob(blob, nombreArchivo) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nombreArchivo;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
