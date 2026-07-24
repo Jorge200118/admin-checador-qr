@@ -16,6 +16,7 @@ const datos = {
   salario_monto: "9,451.20", salario_letra: "Nueve Mil ... 20/100 M.N.",
   sitio_trabajo: "Fray Marcos de Niza No. 100, Col. San Rafael, Culiacán, Sinaloa",
   ciudad_firma: "Culiacán, Sinaloa", puesto: "Cajera",
+  testigo_1: "Ana Ruiz Soto", testigo_2: "Luis Mena Diaz", encargado_sucursal: "Mario Cruz Vega",
   actividades: ["Actividad uno de prueba", "Actividad dos de prueba", "Actividad tres de prueba"]
 };
 
@@ -34,11 +35,13 @@ const planoTodo = sinTags(partes.map(n => outZip.file(n).asText()).join('\n'));
 
 for (const val of ["Juan Pérez López", "PELJ900510HSLRPN01", "PELJ900510AB1",
                     "11223344556", "1 de marzo del 2026", "1 de mayo del 2026",
-                    "Fray Marcos de Niza", "Actividad uno de prueba", "Actividad tres de prueba"]) {
+                    "Fray Marcos de Niza", "Actividad uno de prueba", "Actividad tres de prueba",
+                    "Ana Ruiz Soto", "Luis Mena Diaz", "Mario Cruz Vega"]) {
   assert.ok(planoTodo.includes(val), `falta en la salida: ${val}`);
 }
 // Datos de Isis que NUNCA deben aparecer EN NINGUNA PARTE, incluido el encabezado
-for (const bad of ["Evaristo", "Valeria", "Ramírez", "35200633903", "PADRE NICOLAS", "isla guyana"]) {
+for (const bad of ["Evaristo", "Valeria", "Ramírez", "35200633903", "PADRE NICOLAS", "isla guyana",
+                   "Guillermo Corrales", "Esmeralda Flores"]) {
   assert.ok(!planoTodo.includes(bad), `no debe aparecer en ninguna parte: ${bad}`);
 }
 // El nombre del empleado debe llegar al encabezado (donde estaba la fuga)
@@ -52,5 +55,12 @@ const segsP = docXml.split(/<w:p[ >]/);
 const itemsBullet = segsP.filter(s => s.includes('Actividad ') && s.includes('<w:numPr'));
 assert.strictEqual(itemsBullet.length, 3,
   `esperados 3 párrafos de actividad con viñeta, hay ${itemsBullet.length}`);
+
+// Cada rol en su lugar: el encargado recibe el AVISO DE RESULTADO (no un testigo)
+const planoDoc = sinTags(docXml);
+const iAviso = planoDoc.indexOf("AVISO DE RESULTADO");
+assert.ok(iAviso > -1, "debe existir el aviso de resultado");
+assert.ok(planoDoc.slice(iAviso, iAviso + 120).includes("Mario Cruz Vega"),
+  "el aviso de resultado debe ir dirigido al Encargado de Sucursal");
 
 console.log("OK: render (salida-render.docx generado, revisar visualmente)");

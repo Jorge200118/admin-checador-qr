@@ -411,9 +411,33 @@
     return partes.join(", ");
   }
 
+  // ---- Testigos: se eligen en un checklist al dar de alta ----
+  // Se recuerda la última selección por sucursal para proponerla la próxima vez.
+  const TESTIGOS_STORAGE_KEY = 'contrato_testigos_por_sucursal';
+
+  function leerTestigosGuardados() {
+    try {
+      return JSON.parse(localStorage.getItem(TESTIGOS_STORAGE_KEY) || '{}');
+    } catch (e) { return {}; }
+  }
+
+  function getTestigosSucursal(sucursal) {
+    const guardado = leerTestigosGuardados()[normalizarPuesto(sucursal)];
+    return guardado || null;   // { testigo_1, testigo_2, encargado_sucursal }
+  }
+
+  function guardarTestigosSucursal(sucursal, seleccion) {
+    try {
+      const todos = leerTestigosGuardados();
+      todos[normalizarPuesto(sucursal)] = seleccion;
+      localStorage.setItem(TESTIGOS_STORAGE_KEY, JSON.stringify(todos));
+    } catch (e) { /* si falla el storage, no bloquea la generación */ }
+  }
+
   // ---- Núcleo: arma datos o faltantes ----
   // exp = json.data del expediente BMS; sucursal/puesto = valores del alta (form).
-  function construirDatosContrato(exp, sucursal, puesto) {
+  // testigos = { testigo_1, testigo_2, encargado_sucursal } elegidos en el checklist.
+  function construirDatosContrato(exp, sucursal, puesto, testigos) {
     const faltantes = [];
     if (!exp) return { datos: null, faltantes: ["No se encontró el expediente del empleado"] };
 
@@ -436,6 +460,11 @@
     if (!tiene(exp.Colonia))      faltantes.push("Falta la colonia del domicilio en el expediente");
     if (!tiene(exp.CodigoPostal)) faltantes.push("Falta el código postal del domicilio en el expediente");
     if (!tiene(exp.Municipio))    faltantes.push("Falta el municipio del domicilio en el expediente");
+    const t = testigos || {};
+    if (!tiene(t.testigo_1) || !tiene(t.testigo_2))
+      faltantes.push("Faltan los 2 testigos del contrato");
+    if (!tiene(t.encargado_sucursal))
+      faltantes.push("Falta el Encargado de Sucursal (firma la comisión y recibe el aviso)");
 
     if (faltantes.length) return { datos: null, faltantes };
 
@@ -459,6 +488,9 @@
       sitio_trabajo: suc.direccion,
       ciudad_firma: suc.ciudad,
       puesto: (puesto || exp.Puesto || "").toString().trim(),
+      testigo_1: String(t.testigo_1).trim(),
+      testigo_2: String(t.testigo_2).trim(),
+      encargado_sucursal: String(t.encargado_sucursal).trim(),
       actividades: ACTIVIDADES_POR_PUESTO[keyPuesto].slice()
     };
     return { datos, faltantes: [] };
@@ -506,6 +538,93 @@
     });
   }
 
+  // ---- Checklist de testigos (modal) ----
+  // Muestra los empleados activos de la sucursal y pide 2 testigos + el encargado.
+  // Devuelve {testigo_1, testigo_2, encargado_sucursal} o null si se cancela.
+  function pedirTestigos(sucursal, empleados, previo) {
+    return new Promise((resolve) => {
+      const prev = previo || {};
+      const id = 'modalTestigosContrato';
+      document.getElementById(id)?.remove();
+
+      const opciones = empleados.map(e => {
+        const n = escaparHtml(e.nombre);
+        return `<option value="${n}">${n}${e.puesto ? ' — ' + escaparHtml(e.puesto) : ''}</option>`;
+      }).join('');
+      const sel = (campo, etiqueta, ayuda) => `
+        <div style="margin-bottom:14px">
+          <label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px">${etiqueta}</label>
+          <select id="${id}_${campo}" class="form-select" style="width:100%">
+            <option value="">— Selecciona —</option>${opciones}
+          </select>
+          <div style="font-size:11px;color:#64748b;margin-top:3px">${ayuda}</div>
+        </div>`;
+
+      const wrap = document.createElement('div');
+      wrap.id = id;
+      wrap.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000;' +
+                           'display:flex;align-items:center;justify-content:center;padding:16px';
+      wrap.innerHTML = `
+        <div style="background:var(--bg-card,#fff);color:var(--text-primary,#0f172a);border-radius:12px;
+                    max-width:520px;width:100%;padding:22px;box-shadow:0 20px 50px rgba(0,0,0,.3)">
+          <h3 style="margin:0 0 4px;font-size:18px">Testigos del contrato</h3>
+          <p style="margin:0 0 16px;font-size:13px;color:#64748b">
+            Personal activo de <strong>${escaparHtml(sucursal || '')}</strong>. Se imprimirán en el contrato.
+          </p>
+          ${sel('t1', 'Testigo 1', 'Firma como testigo')}
+          ${sel('t2', 'Testigo 2', 'Firma como testigo')}
+          ${sel('enc', 'Encargado de Sucursal', 'Firma por los trabajadores y recibe el aviso de resultado')}
+          <div id="${id}_err" style="display:none;color:#dc2626;font-size:12px;margin-bottom:10px"></div>
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button type="button" id="${id}_cancel" class="btn">Omitir</button>
+            <button type="button" id="${id}_ok" class="btn btn-primary">Generar contrato</button>
+          </div>
+        </div>`;
+      document.body.appendChild(wrap);
+
+      const $ = (s) => document.getElementById(id + '_' + s);
+      if (prev.testigo_1) $('t1').value = prev.testigo_1;
+      if (prev.testigo_2) $('t2').value = prev.testigo_2;
+      if (prev.encargado_sucursal) $('enc').value = prev.encargado_sucursal;
+
+      const cerrar = (val) => { wrap.remove(); resolve(val); };
+      $('cancel').onclick = () => cerrar(null);
+      $('ok').onclick = () => {
+        const t1 = $('t1').value, t2 = $('t2').value, enc = $('enc').value;
+        const err = $('err');
+        if (!t1 || !t2 || !enc) {
+          err.textContent = 'Selecciona los 2 testigos y el Encargado de Sucursal.';
+          err.style.display = 'block'; return;
+        }
+        if (t1 === t2) {
+          err.textContent = 'Los dos testigos deben ser personas distintas.';
+          err.style.display = 'block'; return;
+        }
+        cerrar({ testigo_1: t1, testigo_2: t2, encargado_sucursal: enc });
+      };
+    });
+  }
+
+  function escaparHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g,
+      c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  // Empleados activos de una sucursal, excluyendo al recién dado de alta.
+  async function empleadosDeSucursal(sucursal, codigoExcluir) {
+    const r = await window.SupabaseAPI.getEmpleados(sucursal);
+    const lista = (r && (r.data || r)) || [];
+    return lista
+      .filter(e => e.activo !== false)
+      .filter(e => String(e.codigo_empleado).trim() !== String(codigoExcluir).trim())
+      .map(e => ({
+        nombre: [e.nombre, e.apellido].filter(Boolean).join(' ').trim(),
+        puesto: e.puesto || ''
+      }))
+      .filter(e => e.nombre)
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  }
+
   // Punto de entrada desde el alta. NUNCA lanza (maneja su propio error).
   async function generarContratoAlta(codigoEmpleado, opts) {
     opts = opts || {};
@@ -514,7 +633,27 @@
       const json = await res.json().catch(() => ({}));
       const exp = json && json.success ? json.data : null;
 
-      const { datos, faltantes } = construirDatosContrato(exp, opts.sucursal, opts.puesto);
+      // Checklist de testigos: se piden ANTES de generar, proponiendo la última
+      // selección guardada para esa sucursal.
+      let testigos = null;
+      try {
+        const empleados = await empleadosDeSucursal(opts.sucursal, codigoEmpleado);
+        if (!empleados.length) {
+          avisar('Contrato no generado',
+            'No hay personal activo en ' + (opts.sucursal || 'la sucursal') +
+            ' para elegir como testigos.', 'warning');
+          return { ok: false, faltantes: ['Sin personal para testigos'] };
+        }
+        testigos = await pedirTestigos(opts.sucursal, empleados, getTestigosSucursal(opts.sucursal));
+        if (!testigos) return { ok: false, cancelado: true };   // el usuario omitió
+        guardarTestigosSucursal(opts.sucursal, testigos);
+      } catch (e) {
+        avisar('Contrato no generado',
+          'No se pudo cargar el personal para elegir testigos: ' + e.message, 'error');
+        return { ok: false, error: e.message };
+      }
+
+      const { datos, faltantes } = construirDatosContrato(exp, opts.sucursal, opts.puesto, testigos);
       if (!datos) {
         avisar('Contrato no generado',
           'No se descargó el contrato porque falta:\n• ' + faltantes.join('\n• '),
@@ -533,6 +672,7 @@
   // ---- Exponer ----
   const API = { construirDatosContrato, generarContratoAlta, renderizarContrato,
                 normalizarPuesto, fechaLarga, calcularEdad, sumarMeses, construirDomicilio,
+                getTestigosSucursal, guardarTestigosSucursal, pedirTestigos, empleadosDeSucursal,
                 SUCURSAL_CATALOGO, ACTIVIDADES_POR_PUESTO, SALARIO };
   if (typeof window !== 'undefined') Object.assign(window, { CONTRATO: API, generarContratoAlta });
   if (typeof module !== 'undefined' && module.exports) module.exports = API;

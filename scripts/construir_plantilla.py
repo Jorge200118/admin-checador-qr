@@ -31,6 +31,10 @@ REEMPLAZOS = [
     ("Los Cabos San Lucas, BCS", "{ciudad_firma}"),
     ("Cajera", "{puesto}"),
     ("cajera", "{puesto}"),
+    # Esmeralda solo aparece una vez, como testigo 2 -> reemplazo directo.
+    ("Esmeralda Flores López", "{testigo_2}"),
+    # OJO: "Guillermo Corrales Cruz" aparece 3 veces con roles DISTINTOS, por eso no
+    # se puede reemplazar en bloque aquí; se resuelve en reemplazar_guillermo().
 ]
 
 # Textos de las 7 actividades del Anexo "A" del ejemplo (para localizar los párrafos)
@@ -171,6 +175,33 @@ def blanquear_folios(ruta_docx):
             zout.writestr(n, data[n])
     os.replace(tmp, ruta_docx)
 
+# "Guillermo Corrales Cruz" aparece 3 veces, cada una con un rol distinto:
+#   1) firma de TESTIGO en el contrato               -> {testigo_1}
+#   2) firma "Por los Trabajadores" (Comision Mixta) -> {encargado_sucursal}
+#   3) destinatario del AVISO DE RESULTADO           -> {encargado_sucursal}
+# Se distinguen por el texto que acompana a cada parrafo.
+def reemplazar_guillermo(doc):
+    NOMBRE = "Guillermo Corrales Cruz"
+    hechos = {"testigo_1": 0, "encargado_sucursal": 0}
+    paras = list(iter_parrafos(doc))
+
+    def texto_parrafo(p):
+        return "".join(texto_de_run(r) for r in runs_de(p)
+                       if r.find(qn('w:t')) is not None)
+
+    for i, p in enumerate(paras):
+        full = texto_parrafo(p)
+        if NOMBRE not in full:
+            continue
+        # Contexto = el propio parrafo + los 2 siguientes, porque en el aviso de
+        # resultado el titulo "Encargado de Sucursal" va en el parrafo de ABAJO.
+        contexto = full + " " + " ".join(texto_parrafo(q) for q in paras[i + 1:i + 3])
+        es_encargado = ("Fernando Olais Godoy" in full) or ("Encargado de Sucursal" in contexto)
+        rol = "encargado_sucursal" if es_encargado else "testigo_1"
+        hechos[rol] += reemplazar_en_parrafo(p, NOMBRE, "{" + rol + "}")
+    return hechos
+
+
 def main():
     origen = sys.argv[1] if len(sys.argv) > 1 else r"D:\USUARIO\Downloads\CAP-ISIS EVARISTO RAMIREZ.docx"
     salida = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "plantilla-contrato.docx")
@@ -184,12 +215,16 @@ def main():
         for p in iter_parrafos(doc):
             n += reemplazar_en_parrafo(p, literal, token)
         total[literal] = n
+    # 2b) testigos/encargado: mismo nombre, roles distintos -> por contexto
+    g = reemplazar_guillermo(doc)
     doc.save(salida)
     # 3) blanquear folios (textboxes) a nivel XML
     blanquear_folios(salida)
     print("Plantilla generada en:", salida)
     for lit, n in total.items():
         print(f"  {n:>3}x  {lit[:50]}")
+    for rol, n in g.items():
+        print(f"  {n:>3}x  Guillermo Corrales Cruz -> {{{rol}}}")
 
 if __name__ == "__main__":
     main()

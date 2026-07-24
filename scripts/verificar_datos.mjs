@@ -12,8 +12,11 @@ const expB = {
   FechaIngreso: "2026-03-01T00:00:00", Puesto: "Cajera", Sucursal: "CULIACAN"
 };
 
+// Testigos elegidos en el checklist (obligatorios)
+const TT = { testigo_1: "Ana Ruiz Soto", testigo_2: "Luis Mena Diaz", encargado_sucursal: "Mario Cruz Vega" };
+
 // Caso feliz
-let r = C.construirDatosContrato(expB, "CULIACAN", "Cajera");
+let r = C.construirDatosContrato(expB, "CULIACAN", "Cajera", TT);
 assert.deepStrictEqual(r.faltantes, [], "no debe haber faltantes");
 assert.strictEqual(r.datos.nombre_completo, "Juan Pérez López");
 assert.strictEqual(r.datos.edad, "35");                        // nació 1990-05, ingreso 2026-03 => 35
@@ -26,12 +29,12 @@ assert.strictEqual(r.datos.actividades.length, 11);   // 9 del perfil de RH + 2 
 assert.match(r.datos.domicilio, /Av\. Siempre Viva, #742, Centro, C\.P\. 80000, Culiacán/);
 
 // Puesto sin perfil de RH -> faltante, sin datos
-let r2 = C.construirDatosContrato(expB, "CULIACAN", "OPERADOR DE GRUA");
+let r2 = C.construirDatosContrato(expB, "CULIACAN", "OPERADOR DE GRUA", TT);
 assert.strictEqual(r2.datos, null);
 assert.ok(r2.faltantes.some(f => f.includes("Anexo")), "debe faltar Anexo del puesto");
 
 // Chofer configurado desde el perfil oficial (incluye lo del vehículo)
-let rc = C.construirDatosContrato(expB, "CULIACAN", "Chofer");
+let rc = C.construirDatosContrato(expB, "CULIACAN", "Chofer", TT);
 assert.deepStrictEqual(rc.faltantes, [], "Chofer debe estar configurado");
 assert.strictEqual(rc.datos.actividades.length, 20);  // 18 del perfil + 2 de cierre
 assert.ok(rc.datos.actividades.some(a => /niveles de agua, aceite, gasolina/.test(a)),
@@ -56,35 +59,55 @@ for (const [puesto, acts] of Object.entries(C.ACTIVIDADES_POR_PUESTO)) {
 assert.strictEqual(Object.keys(C.ACTIVIDADES_POR_PUESTO).length, 20);
 
 // Sin expediente
-let r3 = C.construirDatosContrato(null, "CULIACAN", "Cajera");
+let r3 = C.construirDatosContrato(null, "CULIACAN", "Cajera", TT);
 assert.strictEqual(r3.datos, null);
 assert.ok(r3.faltantes[0].includes("expediente"));
 
 // --- Casos adversariales (revisión de código) ---
 
 // Domicilio incompleto: falta la colonia -> bloquea, con faltante específico
-let r4 = C.construirDatosContrato({ ...expB, Colonia: "" }, "CULIACAN", "Cajera");
+let r4 = C.construirDatosContrato({ ...expB, Colonia: "" }, "CULIACAN", "Cajera", TT);
 assert.strictEqual(r4.datos, null);
 assert.ok(r4.faltantes.some(f => f.toLowerCase().includes("colonia")), "debe faltar la colonia");
 
 // Falta fecha de nacimiento -> bloquea (la edad va en el contrato)
-let r5 = C.construirDatosContrato({ ...expB, FechaNacimiento: "" }, "CULIACAN", "Cajera");
+let r5 = C.construirDatosContrato({ ...expB, FechaNacimiento: "" }, "CULIACAN", "Cajera", TT);
 assert.strictEqual(r5.datos, null);
 assert.ok(r5.faltantes.some(f => f.toLowerCase().includes("nacimiento")), "debe faltar la fecha de nacimiento");
 
 // NumeroIMSS como número (no string) -> válido, nss como string
-let r6 = C.construirDatosContrato({ ...expB, NumeroIMSS: 11223344556 }, "CULIACAN", "Cajera");
+let r6 = C.construirDatosContrato({ ...expB, NumeroIMSS: 11223344556 }, "CULIACAN", "Cajera", TT);
 assert.deepStrictEqual(r6.faltantes, []);
 assert.strictEqual(r6.datos.nss, "11223344556");
 
 // Sucursal con acento/minúsculas -> se normaliza y resuelve la dirección correcta
-let r7 = C.construirDatosContrato(expB, "Culiacán", "Cajera");
+let r7 = C.construirDatosContrato(expB, "Culiacán", "Cajera", TT);
 assert.deepStrictEqual(r7.faltantes, [], "sucursal con acento debe resolver");
 assert.strictEqual(r7.datos.sitio_trabajo, C.SUCURSAL_CATALOGO["CULIACAN"].direccion);
 
 // Fin de mes: ingreso 31-dic + 2 meses no debe desbordar a marzo (cae en febrero)
-let r8 = C.construirDatosContrato({ ...expB, FechaIngreso: "2025-12-31T00:00:00" }, "CULIACAN", "Cajera");
+let r8 = C.construirDatosContrato({ ...expB, FechaIngreso: "2025-12-31T00:00:00" }, "CULIACAN", "Cajera", TT);
 assert.ok(/de febrero del 2026$/.test(r8.datos.fecha_fin_prueba),
   `fin de prueba debe caer en febrero, fue: ${r8.datos.fecha_fin_prueba}`);
+
+// --- Testigos (elegidos en el checklist) ---
+assert.strictEqual(r.datos.testigo_1, "Ana Ruiz Soto");
+assert.strictEqual(r.datos.testigo_2, "Luis Mena Diaz");
+assert.strictEqual(r.datos.encargado_sucursal, "Mario Cruz Vega");
+
+// Sin testigos -> bloquea
+let s1 = C.construirDatosContrato(expB, "CULIACAN", "Cajera", null);
+assert.strictEqual(s1.datos, null);
+assert.ok(s1.faltantes.some(f => f.includes("testigos")), "debe exigir los 2 testigos");
+
+// Solo un testigo -> bloquea
+let s2 = C.construirDatosContrato(expB, "CULIACAN", "Cajera", { testigo_1: "Ana Ruiz Soto", encargado_sucursal: "Mario Cruz Vega" });
+assert.strictEqual(s2.datos, null);
+assert.ok(s2.faltantes.some(f => f.includes("testigos")));
+
+// Sin encargado -> bloquea (firma la comision y recibe el aviso)
+let s3 = C.construirDatosContrato(expB, "CULIACAN", "Cajera", { testigo_1: "Ana Ruiz Soto", testigo_2: "Luis Mena Diaz" });
+assert.strictEqual(s3.datos, null);
+assert.ok(s3.faltantes.some(f => f.includes("Encargado")));
 
 console.log("OK: construirDatosContrato");
