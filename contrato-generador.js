@@ -37,6 +37,22 @@
   const ACTIVIDADES_POR_PUESTO = {
     // Fuente: perfiles oficiales de RH (carpeta "PERFILES DE PUESTOS"),
     // mas las dos clausulas de cierre del contrato. Clave = puesto de nomina normalizado.
+    "ENCARGADO DE SUCURSAL": [
+      "Cotización a Clientes.",
+      "Facturación a Clientes.",
+      "Supervisión de facturación C.4.D en acuerdo con caja general.",
+      "Autorización de estatus de factura. Cambio a (contado, crédito, redes sociales).",
+      "Autorización de precios (descuentos).",
+      "Supervisión 2 veces a la semana de avances con el personal de Ventas.",
+      "Revisión de avances de objetivos.",
+      "Juntas todos los martes por videoconferencia con dirección para ver avances de cada semana.",
+      "Junta periódica para revisión de cartera de clientes del grupo por videoconferencia.",
+      "Apoyo al personal de ventas para la atención de clientes.",
+      "Revisión de inventarios en apoyo a existencias con compras.",
+      "Cálculo de comisiones cada fin de mes para vendedores.",
+      "De ser necesario, serán capacitados para su puesto en la Ciudad de Los Mochis, Sinaloa. El tiempo requerido, así lo indique la Comisión Mixta de Productividad.",
+      "Tener la disposición de realizar todas las actividades anteriormente descritas, dentro de su Anexo \"A\""
+    ],
     "TRABAJADOR DE PATIO": [
       "Descargar los camiones que llegan con mercancía de parte de los proveedores.",
       "Atender al cliente que viene por su material, y ayudarlo a encontrar lo que busca.",

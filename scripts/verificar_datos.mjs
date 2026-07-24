@@ -26,7 +26,7 @@ assert.strictEqual(r.datos.actividades.length, 11);   // 9 del perfil de RH + 2 
 assert.match(r.datos.domicilio, /Av\. Siempre Viva, #742, Centro, C\.P\. 80000, Culiacán/);
 
 // Puesto sin perfil de RH -> faltante, sin datos
-let r2 = C.construirDatosContrato(expB, "CULIACAN", "ENCARGADO DE SUCURSAL");
+let r2 = C.construirDatosContrato(expB, "CULIACAN", "OPERADOR DE GRUA");
 assert.strictEqual(r2.datos, null);
 assert.ok(r2.faltantes.some(f => f.includes("Anexo")), "debe faltar Anexo del puesto");
 
@@ -53,7 +53,7 @@ for (const [puesto, acts] of Object.entries(C.ACTIVIDADES_POR_PUESTO)) {
   assert.ok(CIERRE_1.test(acts[acts.length - 2]), `${puesto}: falta cláusula de capacitación`);
   assert.ok(CIERRE_2.test(acts[acts.length - 1]), `${puesto}: falta cláusula de disposición`);
 }
-assert.strictEqual(Object.keys(C.ACTIVIDADES_POR_PUESTO).length, 18);
+assert.strictEqual(Object.keys(C.ACTIVIDADES_POR_PUESTO).length, 19);
 
 // Sin expediente
 let r3 = C.construirDatosContrato(null, "CULIACAN", "Cajera");
