@@ -53,7 +53,7 @@ for (const [puesto, acts] of Object.entries(C.ACTIVIDADES_POR_PUESTO)) {
   assert.ok(CIERRE_1.test(acts[acts.length - 2]), `${puesto}: falta cláusula de capacitación`);
   assert.ok(CIERRE_2.test(acts[acts.length - 1]), `${puesto}: falta cláusula de disposición`);
 }
-assert.strictEqual(Object.keys(C.ACTIVIDADES_POR_PUESTO).length, 19);
+assert.strictEqual(Object.keys(C.ACTIVIDADES_POR_PUESTO).length, 20);
 
 // Sin expediente
 let r3 = C.construirDatosContrato(null, "CULIACAN", "Cajera");
