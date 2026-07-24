@@ -22,20 +22,38 @@ assert.strictEqual(r.datos.fecha_fin_prueba, "1 de mayo del 2026");
 assert.strictEqual(r.datos.sitio_trabajo, C.SUCURSAL_CATALOGO["CULIACAN"].direccion);
 assert.strictEqual(r.datos.ciudad_firma, "Culiacán, Sinaloa");
 assert.strictEqual(r.datos.salario_monto, "9,451.20");
-assert.strictEqual(r.datos.actividades.length, 7);
+assert.strictEqual(r.datos.actividades.length, 11);   // 9 del perfil de RH + 2 cláusulas de cierre
 assert.match(r.datos.domicilio, /Av\. Siempre Viva, #742, Centro, C\.P\. 80000, Culiacán/);
 
-// Puesto sin Anexo configurado -> faltante, sin datos
-let r2 = C.construirDatosContrato(expB, "CULIACAN", "ALMACEN");
+// Puesto sin perfil de RH -> faltante, sin datos
+let r2 = C.construirDatosContrato(expB, "CULIACAN", "ENCARGADO DE SUCURSAL");
 assert.strictEqual(r2.datos, null);
 assert.ok(r2.faltantes.some(f => f.includes("Anexo")), "debe faltar Anexo del puesto");
 
-// Chofer SI está configurado -> genera, con sus 8 actividades
+// Chofer configurado desde el perfil oficial (incluye lo del vehículo)
 let rc = C.construirDatosContrato(expB, "CULIACAN", "Chofer");
 assert.deepStrictEqual(rc.faltantes, [], "Chofer debe estar configurado");
-assert.strictEqual(rc.datos.actividades.length, 8);
-assert.match(rc.datos.actividades[0], /Descargar los camiones/);
+assert.strictEqual(rc.datos.actividades.length, 20);  // 18 del perfil + 2 de cierre
+assert.ok(rc.datos.actividades.some(a => /niveles de agua, aceite, gasolina/.test(a)),
+  "Chofer debe incluir la revisión del vehículo (venía del perfil oficial, no del contrato)");
 assert.strictEqual(rc.datos.puesto, "Chofer");
+
+// --- Integridad del catálogo completo (18 puestos desde perfiles de RH) ---
+const CIERRE_1 = /De ser necesario, serán capacitados/;
+const CIERRE_2 = /Tener la disposición de realizar todas las actividades/;
+for (const [puesto, acts] of Object.entries(C.ACTIVIDADES_POR_PUESTO)) {
+  assert.ok(acts.length >= 3, `${puesto}: debe tener actividades`);
+  // ningún encabezado de sección del perfil se coló como actividad
+  for (const a of acts) {
+    assert.ok(!/^(rutinarias|no rutinarias|auxiliares|otras)\s*:?\.?$/i.test(a.trim()),
+      `${puesto}: encabezado de sección colado como actividad -> ${JSON.stringify(a)}`);
+    assert.ok(a.trim().length > 0, `${puesto}: actividad vacía`);
+  }
+  // las dos cláusulas de cierre del contrato van al final, en ese orden
+  assert.ok(CIERRE_1.test(acts[acts.length - 2]), `${puesto}: falta cláusula de capacitación`);
+  assert.ok(CIERRE_2.test(acts[acts.length - 1]), `${puesto}: falta cláusula de disposición`);
+}
+assert.strictEqual(Object.keys(C.ACTIVIDADES_POR_PUESTO).length, 18);
 
 // Sin expediente
 let r3 = C.construirDatosContrato(null, "CULIACAN", "Cajera");
